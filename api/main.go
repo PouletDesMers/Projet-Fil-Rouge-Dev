@@ -40,6 +40,7 @@ func main() {
 	r.HandleFunc("/utilisateurs/{id}", getUtilisateur).Methods("GET")
 	r.HandleFunc("/utilisateurs/{id}", updateUtilisateur).Methods("PUT")
 	r.HandleFunc("/utilisateurs/{id}", deleteUtilisateur).Methods("DELETE")
+	r.HandleFunc("/verif-email/{email}", getVerifEmailExiste).Methods("GET")
 	r.HandleFunc("/abonnements", getAbonnements).Methods("GET")
 	r.HandleFunc("/abonnements", createAbonnement).Methods("POST")
 	r.HandleFunc("/abonnements/{id}", getAbonnement).Methods("GET")

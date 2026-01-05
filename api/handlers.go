@@ -416,6 +416,22 @@ func deleteUtilisateur(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func getVerifEmailExiste(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	email := params["email"]
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM utilisateur WHERE email = $1", email).Scan(&count)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	exists := 0
+	if count > 0 {
+		exists = 1
+	}
+	json.NewEncoder(w).Encode(map[string]int{"exists": exists})
+}
+
 func getAbonnements(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement")
 	if err != nil {
