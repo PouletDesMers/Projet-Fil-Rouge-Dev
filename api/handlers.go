@@ -1,13 +1,101 @@
 package main
 
 import (
+	"bytes"
+	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"image/png"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// 2FA Handlers
+func setup2FA(w http.ResponseWriter, r *http.Request) {
+	// Generate a new TOTP key
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "CYNA",
+		AccountName: "user@example.com", // Should be dynamic based on logged in user
+	})
+	if err != nil {
+		http.Error(w, "Error generating key", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert TOTP key to PNG
+	var buf bytes.Buffer
+	img, err := key.Image(200, 200)
+	if err != nil {
+		http.Error(w, "Error generating image", http.StatusInternalServerError)
+		return
+	}
+	png.Encode(&buf, img)
+
+	// Return the secret and the QR code as base64
+	response := map[string]string{
+		"secret":    key.Secret(),
+		"qrCodeUrl": "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()),
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func verify2FA(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Secret string `json:"secret"`
+		Code   string `json:"code"`
+		UserID int    `json:"user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Default to user ID 1 if not provided
+	if data.UserID == 0 {
+		data.UserID = 1
+	}
+
+	if valid := totp.Validate(data.Code, data.Secret); !valid {
+		http.Error(w, "Invalid code", http.StatusUnauthorized)
+		return
+	}
+
+	// Save the secret to the user's profile (enable 2FA)
+	_, err := db.Exec("UPDATE utilisateur SET totp_secret = $1 WHERE id_utilisateur = $2", data.Secret, data.UserID)
+	if err != nil {
+		log.Printf("Error saving 2FA secret: %v", err)
+		http.Error(w, "Error saving 2FA secret", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "2FA enabled successfully"})
+}
+
+func remove2FA(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from query param or use 1 as default
+	userID := 1
+	if id := r.URL.Query().Get("user_id"); id != "" {
+		if parsed, err := strconv.Atoi(id); err == nil {
+			userID = parsed
+		}
+	}
+
+	// Remove 2FA for user
+	_, err := db.Exec("UPDATE utilisateur SET totp_secret = NULL WHERE id_utilisateur = $1", userID)
+	if err != nil {
+		http.Error(w, "Error removing 2FA", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "2FA disabled successfully"})
+}
 
 func getCategories(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT id_categorie, nom, description, actif FROM categorie")
@@ -450,24 +538,51 @@ func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var creds struct {
 		Email      string `json:"email"`
 		MotDePasse string `json:"mot_de_passe"`
+		TotpCode   string `json:"totp_code"`
 	}
-	json.NewDecoder(r.Body).Decode(&creds)
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+		log.Printf("Login: Error decoding body: %v", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Login attempt for email: %s", creds.Email)
+
 	var storedPassword string
 	var id int
-	err := db.QueryRow("SELECT id_utilisateur, mot_de_passe FROM utilisateur WHERE email = $1", creds.Email).Scan(&id, &storedPassword)
+	var totpSecret sql.NullString
+	err := db.QueryRow("SELECT id_utilisateur, mot_de_passe, totp_secret FROM utilisateur WHERE email = $1", creds.Email).Scan(&id, &storedPassword, &totpSecret)
 	if err != nil {
+		log.Printf("Login: Database error: %v", err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
+	log.Printf("Login: Found user ID %d, checking password", id)
 	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.MotDePasse))
 	if err != nil {
+		log.Printf("Login: Password mismatch: %v", err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	// For now, return a dummy token
-	json.NewEncoder(w).Encode(map[string]string{"token": "dummy_token"})
+	// Check 2FA if enabled
+	if totpSecret.Valid && totpSecret.String != "" {
+		if creds.TotpCode == "" {
+			log.Printf("Login: 2FA required for user %d", id)
+			json.NewEncoder(w).Encode(map[string]interface{}{"requires_2fa": true})
+			return
+		}
+		if !totp.Validate(creds.TotpCode, totpSecret.String) {
+			log.Printf("Login: Invalid 2FA code for user %d", id)
+			http.Error(w, "Invalid 2FA code", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	log.Printf("Login: Successful login for user %d", id)
+	// Return token with user ID
+	json.NewEncoder(w).Encode(map[string]interface{}{"token": "dummy_token", "user_id": id})
 }
 
 func getAbonnements(w http.ResponseWriter, r *http.Request) {
@@ -876,4 +991,143 @@ func deleteNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// User profile handlers
+func getUserProfile(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from query param or use 1 as default
+	userID := 1
+	if id := r.URL.Query().Get("user_id"); id != "" {
+		if parsed, err := strconv.Atoi(id); err == nil {
+			userID = parsed
+		}
+	}
+
+	var u Utilisateur
+	var totpSecret, webauthnCredID, webauthnPubKey sql.NullString
+	var webauthnCounter sql.NullInt64
+	var derniereConnexion sql.NullTime
+	var idEntreprise sql.NullInt64
+
+	err := db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, date_creation, derniere_connexion, id_entreprise, totp_secret, webauthn_credential_id, webauthn_public_key, webauthn_counter FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation, &derniereConnexion, &idEntreprise, &totpSecret, &webauthnCredID, &webauthnPubKey, &webauthnCounter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Handle nullable fields
+	if totpSecret.Valid {
+		u.TotpSecret = &totpSecret.String
+	}
+	if derniereConnexion.Valid {
+		u.DerniereConnexion = &derniereConnexion.Time
+	}
+	if idEntreprise.Valid {
+		val := int(idEntreprise.Int64)
+		u.IDEntreprise = &val
+	}
+	if webauthnCredID.Valid {
+		u.WebAuthnCredentialID = &webauthnCredID.String
+	}
+	if webauthnPubKey.Valid {
+		u.WebAuthnPublicKey = &webauthnPubKey.String
+	}
+	if webauthnCounter.Valid {
+		u.WebAuthnCounter = &webauthnCounter.Int64
+	}
+
+	json.NewEncoder(w).Encode(u)
+}
+
+func updateUserProfile(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from query param or use 1 as default
+	userID := 1
+	if id := r.URL.Query().Get("user_id"); id != "" {
+		if parsed, err := strconv.Atoi(id); err == nil {
+			userID = parsed
+		}
+	}
+
+	var data struct {
+		Prenom    string `json:"prenom"`
+		Nom       string `json:"nom"`
+		Email     string `json:"email"`
+		Telephone string `json:"telephone"`
+	}
+	json.NewDecoder(r.Body).Decode(&data)
+	_, err := db.Exec("UPDATE utilisateur SET prenom = $1, nom = $2, email = $3, telephone = $4 WHERE id_utilisateur = $5", data.Prenom, data.Nom, data.Email, data.Telephone, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Return updated user
+	getUserProfile(w, r)
+}
+
+// WebAuthn handlers (simplified)
+func getWebAuthnRegisterChallenge(w http.ResponseWriter, r *http.Request) {
+	// Simplified challenge
+	challenge := map[string]interface{}{
+		"challenge": []byte("random_challenge"),
+		"rp": map[string]string{
+			"name": "CYNA",
+		},
+		"user": map[string]interface{}{
+			"id":          []byte("user_id"),
+			"name":        "user@example.com",
+			"displayName": "User",
+		},
+		"pubKeyCredParams": []map[string]interface{}{
+			{"alg": -7, "type": "public-key"},
+		},
+	}
+	json.NewEncoder(w).Encode(challenge)
+}
+
+func registerWebAuthn(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		ID       string `json:"id"`
+		RawID    []int  `json:"rawId"`
+		Response struct {
+			ClientDataJSON    []int `json:"clientDataJSON"`
+			AttestationObject []int `json:"attestationObject"`
+		} `json:"response"`
+	}
+	json.NewDecoder(r.Body).Decode(&data)
+	// Store in DB (simplified)
+	_, err := db.Exec("UPDATE utilisateur SET webauthn_credential_id = $1, webauthn_public_key = $2 WHERE id_utilisateur = 1", data.ID, "dummy_public_key")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func removeWebAuthn(w http.ResponseWriter, r *http.Request) {
+	_, err := db.Exec("UPDATE utilisateur SET webauthn_credential_id = NULL, webauthn_public_key = NULL WHERE id_utilisateur = 1")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// TOTP handlers
+func setupTOTP(w http.ResponseWriter, r *http.Request) {
+	secret := "JBSWY3DPEHPK3PXP" // Dummy secret
+	_, err := db.Exec("UPDATE utilisateur SET totp_secret = $1 WHERE id_utilisateur = 1", secret)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"secret": secret})
+}
+
+func removeTOTP(w http.ResponseWriter, r *http.Request) {
+	_, err := db.Exec("UPDATE utilisateur SET totp_secret = NULL WHERE id_utilisateur = 1")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

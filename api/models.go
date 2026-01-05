@@ -59,6 +59,11 @@ type Utilisateur struct {
 	DateCreation      time.Time  `json:"date_creation"`
 	DerniereConnexion *time.Time `json:"derniere_connexion"`
 	IDEntreprise      *int       `json:"id_entreprise"`
+	// 2FA fields
+	TotpSecret           *string `json:"totp_secret,omitempty"`
+	WebAuthnCredentialID *string `json:"webauthn_credential_id,omitempty"`
+	WebAuthnPublicKey    *string `json:"webauthn_public_key,omitempty"`
+	WebAuthnCounter      *int64  `json:"webauthn_counter,omitempty"`
 }
 
 type Abonnement struct {

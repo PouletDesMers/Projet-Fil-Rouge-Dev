@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CYNA — Profil</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Charte graphique -->
+  <style>
+    :root{
+      --cyna-dark: #351E90;
+      --cyna-primary: #5610C0;
+      --cyna-accent: #7602F9;
+      --cyna-light: #EEEEEE;
+    }
+
+    body{ background: var(--cyna-light); }
+
+    .navbar-cyna{ background: var(--cyna-dark); }
+    .navbar-cyna .navbar-brand,
+    .navbar-cyna .nav-link,
+    .navbar-cyna .navbar-toggler{ color:#fff !important; }
+    .navbar-cyna .nav-link:hover{ color: rgba(255,255,255,.85) !important; }
+    .navbar-cyna .navbar-toggler{ border-color: rgba(255,255,255,.35); }
+    .navbar-cyna .navbar-toggler-icon{ filter: invert(1); }
+
+    .btn-cyna{
+      background: var(--cyna-primary);
+      border-color: var(--cyna-primary);
+      color: #fff;
+    }
+    .btn-cyna:hover{
+      background: var(--cyna-accent);
+      border-color: var(--cyna-accent);
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR (simplifié pour la page profil) -->
+  <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/index.html">
+        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
+        CYNA
+      </a>
+
+      <div class="d-flex align-items-center gap-2">
+        <a class="btn btn-outline-cyna" href="/index.html">Accueil</a>
+        <button class="btn btn-outline-cyna" id="logoutBtn">Déconnexion</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- CONTENU PROFIL -->
+  <div class="container my-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Mon Profil</h2>
+          </div>
+          <div class="card-body">
+            <!-- Formulaire pour afficher et modifier les informations utilisateur -->
+            <form id="profileForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="prenom" class="form-label">Prénom</label>
+                  <input type="text" class="form-control" id="prenom" name="prenom" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="nom" class="form-label">Nom</label>
+                  <input type="text" class="form-control" id="nom" name="nom" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="telephone" class="form-label">Téléphone</label>
+                  <input type="text" class="form-control" id="telephone" name="telephone">
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-cyna">Mettre à jour</button>
+              </div>
+            </form>
+
+            <hr>
+
+            <h3 class="h6">Authentification à deux facteurs (2FA)</h3>
+            <p>Améliorez la sécurité de votre compte avec une 2FA.</p>
+
+            <div class="mb-3">
+              <h4 class="h6">Application d'authentification (TOTP)</h4>
+              <p>Utilisez une app comme Google Authenticator.</p>
+              <button class="btn btn-cyna" id="setupTotpBtn">Activer 2FA</button>
+              <button class="btn btn-outline-danger" id="removeTotpBtn" style="display:none;">Désactiver 2FA</button>
+              
+              <!-- QR Code and verification form -->
+              <div id="qrcodeContainer" style="display:none;" class="mt-3">
+                <div id="qrcode" class="mb-3"></div>
+                <p>Scannez le QR code avec votre application d'authentification, puis entrez le code pour activer la 2FA.</p>
+                <input type="text" id="verifyCode" class="form-control mb-2" placeholder="Entrez le code à 6 chiffres" maxlength="6">
+                <button class="btn btn-cyna" id="verifyTotpBtn">Vérifier et activer</button>
+                <p class="text-muted small mt-2">Secret: <span id="totpSecret"></span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      window.location.href = "/auth.html";
+    }
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/index.html";
+    });
+
+    // Load user data
+    const userId = localStorage.getItem("user_id") || "1";
+    fetch(`/api/user/profile?user_id=${userId}`)
+    .then(res => res.json())
+    .then(user => {
+      document.getElementById("prenom").value = user.prenom || "";
+      document.getElementById("nom").value = user.nom || "";
+      document.getElementById("email").value = user.email || "";
+      document.getElementById("telephone").value = user.telephone || "";
+
+      if (user.totp_secret && user.totp_secret !== "") {
+        document.getElementById("setupTotpBtn").style.display = "none";
+        document.getElementById("removeTotpBtn").style.display = "inline-block";
+      }
+    })
+    .catch(error => {
+      console.error('Error loading profile:', error);
+      alert('Erreur lors du chargement du profil');
+    });
+
+    // Update profile
+    document.getElementById("profileForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = {
+        prenom: document.getElementById("prenom").value,
+        nom: document.getElementById("nom").value,
+        email: document.getElementById("email").value,
+        telephone: document.getElementById("telephone").value
+      };
+
+      fetch(`/api/user/profile?user_id=${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(result => {
+        alert("Profil mis à jour !");
+      })
+      .catch(error => {
+        console.error('Error updating profile:', error);
+        alert('Erreur lors de la mise à jour du profil');
+      });
+    });
+
+    // Setup 2FA
+    let currentSecret = "";
+    document.getElementById("setupTotpBtn").addEventListener("click", () => {
+      fetch('/api/user/2fa/setup', {
+        method: 'POST'
+      })
+      .then(res => res.json())
+      .then(data => {
+        currentSecret = data.secret;
+        document.getElementById("totpSecret").textContent = data.secret;
+        document.getElementById("qrcode").innerHTML = `<img src="${data.qrCodeUrl}" alt="QR Code">`;
+        document.getElementById("qrcodeContainer").style.display = "block";
+        document.getElementById("setupTotpBtn").style.display = "none";
+      })
+      .catch(error => {
+        console.error('Error setting up 2FA:', error);
+        alert('Erreur lors de la configuration de la 2FA');
+      });
+    });
+
+    // Verify 2FA code and activate
+    document.getElementById("verifyTotpBtn").addEventListener("click", () => {
+      const code = document.getElementById("verifyCode").value;
+      if (!code || code.length !== 6) {
+        alert("Veuillez entrer un code à 6 chiffres");
+        return;
+      }
+
+      fetch('/api/user/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          secret: currentSecret,
+          code: code,
+          user_id: parseInt(userId)
+        })
+      })
+      .then(res => {
+        if (res.ok) {
+          return res.json();
+        } else {
+          throw new Error('Code invalide');
+        }
+      })
+      .then(data => {
+        alert("2FA activé avec succès !");
+        location.reload();
+      })
+      .catch(error => {
+        console.error('Error verifying 2FA:', error);
+        alert('Code invalide. Veuillez réessayer.');
+      });
+    });
+
+    // Remove 2FA
+    document.getElementById("removeTotpBtn").addEventListener("click", () => {
+      if (!confirm("Êtes-vous sûr de vouloir désactiver la 2FA ?")) {
+        return;
+      }
+      
+      fetch(`/api/user/2fa/remove?user_id=${userId}`, {
+        method: 'DELETE'
+      })
+      .then(() => {
+        alert("2FA désactivée");
+        location.reload();
+      })
+      .catch(error => {
+        console.error('Error removing 2FA:', error);
+        alert('Erreur lors de la désactivation de la 2FA');
+      });
+    });
+  </script>
+</body>
+</html>

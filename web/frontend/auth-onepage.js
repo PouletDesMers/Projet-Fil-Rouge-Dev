@@ -1,4 +1,4 @@
-const API_BASE = "http://172.16.1.152:8080";
+const API_BASE = "";
 
 // Elements
 const msg = document.getElementById("msg");
@@ -17,6 +17,9 @@ const regPassword2 = document.getElementById("regPassword2");
 
 const back1 = document.getElementById("back1");
 const back2 = document.getElementById("back2");
+
+// Gestion du bouton 2FA
+const twoFABtn = document.getElementById("twoFABtn");
 
 let currentEmail = "";
 
@@ -67,7 +70,7 @@ async function postJSON(url, data) {
  * Si tu ne l'as pas, je te donne juste après une alternative (moins propre).
  */
 async function emailExists(email) {
-  const url = `${API_BASE}/utilisateurs/exists?email=${encodeURIComponent(email)}`;
+  const url = `http://172.16.1.152:8080/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Erreur check email (${res.status})`);
   const data = await res.json();
@@ -116,12 +119,43 @@ loginForm.addEventListener("submit", async (e) => {
     showMsg("secondary", "Connexion...");
 
     // ✅ à adapter si ton endpoint login n'est pas /login
-    const result = await postJSON(`${API_BASE}/login`, {
+    const result = await postJSON(`${API_BASE}/api/login`, {
       email: currentEmail,
       mot_de_passe: loginPassword.value,
     });
 
-    if (result?.token) localStorage.setItem("token", result.token);
+    // Check if 2FA is required
+    if (result?.requires_2fa) {
+      hideMsg();
+      // Show 2FA input
+      const totpCode = prompt("Entrez votre code 2FA (6 chiffres):");
+      if (!totpCode) {
+        showMsg("warning", "Code 2FA requis pour se connecter.");
+        return;
+      }
+
+      // Retry login with 2FA code
+      showMsg("secondary", "Vérification du code 2FA...");
+      const result2fa = await postJSON(`${API_BASE}/api/login`, {
+        email: currentEmail,
+        mot_de_passe: loginPassword.value,
+        totp_code: totpCode,
+      });
+
+      if (result2fa?.token) {
+        localStorage.setItem("token", result2fa.token);
+        if (result2fa.user_id) localStorage.setItem("user_id", result2fa.user_id);
+      }
+      
+      showMsg("success", "Connecté ✅");
+      setTimeout(() => (window.location.href = "/index.html"), 500);
+      return;
+    }
+
+    if (result?.token) {
+      localStorage.setItem("token", result.token);
+      if (result.user_id) localStorage.setItem("user_id", result.user_id);
+    }
 
     showMsg("success", "Connecté ✅");
     setTimeout(() => (window.location.href = "/index.html"), 500);
@@ -152,7 +186,7 @@ registerForm.addEventListener("submit", async (e) => {
     showMsg("secondary", "Création du compte...");
 
     // ✅ à adapter si ton endpoint register n'est pas POST /utilisateurs
-    await postJSON(`${API_BASE}/utilisateurs`, {
+    await postJSON(`${API_BASE}/api/utilisateurs`, {
       email: currentEmail,
       mot_de_passe: pwd,
       nom: formData.nom,

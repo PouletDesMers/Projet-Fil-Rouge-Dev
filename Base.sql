@@ -67,6 +67,11 @@ CREATE TABLE utilisateur (
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     derniere_connexion TIMESTAMP,
     id_entreprise INT,
+    -- 2FA fields
+    totp_secret TEXT,
+    webauthn_credential_id TEXT,
+    webauthn_public_key TEXT,
+    webauthn_counter BIGINT DEFAULT 0,
     CONSTRAINT fk_utilisateur_entreprise
         FOREIGN KEY (id_entreprise)
         REFERENCES entreprise(id_entreprise)
