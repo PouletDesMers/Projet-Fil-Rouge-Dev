@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYNA - Cybersécurité Professionnelle</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="style.css" rel="stylesheet">
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="main-wrapper"><!-- Header -->
+   <header class="header">
+    <div class="header-content">
+     <div class="logo" id="logo">
+      CYNA
+     </div>
+     <nav class="nav"><a href="#solutions">Solutions</a> <a href="#tarifs">Tarifs</a> <a href="#apropos">À propos</a> <a href="#contact">Contact</a>
+     </nav>
+     <div class="header-buttons" id="authButtons">
+       <a href="auth.html" class="btn btn-secondary">Connexion</a>
+       <a href="auth.html" class="btn btn-primary">Inscription</a>
+     </div>
+    </div>
+   </header><!-- Hero Section -->
+   <section class="hero">
+    <div class="hero-content">
+     <h1 class="hero-title" id="hero-title">Protégez votre entreprise contre les cyberattaques</h1>
+     <p class="hero-subtitle" id="hero-subtitle">Des solutions de cybersécurité claires et efficaces pour les entreprises</p>
+     <div class="hero-buttons"><button class="btn btn-primary">Découvrir les solutions</button> <button class="btn btn-outline">Demander une démo</button>
+     </div>
+    </div>
+   </section><!-- Solutions Section -->
+   <section class="solutions" id="solutions">
+    <h2 class="section-title" id="solutions-title">Nos Solutions</h2>
+    <div class="solutions-grid">
+     <div class="solution-card">
+      <div class="solution-icon">
+       🛡️
+      </div>
+      <h3 class="solution-title">EDR</h3>
+      <p class="solution-text">Protection avancée des endpoints avec détection et réponse automatisées aux menaces en temps réel.</p>
+     </div>
+     <div class="solution-card">
+      <div class="solution-icon">
+       🔍
+      </div>
+      <h3 class="solution-title">XDR</h3>
+      <p class="solution-text">Détection étendue et réponse unifiée sur l'ensemble de votre infrastructure numérique.</p>
+     </div>
+     <div class="solution-card">
+      <div class="solution-icon">
+       👁️
+      </div>
+      <h3 class="solution-title">SOC</h3>
+      <p class="solution-text">Centre opérationnel de sécurité géré par des experts disponibles 24/7 pour votre entreprise.</p>
+     </div>
+    </div>
+   </section><!-- Advantages Section -->
+   <section class="advantages">
+    <h2 class="advantages-title" id="advantages-title">Pourquoi choisir CYNA</h2>
+    <div class="advantages-grid">
+     <div class="advantage-card">
+      <div class="advantage-icon">
+       🔒
+      </div>
+      <h3 class="advantage-title">Sécurité</h3>
+      <p class="advantage-text">Protection maximale contre toutes les menaces cybernétiques</p>
+     </div>
+     <div class="advantage-card">
+      <div class="advantage-icon">
+       ✨
+      </div>
+      <h3 class="advantage-title">Simplicité</h3>
+      <p class="advantage-text">Interface intuitive et déploiement rapide sans expertise technique</p>
+     </div>
+     <div class="advantage-card">
+      <div class="advantage-icon">
+       📊
+      </div>
+      <h3 class="advantage-title">Surveillance</h3>
+      <p class="advantage-text">Monitoring continu avec alertes en temps réel</p>
+     </div>
+     <div class="advantage-card">
+      <div class="advantage-icon">
+       💬
+      </div>
+      <h3 class="advantage-title">Support</h3>
+      <p class="advantage-text">Équipe d'experts disponible 24/7 pour vous accompagner</p>
+     </div>
+    </div>
+   </section><!-- CTA Section -->
+   <section class="cta">
+    <h2 class="cta-title" id="cta-title">Prêt à protéger votre entreprise ?</h2>
+    <p class="cta-text">Commencez votre essai gratuit de 30 jours sans carte bancaire</p><button class="btn btn-white">Créer un compte</button>
+   </section><!-- Footer -->
+   <footer class="footer">
+    <div class="footer-content">
+     <div class="footer-section">
+      <h3>CYNA</h3>
+      <p>Cybersécurité professionnelle pour toutes les entreprises</p>
+     </div>
+     <div class="footer-section">
+      <h3>Solutions</h3>
+      <ul>
+       <li><a href="#edr">EDR</a></li>
+       <li><a href="#xdr">XDR</a></li>
+       <li><a href="#soc">SOC</a></li>
+      </ul>
+     </div>
+     <div class="footer-section">
+      <h3>Entreprise</h3>
+      <ul>
+       <li><a href="#apropos">À propos</a></li>
+       <li><a href="#carriere">Carrières</a></li>
+       <li><a href="#blog">Blog</a></li>
+      </ul>
+     </div>
+     <div class="footer-section">
+      <h3>Légal</h3>
+      <ul>
+       <li><a href="#mentions">Mentions légales</a></li>
+       <li><a href="#confidentialite">Confidentialité</a></li>
+       <li><a href="#cgu">CGU</a></li>
+      </ul>
+     </div>
+    </div>
+    <div class="footer-bottom">
+     <p>© 2024 CYNA. Tous droits réservés.</p>
+    </div>
+   </footer>
+  </div>
+  <script>
+    // Check for user login
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+      const authButtons = document.getElementById('authButtons');
+      authButtons.innerHTML = `
+        <div class="user-profile" style="display: flex; align-items: center;">
+          <span style="color: white; margin-right: 10px;">${user.prenom} ${user.nom}</span>
+          <button onclick="logout()" class="btn btn-outline" style="padding: 8px 16px; font-size: 14px; color: white; border-color: white;">Déconnexion</button>
+        </div>
+      `;
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.reload();
+    }
+
+    const defaultConfig = {
+      primary_color: '#351E90',
+      secondary_color: '#5610C0',
+      accent_color: '#7602F9',
+      background_color: '#EEEEEE',
+      text_color: '#333333',
+      font_family: '-apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif',
+      font_size: 16,
+      company_name: 'CYNA',
+      hero_title: 'Protégez votre entreprise contre les cyberattaques',
+      hero_subtitle: 'Des solutions de cybersécurité claires et efficaces pour les entreprises',
+      solutions_title: 'Nos Solutions',
+      advantages_title: 'Pourquoi choisir CYNA',
+      cta_title: 'Prêt à protéger votre entreprise ?'
+    };
+
+    async function onConfigChange(config) {
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const baseFontStack = '-apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif';
+      const fontSize = config.font_size || defaultConfig.font_size;
+      
+      const primaryColor = config.primary_color || defaultConfig.primary_color;
+      const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+      const accentColor = config.accent_color || defaultConfig.accent_color;
+      const bgColor = config.background_color || defaultConfig.background_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      
+      // Apply colors
+      document.querySelector('.header').style.backgroundColor = primaryColor;
+      document.querySelector('.hero').style.backgroundColor = bgColor;
+      document.querySelector('.advantages').style.backgroundColor = primaryColor;
+      document.querySelector('.cta').style.backgroundColor = accentColor;
+      document.querySelector('.footer').style.backgroundColor = primaryColor;
+      
+      document.querySelectorAll('.btn-secondary').forEach(btn => {
+        btn.style.backgroundColor = secondaryColor;
+      });
+      
+      document.querySelectorAll('.btn-primary').forEach(btn => {
+        btn.style.backgroundColor = accentColor;
+      });
+      
+      document.querySelectorAll('.btn-outline').forEach(btn => {
+        btn.style.color = secondaryColor;
+        btn.style.borderColor = secondaryColor;
+      });
+      
+      document.querySelectorAll('.btn-white').forEach(btn => {
+        btn.style.color = accentColor;
+      });
+      
+      document.querySelectorAll('.solution-card').forEach(card => {
+        card.style.borderColor = secondaryColor;
+      });
+      
+      document.querySelectorAll('.solution-icon, .advantage-icon').forEach(icon => {
+        icon.style.backgroundColor = accentColor;
+      });
+      
+      document.querySelectorAll('.hero-title, .section-title, .solution-title').forEach(title => {
+        title.style.color = primaryColor;
+      });
+      
+      document.querySelector('.hero-subtitle').style.color = textColor;
+      
+      // Apply font
+      document.body.style.fontFamily = `${fontFamily}, ${baseFontStack}`;
+      
+      // Apply font sizes
+      document.querySelector('.hero-title').style.fontSize = `${fontSize * 3.25}px`;
+      document.querySelector('.hero-subtitle').style.fontSize = `${fontSize * 1.375}px`;
+      document.querySelectorAll('.section-title').forEach(title => {
+        title.style.fontSize = `${fontSize * 2.625}px`;
+      });
+      document.querySelectorAll('.solution-title').forEach(title => {
+        title.style.fontSize = `${fontSize * 1.75}px`;
+      });
+      
+      // Update text content
+      document.getElementById('logo').textContent = config.company_name || defaultConfig.company_name;
+      document.getElementById('hero-title').textContent = config.hero_title || defaultConfig.hero_title;
+      document.getElementById('hero-subtitle').textContent = config.hero_subtitle || defaultConfig.hero_subtitle;
+      document.getElementById('solutions-title').textContent = config.solutions_title || defaultConfig.solutions_title;
+      document.getElementById('advantages-title').textContent = config.advantages_title || defaultConfig.advantages_title;
+      document.getElementById('cta-title').textContent = config.cta_title || defaultConfig.cta_title;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.primary_color || defaultConfig.primary_color,
+            set: (value) => {
+              config.primary_color = value;
+              window.elementSdk.setConfig({ primary_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          },
+          {
+            get: () => config.secondary_color || defaultConfig.secondary_color,
+            set: (value) => {
+              config.secondary_color = value;
+              window.elementSdk.setConfig({ secondary_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['company_name', config.company_name || defaultConfig.company_name],
+        ['hero_title', config.hero_title || defaultConfig.hero_title],
+        ['hero_subtitle', config.hero_subtitle || defaultConfig.hero_subtitle],
+        ['solutions_title', config.solutions_title || defaultConfig.solutions_title],
+        ['advantages_title', config.advantages_title || defaultConfig.advantages_title],
+        ['cta_title', config.cta_title || defaultConfig.cta_title]
+      ]);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+  </script>
+ </body>
+</html>

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func getCategories(w http.ResponseWriter, r *http.Request) {
@@ -383,7 +384,21 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 func createUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var u Utilisateur
 	json.NewDecoder(r.Body).Decode(&u)
-	err := db.QueryRow("INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur", u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
+	if u.Role == "" {
+		u.Role = "client"
+	}
+	if u.Statut == "" {
+		u.Statut = "actif"
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.MotDePasse), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Error hashing password", http.StatusInternalServerError)
+		return
+	}
+	u.MotDePasse = string(hashedPassword)
+
+	err = db.QueryRow("INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur", u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -416,20 +431,43 @@ func deleteUtilisateur(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func getVerifEmailExiste(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	email := params["email"]
+func getUtilisateurExists(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "Email required", http.StatusBadRequest)
+		return
+	}
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM utilisateur WHERE email = $1", email).Scan(&count)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	exists := 0
-	if count > 0 {
-		exists = 1
+	json.NewEncoder(w).Encode(map[string]bool{"exists": count > 0})
+}
+
+func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
+	var creds struct {
+		Email      string `json:"email"`
+		MotDePasse string `json:"mot_de_passe"`
 	}
-	json.NewEncoder(w).Encode(map[string]int{"exists": exists})
+	json.NewDecoder(r.Body).Decode(&creds)
+	var storedPassword string
+	var id int
+	err := db.QueryRow("SELECT id_utilisateur, mot_de_passe FROM utilisateur WHERE email = $1", creds.Email).Scan(&id, &storedPassword)
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.MotDePasse))
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	// For now, return a dummy token
+	json.NewEncoder(w).Encode(map[string]string{"token": "dummy_token"})
 }
 
 func getAbonnements(w http.ResponseWriter, r *http.Request) {

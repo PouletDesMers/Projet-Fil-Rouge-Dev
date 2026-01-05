@@ -7,9 +7,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	initDB()
 	r := mux.NewRouter()
+	// r.Use(enableCORS) // Removed this line
 	r.HandleFunc("/categories", getCategories).Methods("GET")
 	r.HandleFunc("/categories", createCategorie).Methods("POST")
 	r.HandleFunc("/categories/{id}", getCategorie).Methods("GET")
@@ -37,10 +53,11 @@ func main() {
 	r.HandleFunc("/entreprises/{id}", deleteEntreprise).Methods("DELETE")
 	r.HandleFunc("/utilisateurs", getUtilisateurs).Methods("GET")
 	r.HandleFunc("/utilisateurs", createUtilisateur).Methods("POST")
+	r.HandleFunc("/utilisateurs/exists", getUtilisateurExists).Methods("GET")
 	r.HandleFunc("/utilisateurs/{id}", getUtilisateur).Methods("GET")
 	r.HandleFunc("/utilisateurs/{id}", updateUtilisateur).Methods("PUT")
 	r.HandleFunc("/utilisateurs/{id}", deleteUtilisateur).Methods("DELETE")
-	r.HandleFunc("/verif-email/{email}", getVerifEmailExiste).Methods("GET")
+	r.HandleFunc("/login", loginUtilisateur).Methods("POST")
 	r.HandleFunc("/abonnements", getAbonnements).Methods("GET")
 	r.HandleFunc("/abonnements", createAbonnement).Methods("POST")
 	r.HandleFunc("/abonnements/{id}", getAbonnement).Methods("GET")
@@ -71,5 +88,5 @@ func main() {
 	r.HandleFunc("/notifications/{id}", getNotification).Methods("GET")
 	r.HandleFunc("/notifications/{id}", updateNotification).Methods("PUT")
 	r.HandleFunc("/notifications/{id}", deleteNotification).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":8080", enableCORS(r)))
 }
