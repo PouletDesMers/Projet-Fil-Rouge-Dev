@@ -1,10 +1,10 @@
 module api
 
-go 1.21
+go 1.24.0
 
 require (
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.10.9
 )
 
-require golang.org/x/crypto v0.14.0 // indirect
+require golang.org/x/crypto v0.46.0
