@@ -69,6 +69,7 @@ L'API écoute sur http://localhost:8080
 - GET /utilisateurs/{id} - Récupère un utilisateur
 - PUT /utilisateurs/{id} - Met à jour un utilisateur
 - DELETE /utilisateurs/{id} - Supprime un utilisateur
+- GET /verif-email/{email} - Vérifie si l'email existe (retourne {"exists": 1} ou {"exists": 0})
 
 ### Abonnements
 - GET /abonnements - Liste tous les abonnements
@@ -111,3 +112,69 @@ L'API écoute sur http://localhost:8080
 - GET /notifications/{id} - Récupère une notification
 - PUT /notifications/{id} - Met à jour une notification
 - DELETE /notifications/{id} - Supprime une notification
+
+## Exemples
+
+### Créer un utilisateur
+```bash
+curl -X POST http://localhost:8080/utilisateurs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "mot_de_passe": "password123",
+    "nom": "Dupont",
+    "prenom": "Jean",
+    "telephone": "0123456789",
+    "role": "user",
+    "statut": "actif"
+  }'
+```
+
+### Lister les utilisateurs
+```bash
+curl -X GET http://localhost:8080/utilisateurs
+```
+
+### Créer une entreprise
+```bash
+curl -X POST http://localhost:8080/entreprises \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nom": "Entreprise ABC",
+    "secteur": "Technologie",
+    "taille": "PME",
+    "pays": "France"
+  }'
+```
+
+### Créer un produit
+```bash
+curl -X POST http://localhost:8080/produits \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nom": "Produit Test",
+    "description": "Description du produit",
+    "sur_devis": false,
+    "actif": true,
+    "id_service": 1
+  }'
+```
+
+### Créer une commande
+```bash
+curl -X POST http://localhost:8080/commandes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "montant_total": 100.50,
+    "statut": "en_cours",
+    "id_utilisateur": 1
+  }'
+```
+
+### Vérifier si un email existe
+```bash
+curl -X GET "http://localhost:8080/verif-email/user@example.com"
+```
+Réponse : `{"exists": 1}` si l'email existe, `{"exists": 0}` sinon.
+
+Pour plus d'exemples, consultez la documentation complète ou testez via les pages web fournies dans le projet.
