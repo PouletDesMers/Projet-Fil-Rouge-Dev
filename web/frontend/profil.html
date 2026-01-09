@@ -16,33 +16,8 @@
 
 <body>
 
-  <!-- NAVBAR (simplifié pour la page profil) -->
-  <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/index.html">
-        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
-        CYNA
-      </a>
-
-      <div class="d-flex align-items-center gap-2">
-        <a class="btn btn-outline-cyna" href="/index.html">Accueil</a>
-        
-        <div class="dropdown" id="accountDropdown">
-          <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
-                  data-bs-toggle="dropdown" aria-expanded="false">
-            Mon compte
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
-            <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
-            <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
-            <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <!-- NAVBAR -->
+  <div id="navbar-container"></div>
 
   <!-- CONTENU PROFIL -->
   <div class="container my-4">
@@ -106,19 +81,13 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/navbar.js"></script>
 
   <script>
     const token = localStorage.getItem("token");
     if (!token) {
       window.location.href = "/auth.html";
     }
-
-    // Logout
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/index.html";
-    });
 
     // Load user data
     fetch(`/api/user/profile`, {
