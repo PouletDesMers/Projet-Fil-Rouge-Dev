@@ -60,7 +60,8 @@ type Utilisateur struct {
 	DerniereConnexion *time.Time `json:"derniere_connexion"`
 	IDEntreprise      *int       `json:"id_entreprise"`
 	// 2FA fields
-	TotpSecret           *string `json:"totp_secret,omitempty"`
+	TotpSecret           *string `json:"-"`
+	TotpEnabled          bool    `json:"totp_enabled"`
 	WebAuthnCredentialID *string `json:"webauthn_credential_id,omitempty"`
 	WebAuthnPublicKey    *string `json:"webauthn_public_key,omitempty"`
 	WebAuthnCounter      *int64  `json:"webauthn_counter,omitempty"`
@@ -120,5 +121,9 @@ type Notification struct {
 	DateCreation  time.Time `json:"date_creation"`
 	IDUtilisateur int       `json:"id_utilisateur"`
 }
+
+type contextKey string
+
+const UserIDKey contextKey = "userID"
 
 var db *sql.DB

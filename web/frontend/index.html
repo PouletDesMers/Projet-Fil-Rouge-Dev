@@ -11,66 +11,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
   <!-- Charte graphique -->
-  <style>
-    :root{
-      --cyna-dark: #351E90;
-      --cyna-primary: #5610C0;
-      --cyna-accent: #7602F9;
-      --cyna-light: #EEEEEE;
-    }
-
-    body{ background: var(--cyna-light); }
-
-    /* Navbar */
-    .navbar-cyna{ background: var(--cyna-dark); }
-    .navbar-cyna .navbar-brand,
-    .navbar-cyna .nav-link,
-    .navbar-cyna .navbar-toggler{ color:#fff !important; }
-    .navbar-cyna .nav-link:hover{ color: rgba(255,255,255,.85) !important; }
-    .navbar-cyna .navbar-toggler{ border-color: rgba(255,255,255,.35); }
-    .navbar-cyna .navbar-toggler-icon{ filter: invert(1); }
-
-    /* Boutons */
-    .btn-cyna{
-      background: var(--cyna-primary);
-      border-color: var(--cyna-primary);
-      color: #fff;
-    }
-    .btn-cyna:hover{
-      background: var(--cyna-accent);
-      border-color: var(--cyna-accent);
-      color: #fff;
-    }
-    .btn-outline-cyna{
-      border-color: rgba(255,255,255,.65);
-      color: #fff;
-    }
-    .btn-outline-cyna:hover{
-      background: rgba(255,255,255,.12);
-      color: #fff;
-      border-color: rgba(255,255,255,.85);
-    }
-
-    /* Barre de recherche (pas de lien "Recherche") */
-    .search-wrap .form-control{
-      border-radius: 999px 0 0 999px;
-      border: 0;
-    }
-    .search-wrap .btn{
-      border-radius: 0 999px 999px 0;
-      border: 0;
-      width: 44px;
-    }
-
-    /* Carousel un peu clean */
-    .carousel-inner{
-      border-radius: 18px;
-      overflow: hidden;
-    }
-  </style>
-
-  <!-- (Optionnel) ton CSS -->
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
@@ -91,11 +32,11 @@
       </button>
 
       <div class="collapse navbar-collapse" id="mainNavbar">
-        <!-- Pages principales (Recherche ENLEVÉE ici) -->
+        <!-- Pages principales -->
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link active" href="/index.html">Accueil</a></li>
-          <li class="nav-item"><a class="nav-link" href="/categories.html">Catégories</a></li>
-          <li class="nav-item"><a class="nav-link" href="/produit.html">Produit</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Services</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Tarification</a></li>
         </ul>
 
         <!-- Barre de recherche avec LOUPE (pas de bouton OK) -->
@@ -109,7 +50,7 @@
         <!-- Commande + compte -->
         <div class="d-flex align-items-center gap-2">
           <!-- Panier: icône -->
-          <a class="btn btn-outline-cyna position-relative" href="/panier.html" aria-label="Panier">
+          <a class="btn btn-outline-cyna position-relative" href="#" id="navCartBtn" aria-label="Panier">
             <i class="bi bi-cart3"></i>
             <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
                   style="background: var(--cyna-accent);">
@@ -124,15 +65,13 @@
               Mon compte
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
-              <li><a class="dropdown-item" href="/compte.html">Mon compte</a></li>
+              <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
               <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
               <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
             </ul>
           </div>
-          <!-- Bouton Profil: ne s'affiche QUE si connecté -->
-          <a class="btn btn-cyna d-none" href="/profil.html" id="profilBtn">Profil</a>
           <!-- S’identifier: renvoie vers la page one-page auth (connexion/inscription) -->
           <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S’identifier</a>
         </div>
@@ -140,6 +79,7 @@
     </div>
   </nav>
 
+<div id="appRoot">
   <!-- CAROUSEL -->
   <div class="container mt-3">
     <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
@@ -204,37 +144,10 @@
       </div>
     </div>
   </div>
+</div>
 
   <!-- Bootstrap JS (dropdown + carousel) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Affichage Mon compte seulement si connecté -->
-  <script>
-    // Si ton auth met un token dans localStorage, ça marche direct.
-    const token = localStorage.getItem("token");
-
-    const profilBtn = document.getElementById("profilBtn");
-    const loginBtn = document.getElementById("loginBtn");
-
-    if (token) {
-      // Afficher bouton Profil
-      profilBtn.classList.remove("d-none");
-      loginBtn.classList.add("d-none");
-    } else {
-      profilBtn.classList.add("d-none");
-      loginBtn.classList.remove("d-none");
-    }
-
-    // Badge panier (optionnel) si tu stockes un nombre dans localStorage
-    const cartBadge = document.getElementById("cartBadge");
-    const cartCount = parseInt(localStorage.getItem("cartCount") || "0", 10);
-    if (cartBadge && cartCount > 0) {
-      cartBadge.textContent = cartCount;
-      cartBadge.classList.remove("d-none");
-    }
-
-    // IMPORTANT: si ton fichier s'appelle en vrai /cyna-logo.png, corrige ici:
-    // (rien à faire, c'est juste pour te rappeler)
-  </script>
+  <script src="/cart.js"></script>
 </body>
 </html>

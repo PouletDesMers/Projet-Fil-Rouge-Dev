@@ -29,6 +29,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: mydb
+      API_SECRET: eb736d4f64b3aa4861f22c4830de8eb1
 
   web:
     build: ./web
@@ -36,6 +37,8 @@ services:
       - "3000:3000"
     depends_on:
       - api
+    environment:
+      API_SECRET: eb736d4f64b3aa4861f22c4830de8eb1
     volumes:
       - ./web:/app
       - /app/node_modules

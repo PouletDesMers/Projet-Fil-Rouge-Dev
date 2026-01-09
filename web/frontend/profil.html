@@ -11,35 +11,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
   <!-- Charte graphique -->
-  <style>
-    :root{
-      --cyna-dark: #351E90;
-      --cyna-primary: #5610C0;
-      --cyna-accent: #7602F9;
-      --cyna-light: #EEEEEE;
-    }
-
-    body{ background: var(--cyna-light); }
-
-    .navbar-cyna{ background: var(--cyna-dark); }
-    .navbar-cyna .navbar-brand,
-    .navbar-cyna .nav-link,
-    .navbar-cyna .navbar-toggler{ color:#fff !important; }
-    .navbar-cyna .nav-link:hover{ color: rgba(255,255,255,.85) !important; }
-    .navbar-cyna .navbar-toggler{ border-color: rgba(255,255,255,.35); }
-    .navbar-cyna .navbar-toggler-icon{ filter: invert(1); }
-
-    .btn-cyna{
-      background: var(--cyna-primary);
-      border-color: var(--cyna-primary);
-      color: #fff;
-    }
-    .btn-cyna:hover{
-      background: var(--cyna-accent);
-      border-color: var(--cyna-accent);
-      color: #fff;
-    }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
@@ -54,7 +26,20 @@
 
       <div class="d-flex align-items-center gap-2">
         <a class="btn btn-outline-cyna" href="/index.html">Accueil</a>
-        <button class="btn btn-outline-cyna" id="logoutBtn">Déconnexion</button>
+        
+        <div class="dropdown" id="accountDropdown">
+          <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            Mon compte
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
+            <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
+            <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
+            <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
+          </ul>
+        </div>
       </div>
     </div>
   </nav>
@@ -136,23 +121,43 @@
     });
 
     // Load user data
-    const userId = localStorage.getItem("user_id") || "1";
-    fetch(`/api/user/profile?user_id=${userId}`)
-    .then(res => res.json())
+    fetch(`/api/user/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(async res => {
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/auth.html";
+        return;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Erreur ${res.status}`);
+      }
+      return res.json();
+    })
     .then(user => {
+      if (!user) return;
       document.getElementById("prenom").value = user.prenom || "";
       document.getElementById("nom").value = user.nom || "";
       document.getElementById("email").value = user.email || "";
       document.getElementById("telephone").value = user.telephone || "";
 
-      if (user.totp_secret && user.totp_secret !== "") {
+      if (user.totp_enabled) {
         document.getElementById("setupTotpBtn").style.display = "none";
         document.getElementById("removeTotpBtn").style.display = "inline-block";
+      } else {
+        document.getElementById("setupTotpBtn").style.display = "inline-block";
+        document.getElementById("removeTotpBtn").style.display = "none";
       }
+
+
     })
     .catch(error => {
       console.error('Error loading profile:', error);
-      alert('Erreur lors du chargement du profil');
+      // alert('Erreur lors du chargement du profil');
     });
 
     // Update profile
@@ -165,20 +170,27 @@
         telephone: document.getElementById("telephone").value
       };
 
-      fetch(`/api/user/profile?user_id=${userId}`, {
+      fetch(`/api/user/profile`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(data)
       })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Erreur ${res.status}`);
+        }
+        return res.json();
+      })
       .then(result => {
         alert("Profil mis à jour !");
       })
       .catch(error => {
         console.error('Error updating profile:', error);
-        alert('Erreur lors de la mise à jour du profil');
+        alert('Erreur lors de la mise à jour du profil: ' + error.message);
       });
     });
 
@@ -186,9 +198,18 @@
     let currentSecret = "";
     document.getElementById("setupTotpBtn").addEventListener("click", () => {
       fetch('/api/user/2fa/setup', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Erreur ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         currentSecret = data.secret;
         document.getElementById("totpSecret").textContent = data.secret;
@@ -213,12 +234,12 @@
       fetch('/api/user/2fa/verify', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           secret: currentSecret,
-          code: code,
-          user_id: parseInt(userId)
+          code: code
         })
       })
       .then(res => {
@@ -244,8 +265,11 @@
         return;
       }
       
-      fetch(`/api/user/2fa/remove?user_id=${userId}`, {
-        method: 'DELETE'
+      fetch(`/api/user/2fa/remove`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
       .then(() => {
         alert("2FA désactivée");

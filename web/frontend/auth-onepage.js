@@ -69,9 +69,13 @@ function isPasswordValid(pwd) {
 }
 
 async function postJSON(url, data) {
+  const token = localStorage.getItem("token");
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: headers,
     body: JSON.stringify(data),
   });
   let payload = null;
@@ -80,17 +84,13 @@ async function postJSON(url, data) {
   return payload;
 }
 
-/**
- * ✅ IMPORTANT :
- * Il te faut idéalement un endpoint Go du style:
- *   GET /utilisateurs/exists?email=...
- * qui renvoie { "exists": true } ou { "exists": false }
- *
- * Si tu ne l'as pas, je te donne juste après une alternative (moins propre).
- */
 async function emailExists(email) {
-  const url = `http://localhost:8080/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
-  const res = await fetch(url);
+  const token = localStorage.getItem("token");
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const url = `/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
+  const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`Erreur check email (${res.status})`);
   const data = await res.json();
   return !!data.exists;

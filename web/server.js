@@ -8,6 +8,14 @@ const port = 3000;
 app.use('/api', createProxyMiddleware({
   target: 'http://api:8080',
   changeOrigin: true,
+  onProxyReq: (proxyReq, req, res) => {
+    // If the client already sent an Authorization header, keep it!
+    // Otherwise, inject the master secret (for public routes or internal calls)
+    if (!req.headers['authorization']) {
+      const secret = process.env.API_SECRET || 'change_me_in_production_12345';
+      proxyReq.setHeader('Authorization', `Bearer ${secret}`);
+    }
+  }
 }));
 
 // Serve static files from the frontend directory
