@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"log"
@@ -34,29 +35,44 @@ func authMiddleware(next http.Handler) http.Handler {
 		}
 
 		token := parts[1]
-		var exists bool
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM api_token WHERE cle_api = $1 AND est_actif = TRUE)", token).Scan(&exists)
-		if err != nil {
-			log.Printf("Auth error: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		var userID int
+
+		// 1. Check if it's a valid session token
+		err := db.QueryRow("SELECT id_utilisateur FROM session_utilisateur WHERE token_session = $1 AND est_valide = TRUE AND date_expiration > NOW()", token).Scan(&userID)
+		if err == nil {
+			// Valid session found!
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
-		if !exists {
-			// Check if it's the master secret from env
-			masterSecret := os.Getenv("API_SECRET")
-			if masterSecret != "" && token == masterSecret {
-				next.ServeHTTP(w, r)
-				return
+		// 2. Check if it's a valid API token
+		err = db.QueryRow("SELECT id_utilisateur FROM api_token WHERE cle_api = $1 AND est_actif = TRUE", token).Scan(&userID)
+		if err == nil {
+			db.Exec("UPDATE api_token SET dernier_usage = NOW() WHERE cle_api = $1", token)
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// 3. Check if it's the master secret from env (used by Proxy)
+		masterSecret := os.Getenv("API_SECRET")
+		if masterSecret != "" && token == masterSecret {
+			// For the master secret, we might not have a specific user ID.
+			// Let's try to find an admin or just use a dummy.
+			// Improved logic: find the first admin.
+			err = db.QueryRow("SELECT id_utilisateur FROM utilisateur WHERE role = 'admin' LIMIT 1").Scan(&userID)
+			if err != nil {
+				// If no admin, fallback to anything or 0
+				db.QueryRow("SELECT id_utilisateur FROM utilisateur LIMIT 1").Scan(&userID)
 			}
-			http.Error(w, "Unauthorized: Invalid Token", http.StatusUnauthorized)
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
-		// Update last usage
-		db.Exec("UPDATE api_token SET dernier_usage = NOW() WHERE cle_api = $1", token)
-
-		next.ServeHTTP(w, r)
+		log.Printf("Unauthorized access attempt with token: %s...", token[:5])
+		http.Error(w, "Unauthorized: Invalid Token", http.StatusUnauthorized)
 	})
 }
 
@@ -84,6 +100,13 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+
+	// Public routes (No Auth required)
+	r.HandleFunc("/api/login", loginUtilisateur).Methods("POST")
+	r.HandleFunc("/api/utilisateurs", createUtilisateur).Methods("POST")
+	r.HandleFunc("/api/utilisateurs/exists", getUtilisateurExists).Methods("GET")
+
+	// Protected routes
 	api := r.PathPrefix("/api").Subrouter()
 	api.Use(authMiddleware)
 
@@ -113,19 +136,20 @@ func main() {
 	api.HandleFunc("/entreprises/{id}", updateEntreprise).Methods("PUT")
 	api.HandleFunc("/entreprises/{id}", deleteEntreprise).Methods("DELETE")
 	api.HandleFunc("/utilisateurs", getUtilisateurs).Methods("GET")
-	api.HandleFunc("/utilisateurs", createUtilisateur).Methods("POST")
-	api.HandleFunc("/utilisateurs/exists", getUtilisateurExists).Methods("GET")
 	api.HandleFunc("/utilisateurs/{id}", getUtilisateur).Methods("GET")
 	api.HandleFunc("/utilisateurs/{id}", updateUtilisateur).Methods("PUT")
 	api.HandleFunc("/utilisateurs/{id}", deleteUtilisateur).Methods("DELETE")
-	api.HandleFunc("/login", loginUtilisateur).Methods("POST")
 	api.HandleFunc("/user/profile", getUserProfile).Methods("GET")
 	api.HandleFunc("/user/profile", updateUserProfile).Methods("PUT")
+
 	api.HandleFunc("/webauthn/register-challenge", getWebAuthnRegisterChallenge).Methods("GET")
 	api.HandleFunc("/webauthn/register", registerWebAuthn).Methods("POST")
 	api.HandleFunc("/webauthn/remove", removeWebAuthn).Methods("DELETE")
-	api.HandleFunc("/totp/setup", setupTOTP).Methods("GET")
-	api.HandleFunc("/totp/remove", removeTOTP).Methods("DELETE")
+
+	api.HandleFunc("/user/2fa/setup", setup2FA).Methods("POST")
+	api.HandleFunc("/user/2fa/verify", verify2FA).Methods("POST")
+	api.HandleFunc("/user/2fa/remove", remove2FA).Methods("DELETE")
+
 	api.HandleFunc("/abonnements", getAbonnements).Methods("GET")
 	api.HandleFunc("/abonnements", createAbonnement).Methods("POST")
 	api.HandleFunc("/abonnements/{id}", getAbonnement).Methods("GET")
@@ -156,10 +180,8 @@ func main() {
 	api.HandleFunc("/notifications/{id}", getNotification).Methods("GET")
 	api.HandleFunc("/notifications/{id}", updateNotification).Methods("PUT")
 	api.HandleFunc("/notifications/{id}", deleteNotification).Methods("DELETE")
-	api.HandleFunc("/user/2fa/setup", setup2FA).Methods("POST")
-	api.HandleFunc("/user/2fa/verify", verify2FA).Methods("POST")
-	api.HandleFunc("/user/2fa/remove", remove2FA).Methods("DELETE")
-	api.HandleFunc("/user/profile", updateUserProfile).Methods("PUT")
+
 	log.Println("API démarrée en HTTP sur le port 8080")
+
 	http.ListenAndServe(":8080", r)
 }

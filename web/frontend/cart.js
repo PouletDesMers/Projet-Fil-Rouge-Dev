@@ -1,17 +1,24 @@
   /***********************
-   * 1) AUTH UI (comme tu as déjà)
+   * 1) AUTH UI
    ***********************/
   const token = localStorage.getItem("token");
-  const profilBtn = document.getElementById("profilBtn");
   const loginBtn = document.getElementById("loginBtn");
+  const accountDropdown = document.getElementById("accountDropdown");
+  const logoutBtn = document.getElementById("logoutBtn");
 
   if (token) {
-    profilBtn?.classList.remove("d-none");
+    accountDropdown?.classList.remove("d-none");
     loginBtn?.classList.add("d-none");
   } else {
-    profilBtn?.classList.add("d-none");
+    accountDropdown?.classList.add("d-none");
     loginBtn?.classList.remove("d-none");
   }
+
+  logoutBtn?.addEventListener("click", () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_id");
+    window.location.href = "/index.html";
+  });
 
   /***********************
    * 2) PANIER STORAGE
