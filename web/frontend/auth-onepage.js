@@ -70,7 +70,7 @@ async function postJSON(url, data) {
  * Si tu ne l'as pas, je te donne juste après une alternative (moins propre).
  */
 async function emailExists(email) {
-  const url = `http://localhost:8080/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
+  const url = `/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Erreur check email (${res.status})`);
   const data = await res.json();

@@ -8,6 +8,11 @@ const port = 3000;
 app.use('/api', createProxyMiddleware({
   target: 'http://api:8080',
   changeOrigin: true,
+  onProxyReq: (proxyReq, req, res) => {
+    // Inject the secret token from environment variable
+    const secret = process.env.API_SECRET || 'change_me_in_production_12345';
+    proxyReq.setHeader('Authorization', `Bearer ${secret}`);
+  }
 }));
 
 // Serve static files from the frontend directory

@@ -1,25 +1,60 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
 
-func enableCORS(next http.Handler) http.Handler {
+func generateRandomToken() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
+}
+
+func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		log.Printf("CORS Request: Method=%s, Origin=%s", r.Method, r.Header.Get("Origin"))
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Unauthorized: Missing Token", http.StatusUnauthorized)
 			return
 		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Unauthorized: Invalid Token Format", http.StatusUnauthorized)
+			return
+		}
+
+		token := parts[1]
+		var exists bool
+		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM api_token WHERE cle_api = $1 AND est_actif = TRUE)", token).Scan(&exists)
+		if err != nil {
+			log.Printf("Auth error: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if !exists {
+			// Check if it's the master secret from env
+			masterSecret := os.Getenv("API_SECRET")
+			if masterSecret != "" && token == masterSecret {
+				next.ServeHTTP(w, r)
+				return
+			}
+			http.Error(w, "Unauthorized: Invalid Token", http.StatusUnauthorized)
+			return
+		}
+
+		// Update last usage
+		db.Exec("UPDATE api_token SET dernier_usage = NOW() WHERE cle_api = $1", token)
 
 		next.ServeHTTP(w, r)
 	})
@@ -27,10 +62,31 @@ func enableCORS(next http.Handler) http.Handler {
 
 func main() {
 	initDB()
+
+	// Auto-generate a token if the table is empty (initial setup)
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM api_token").Scan(&count)
+	if count == 0 {
+		newToken := generateRandomToken()
+		// Get first user (usually admin if created) or create dummy
+		var userID int
+		err := db.QueryRow("SELECT id_utilisateur FROM utilisateur LIMIT 1").Scan(&userID)
+		if err == nil {
+			_, err = db.Exec("INSERT INTO api_token (cle_api, nom, permissions, id_utilisateur) VALUES ($1, $2, $3, $4)",
+				newToken, "System Token", "all", userID)
+			if err == nil {
+				log.Printf("========================================")
+				log.Printf("NEW SYSTEM API TOKEN GENERATED:")
+				log.Printf("%s", newToken)
+				log.Printf("========================================")
+			}
+		}
+	}
+
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
-	api.Use(enableCORS)
-	// r.Use(enableCORS) // Removed this line
+	api.Use(authMiddleware)
+
 	api.HandleFunc("/categories", getCategories).Methods("GET")
 	api.HandleFunc("/categories", createCategorie).Methods("POST")
 	api.HandleFunc("/categories/{id}", getCategorie).Methods("GET")
