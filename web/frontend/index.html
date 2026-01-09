@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CYNA — Accueil</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons (loupe + panier) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Charte graphique -->
+  <style>
+    :root{
+      --cyna-dark: #351E90;
+      --cyna-primary: #5610C0;
+      --cyna-accent: #7602F9;
+      --cyna-light: #EEEEEE;
+    }
+
+    body{ background: var(--cyna-light); }
+
+    /* Navbar */
+    .navbar-cyna{ background: var(--cyna-dark); }
+    .navbar-cyna .navbar-brand,
+    .navbar-cyna .nav-link,
+    .navbar-cyna .navbar-toggler{ color:#fff !important; }
+    .navbar-cyna .nav-link:hover{ color: rgba(255,255,255,.85) !important; }
+    .navbar-cyna .navbar-toggler{ border-color: rgba(255,255,255,.35); }
+    .navbar-cyna .navbar-toggler-icon{ filter: invert(1); }
+
+    /* Boutons */
+    .btn-cyna{
+      background: var(--cyna-primary);
+      border-color: var(--cyna-primary);
+      color: #fff;
+    }
+    .btn-cyna:hover{
+      background: var(--cyna-accent);
+      border-color: var(--cyna-accent);
+      color: #fff;
+    }
+    .btn-outline-cyna{
+      border-color: rgba(255,255,255,.65);
+      color: #fff;
+    }
+    .btn-outline-cyna:hover{
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-color: rgba(255,255,255,.85);
+    }
+
+    /* Barre de recherche (pas de lien "Recherche") */
+    .search-wrap .form-control{
+      border-radius: 999px 0 0 999px;
+      border: 0;
+    }
+    .search-wrap .btn{
+      border-radius: 0 999px 999px 0;
+      border: 0;
+      width: 44px;
+    }
+
+    /* Carousel un peu clean */
+    .carousel-inner{
+      border-radius: 18px;
+      overflow: hidden;
+    }
+  </style>
+
+  <!-- (Optionnel) ton CSS -->
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
+    <div class="container">
+      <!-- Logo + CYNA (logo à gauche) -->
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/index.html">
+        <!-- IMPORTANT : adapte le nom si ton fichier s'appelle cyna-logo.png -->
+       <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
+<span>CYNA</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+              aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="mainNavbar">
+        <!-- Pages principales (Recherche ENLEVÉE ici) -->
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link active" href="/index.html">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link" href="/categories.html">Catégories</a></li>
+          <li class="nav-item"><a class="nav-link" href="/produit.html">Produit</a></li>
+        </ul>
+
+        <!-- Barre de recherche avec LOUPE (pas de bouton OK) -->
+        <form class="d-flex search-wrap me-lg-3 mb-2 mb-lg-0" action="/recherche.html" method="GET" role="search">
+          <input class="form-control" type="search" name="q" placeholder="Rechercher un produit..." aria-label="Rechercher">
+          <button class="btn btn-cyna" type="submit" aria-label="Lancer la recherche">
+            <i class="bi bi-search"></i>
+          </button>
+        </form>
+
+        <!-- Commande + compte -->
+        <div class="d-flex align-items-center gap-2">
+          <!-- Panier: icône -->
+          <a class="btn btn-outline-cyna position-relative" href="/panier.html" aria-label="Panier">
+            <i class="bi bi-cart3"></i>
+            <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
+                  style="background: var(--cyna-accent);">
+              0
+            </span>
+          </a>
+
+          <!-- Mon compte: ne s'affiche QUE si connecté -->
+          <div class="dropdown d-none" id="accountDropdown">
+            <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+              Mon compte
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
+              <li><a class="dropdown-item" href="/compte.html">Mon compte</a></li>
+              <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
+              <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
+            </ul>
+          </div>
+          <!-- Bouton Profil: ne s'affiche QUE si connecté -->
+          <a class="btn btn-cyna d-none" href="/profil.html" id="profilBtn">Profil</a>
+          <!-- S’identifier: renvoie vers la page one-page auth (connexion/inscription) -->
+          <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S’identifier</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- CAROUSEL -->
+  <div class="container mt-3">
+    <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-indicators">
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0"
+                class="active" aria-current="true" aria-label="Slide 1"></button>
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"
+                aria-label="Slide 2"></button>
+        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"
+                aria-label="Slide 3"></button>
+      </div>
+
+      <div class="carousel-inner shadow-sm">
+        <!-- Remplace par tes images locales si tu veux: /img/slide1.jpg -->
+        <div class="carousel-item active">
+          <img src="https://picsum.photos/1200/360?random=1" class="d-block w-100" alt="Slide 1">
+        </div>
+        <div class="carousel-item">
+          <img src="https://picsum.photos/1200/360?random=2" class="d-block w-100" alt="Slide 2">
+        </div>
+        <div class="carousel-item">
+          <img src="https://picsum.photos/1200/360?random=3" class="d-block w-100" alt="Slide 3">
+        </div>
+      </div>
+
+      <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENU ACCUEIL (exemple) -->
+  <div class="container my-4">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h2 class="h5 mb-2">Bienvenue sur CYNA</h2>
+            <p class="mb-0 text-muted">
+              Navigation: Accueil / Catégories / Produit, recherche via la barre, panier via icône.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h3 class="h6">Accès rapide</h3>
+            <div class="d-grid gap-2">
+              <a class="btn btn-outline-secondary" href="/categories.html">Voir les catégories</a>
+              <a class="btn btn-outline-secondary" href="/panier.html">Voir le panier</a>
+              <a class="btn btn-cyna" href="/auth.html">Connexion / Inscription</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS (dropdown + carousel) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Affichage Mon compte seulement si connecté -->
+  <script>
+    // Si ton auth met un token dans localStorage, ça marche direct.
+    const token = localStorage.getItem("token");
+
+    const profilBtn = document.getElementById("profilBtn");
+    const loginBtn = document.getElementById("loginBtn");
+
+    if (token) {
+      // Afficher bouton Profil
+      profilBtn.classList.remove("d-none");
+      loginBtn.classList.add("d-none");
+    } else {
+      profilBtn.classList.add("d-none");
+      loginBtn.classList.remove("d-none");
+    }
+
+    // Badge panier (optionnel) si tu stockes un nombre dans localStorage
+    const cartBadge = document.getElementById("cartBadge");
+    const cartCount = parseInt(localStorage.getItem("cartCount") || "0", 10);
+    if (cartBadge && cartCount > 0) {
+      cartBadge.textContent = cartCount;
+      cartBadge.classList.remove("d-none");
+    }
+
+    // IMPORTANT: si ton fichier s'appelle en vrai /cyna-logo.png, corrige ici:
+    // (rien à faire, c'est juste pour te rappeler)
+  </script>
+</body>
+</html>
