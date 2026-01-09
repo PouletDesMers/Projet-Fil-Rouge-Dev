@@ -109,7 +109,7 @@
         <!-- Commande + compte -->
         <div class="d-flex align-items-center gap-2">
           <!-- Panier: icône -->
-          <a class="btn btn-outline-cyna position-relative" href="/panier.html" aria-label="Panier">
+          <a class="btn btn-outline-cyna position-relative" href="#" id="navCartBtn" aria-label="Panier">
             <i class="bi bi-cart3"></i>
             <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
                   style="background: var(--cyna-accent);">
@@ -140,6 +140,7 @@
     </div>
   </nav>
 
+<div id="appRoot">
   <!-- CAROUSEL -->
   <div class="container mt-3">
     <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
@@ -204,37 +205,10 @@
       </div>
     </div>
   </div>
+</div>
 
   <!-- Bootstrap JS (dropdown + carousel) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Affichage Mon compte seulement si connecté -->
-  <script>
-    // Si ton auth met un token dans localStorage, ça marche direct.
-    const token = localStorage.getItem("token");
-
-    const profilBtn = document.getElementById("profilBtn");
-    const loginBtn = document.getElementById("loginBtn");
-
-    if (token) {
-      // Afficher bouton Profil
-      profilBtn.classList.remove("d-none");
-      loginBtn.classList.add("d-none");
-    } else {
-      profilBtn.classList.add("d-none");
-      loginBtn.classList.remove("d-none");
-    }
-
-    // Badge panier (optionnel) si tu stockes un nombre dans localStorage
-    const cartBadge = document.getElementById("cartBadge");
-    const cartCount = parseInt(localStorage.getItem("cartCount") || "0", 10);
-    if (cartBadge && cartCount > 0) {
-      cartBadge.textContent = cartCount;
-      cartBadge.classList.remove("d-none");
-    }
-
-    // IMPORTANT: si ton fichier s'appelle en vrai /cyna-logo.png, corrige ici:
-    // (rien à faire, c'est juste pour te rappeler)
-  </script>
+  <script src="/cart.js"></script>
 </body>
 </html>
