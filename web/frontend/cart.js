@@ -1,24 +1,6 @@
   /***********************
-   * 1) AUTH UI
+   * 1) AUTH UI (Moved to navbar.js)
    ***********************/
-  const token = localStorage.getItem("token");
-  const loginBtn = document.getElementById("loginBtn");
-  const accountDropdown = document.getElementById("accountDropdown");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  if (token) {
-    accountDropdown?.classList.remove("d-none");
-    loginBtn?.classList.add("d-none");
-  } else {
-    accountDropdown?.classList.add("d-none");
-    loginBtn?.classList.remove("d-none");
-  }
-
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_id");
-    window.location.href = "/index.html";
-  });
 
   /***********************
    * 2) PANIER STORAGE
@@ -81,7 +63,6 @@
    * 3) SPA ROUTER (Home <-> Panier)
    ***********************/
   const appRoot = document.getElementById("appRoot");
-  const navCartBtn = document.getElementById("navCartBtn");
 
   // On mémorise le HTML initial (accueil) pour pouvoir y revenir
   const HOME_HTML = appRoot ? appRoot.innerHTML : "";
@@ -330,13 +311,82 @@
   /***********************
    * 4) Bind navbar click + init
    ***********************/
-  navCartBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    renderCart();
-  });
+  function initCartBindings() {
+      const navCartBtn = document.getElementById("navCartBtn");
+      if (navCartBtn) {
+          navCartBtn.addEventListener("click", (e) => {
+              if (appRoot) {
+                  e.preventDefault();
+                  renderCart();
+              } else {
+                  // Redirection vers l'accueil avec vue panier
+                  window.location.href = "/index.html?view=cart";
+              }
+          });
+      }
 
-  // Init badge
-  updateCartBadge();
+      // Gérer le clic sur "Accueil" ou le Logo pour reset la SPA si on est sur index.html
+      const homeLinks = document.querySelectorAll('a[href="/index.html"], .navbar-brand');
+      if (appRoot) {
+          homeLinks.forEach(link => {
+              link.addEventListener("click", (e) => {
+                  // Si on est déjà sur l'index (éventuellement avec le panier affiché)
+                  if (window.location.pathname === "/index.html" || window.location.pathname === "/") {
+                      e.preventDefault();
+                      renderHome();
+                      window.history.pushState({}, "", "/index.html");
+                  }
+              });
+          });
+          
+          // Nouveau bouton sur l'accueil
+          const homeCartBtn = document.getElementById("homeCartBtn");
+          if (homeCartBtn) {
+              homeCartBtn.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  renderCart();
+              });
+          }
+      }
+
+      updateCartBadge();
+      initProductButtons();
+  }
+
+  function initProductButtons() {
+    document.querySelectorAll(".btn-add-to-cart").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const id = btn.getAttribute("data-id");
+        const name = btn.getAttribute("data-name");
+        const price = btn.getAttribute("data-price");
+        if (id && name && price) {
+          addToCart({ id, name, price: Number(price), qty: 1 });
+          // Feedback
+          const originalText = btn.textContent;
+          btn.textContent = "Ajouté !";
+          btn.classList.replace("btn-primary", "btn-success");
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.replace("btn-success", "btn-primary");
+          }, 2000);
+        }
+      });
+    });
+  }
+
+  // Gérer le paramètre ?view=cart au chargement de la page
+  if (appRoot && new URLSearchParams(window.location.search).get("view") === "cart") {
+    renderCart();
+  }
+
+  // Si le DOM est déjà prêt
+  initCartBindings();
+  
+  // Et aussi au chargement de la navbar
+  document.addEventListener("navbarLoaded", initCartBindings);
+
+  // Expose globalement pour navbar.js
+  window.updateCartBadge = updateCartBadge;
 
   // (Optionnel) si tu veux voir le rendu direct sans passer par une page produit :
   // Décommente pour ajouter un item de démo une seule fois.

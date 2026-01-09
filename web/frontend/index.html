@@ -17,67 +17,7 @@
 <body>
 
   <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
-    <div class="container">
-      <!-- Logo + CYNA (logo à gauche) -->
-      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/index.html">
-        <!-- IMPORTANT : adapte le nom si ton fichier s'appelle cyna-logo.png -->
-       <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
-<span>CYNA</span>
-      </a>
-
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
-              aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="mainNavbar">
-        <!-- Pages principales -->
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link active" href="/index.html">Accueil</a></li>
-          <li class="nav-item"><a class="nav-link" href="#">Catégories</a></li>
-          <li class="nav-item"><a class="nav-link" href="/produit.html">Produits</a></li>
-        </ul>
-
-        <!-- Barre de recherche avec LOUPE (pas de bouton OK) -->
-        <form class="d-flex search-wrap me-lg-3 mb-2 mb-lg-0" action="/recherche.html" method="GET" role="search">
-          <input class="form-control" type="search" name="q" placeholder="Rechercher un produit..." aria-label="Rechercher">
-          <button class="btn btn-cyna" type="submit" aria-label="Lancer la recherche">
-            <i class="bi bi-search"></i>
-          </button>
-        </form>
-
-        <!-- Commande + compte -->
-        <div class="d-flex align-items-center gap-2">
-          <!-- Panier: icône -->
-          <a class="btn btn-outline-cyna position-relative" href="#" id="navCartBtn" aria-label="Panier">
-            <i class="bi bi-cart3"></i>
-            <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
-                  style="background: var(--cyna-accent);">
-              0
-            </span>
-          </a>
-
-          <!-- Mon compte: ne s'affiche QUE si connecté -->
-          <div class="dropdown d-none" id="accountDropdown">
-            <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-              Mon compte
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
-              <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
-              <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
-              <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
-            </ul>
-          </div>
-          <!-- S’identifier: renvoie vers la page one-page auth (connexion/inscription) -->
-          <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S’identifier</a>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <div id="navbar-container"></div>
 
 <div id="appRoot">
   <!-- CAROUSEL -->
@@ -135,8 +75,8 @@
           <div class="card-body">
             <h3 class="h6">Accès rapide</h3>
             <div class="d-grid gap-2">
-              <a class="btn btn-outline-secondary" href="/categories.html">Voir les catégories</a>
-              <a class="btn btn-outline-secondary" href="/panier.html">Voir le panier</a>
+              <a class="btn btn-outline-secondary" href="/produit.html">Voir tous les produits</a>
+              <a class="btn btn-outline-secondary" href="#" id="homeCartBtn">Voir mon panier</a>
               <a class="btn btn-cyna" href="/auth.html">Connexion / Inscription</a>
             </div>
           </div>
@@ -148,6 +88,7 @@
 
   <!-- Bootstrap JS (dropdown + carousel) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/navbar.js"></script>
   <script src="/cart.js"></script>
 </body>
 </html>

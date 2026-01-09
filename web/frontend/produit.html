@@ -10,72 +10,10 @@
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+  <!-- Charte graphique -->
+  <link rel="stylesheet" href="/style.css">
+
   <style>
-    :root {
-      --cyna-dark: #351E90;
-      --cyna-primary: #5610C0;
-      --cyna-accent: #7602F9;
-      --cyna-light: #EEEEEE;
-    }
-
-    body { background: var(--cyna-light); }
-
-    /* Navbar */
-    .navbar-cyna { background: var(--cyna-dark); }
-    .navbar-cyna .navbar-brand,
-    .navbar-cyna .nav-link,
-    .navbar-cyna .navbar-toggler { color: #fff !important; }
-    .navbar-cyna .nav-link:hover { color: rgba(255,255,255,.85) !important; }
-    .navbar-cyna .navbar-toggler { border-color: rgba(255,255,255,.35); }
-    .navbar-cyna .navbar-toggler-icon { filter: invert(1); }
-
-    /* Boutons */
-    .btn-cyna {
-      background: var(--cyna-primary);
-      border-color: var(--cyna-primary);
-      color: #fff;
-    }
-    .btn-cyna:hover {
-      background: var(--cyna-accent);
-      border-color: var(--cyna-accent);
-      color: #fff;
-    }
-    .btn-outline-cyna {
-      border-color: rgba(255,255,255,.65);
-      color: #fff;
-    }
-    .btn-outline-cyna:hover {
-      background: rgba(255,255,255,.12);
-      color: #fff;
-      border-color: rgba(255,255,255,.85);
-    }
-
-    /* Barre de recherche */
-    .search-wrap .form-control {
-      border-radius: 999px 0 0 999px;
-      border: 0;
-    }
-    .search-wrap .btn {
-      border-radius: 0 999px 999px 0;
-      border: 0;
-      width: 44px;
-    }
-
-    /* Footer */
-    .footer-cyna {
-      background: var(--cyna-dark);
-      color: #fff;
-      padding: 2rem 0;
-      margin-top: 3rem;
-    }
-    .footer-cyna a {
-      color: rgba(255,255,255,.75);
-      text-decoration: none;
-    }
-    .footer-cyna a:hover {
-      color: #fff;
-    }
-
     /* Styles personnalisés pour les produits */
 
     .product-card {
@@ -194,68 +132,7 @@
 <body>
 
   <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
-    <div class="container">
-      <!-- Logo + CYNA -->
-      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/">
-        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
-        <span>CYNA</span>
-      </a>
-
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
-              aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="mainNavbar">
-        <!-- Pages principales -->
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link" href="/">Accueil</a></li>
-          <li class="nav-item"><a class="nav-link" href="/categories.html">Catégories</a></li>
-          <li class="nav-item"><a class="nav-link active" href="/produit.html">Produit</a></li>
-        </ul>
-
-        <!-- Barre de recherche -->
-        <form class="d-flex search-wrap me-lg-3 mb-2 mb-lg-0" action="/recherche.html" method="GET" role="search">
-          <input class="form-control" type="search" name="q" placeholder="Rechercher un produit..." aria-label="Rechercher">
-          <button class="btn btn-cyna" type="submit" aria-label="Lancer la recherche">
-            <i class="bi bi-search"></i>
-          </button>
-        </form>
-
-        <!-- Commande + compte -->
-        <div class="d-flex align-items-center gap-2">
-          <!-- Panier -->
-          <a class="btn btn-outline-cyna position-relative" href="#" id="navCartBtn" aria-label="Panier">
-            <i class="bi bi-cart3"></i>
-            <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
-                  style="background: var(--cyna-accent);">
-              0
-            </span>
-          </a>
-
-          <!-- Mon compte (connecté) -->
-          <div class="dropdown d-none" id="accountDropdown">
-            <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-              Mon compte
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
-              <li><a class="dropdown-item" href="/compte.html">Mon compte</a></li>
-              <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
-              <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
-            </ul>
-          </div>
-          <!-- Profil (connecté) -->
-          <a class="btn btn-cyna d-none" href="/profil.html" id="profilBtn">Profil</a>
-          <!-- S'identifier -->
-          <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S'identifier</a>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <div id="navbar-container"></div>
 
   <div class="container mt-5">
     <section class="py-5 text-center">
@@ -289,7 +166,7 @@
                   <p class="text-muted small mb-0">Protection essentielle des postes.</p>
                 </div>
                 <div class="mt-auto">
-                  <button class="btn btn-primary w-100">Choisir cette offre</button>
+                  <button class="btn btn-primary w-100 btn-add-to-cart" data-id="edr-basic" data-name="CYNA EDR Basic" data-price="8.99">Choisir cette offre</button>
                 </div>
               </div>
             </div>
@@ -305,7 +182,7 @@
                   <p class="text-muted small mb-0">Protection avancée et analyses approfondies.</p>
                 </div>
                 <div class="mt-auto">
-                  <button class="btn btn-primary w-100">Choisir cette offre</button>
+                  <button class="btn btn-primary w-100 btn-add-to-cart" data-id="edr-pro" data-name="CYNA EDR Pro" data-price="14.99">Choisir cette offre</button>
                 </div>
               </div>
             </div>
@@ -343,7 +220,7 @@
                   <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">15,99 €</span> <small class="text-white-50 ms-1">/ utilisateur / mois</small></div>
                   <p class="text-muted small mb-0">Protection étendue multi-environnements.</p>
                 </div>
-                <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
+                <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="xdr-std" data-name="CYNA XDR Standard" data-price="15.99">Choisir cette offre</button></div>
               </div>
             </div>
 
@@ -355,7 +232,7 @@
                   <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">24,99 €</span> <small class="text-white-50 ms-1">/ utilisateur / mois</small></div>
                   <p class="text-muted small mb-0">Analyses avancées et corrélation intelligente.</p>
                 </div>
-                <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
+                <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="xdr-pre" data-name="CYNA XDR Premium" data-price="24.99">Choisir cette offre</button></div>
               </div>
             </div>
 
@@ -394,7 +271,7 @@
                 <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">4 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
                 <p class="text-muted small mb-0">Surveillance de base et alertes.</p>
               </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
+              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-ess" data-name="SOC Essentials" data-price="4999">Choisir cette offre</button></div>
             </div>
           </div>
 
@@ -406,7 +283,7 @@
                 <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">8 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
                 <p class="text-muted small mb-0">Analyse approfondie et réponse rapide.</p>
               </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
+              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-adv" data-name="SOC Advanced" data-price="8999">Choisir cette offre</button></div>
             </div>
           </div>
 
@@ -418,7 +295,7 @@
                 <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">14 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
                 <p class="text-muted small mb-0">Service complet avec accompagnement dédié.</p>
               </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
+              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-pre" data-name="SOC Premium" data-price="14999">Choisir cette offre</button></div>
             </div>
           </div>
         </div>
@@ -472,6 +349,7 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/navbar.js"></script>
   <script src="/cart.js"></script>
 </body>
 </html>
