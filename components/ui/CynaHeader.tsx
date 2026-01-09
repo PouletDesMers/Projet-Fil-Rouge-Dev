@@ -6,7 +6,7 @@ import { ThemedText } from '../themed-text';
 export function CynaHeader() {
   return (
     <View style={styles.headerContainer}>
-      {/* Πάνω σειρά: Logo, Search, Icons */}
+      
       <View style={styles.topRow}>
         <ThemedText style={styles.logoText}>CYNA</ThemedText>
         

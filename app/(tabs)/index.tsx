@@ -1,6 +1,12 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,23 +17,30 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleLogin = () => {
-    // Logique de connexion
+    if (!email || !password) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
     console.log('Connexion avec :', email, password);
-    router.replace('/(tabs)'); 
+    router.replace('/(tabs)/dashboard');
   };
 
   return (
     <ThemedView style={styles.mainContainer}>
       <View style={styles.content}>
-        
-        <ThemedText type="title" style={styles.title}>Bienvenue sur Cyna</ThemedText>
-        <ThemedText style={styles.subtitle}>Connectez-vous pour continuer</ThemedText>
+        <ThemedText type="title" style={styles.title}>
+          Bienvenue sur Cyna
+        </ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Connectez-vous pour continuer
+        </ThemedText>
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             placeholder="Adresse e-mail"
-            placeholderTextColor="#b74747"
+            placeholderTextColor="#888"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -50,10 +63,16 @@ export default function LoginScreen() {
         <TouchableOpacity style={styles.linkContainer}>
           <ThemedText type="defaultSemiBold">Mot de passe oublié ?</ThemedText>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.linkContainer} onPress={() => router.push('/register')}>
+
+        <TouchableOpacity
+          style={styles.linkContainer}
+          onPress={() => router.push('/register')}
+        >
           <ThemedText>
-            Pas encore de compte ? <ThemedText type="defaultSemiBold" style={styles.linkText}>S'inscrire</ThemedText>
+            Pas encore de compte ?{' '}
+            <ThemedText type="defaultSemiBold" style={styles.linkText}>
+              S'inscrire
+            </ThemedText>
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -64,7 +83,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    justifyContent: 'center', 
+    justifyContent: 'center',
   },
   content: {
     paddingHorizontal: 30,
@@ -117,7 +136,5 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: '#007AFF',
-  }
-
-
+  },
 });
