@@ -17,160 +17,345 @@
     />
 
     <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: #fff;
+      }
+      .auth-container {
+        max-width: 350px;
+        margin: 20px auto;
+      }
+      .auth-logo {
+        display: block;
+        margin: 0 auto 20px;
+        text-align: center;
+        text-decoration: none;
+        color: var(--cyna-dark);
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .auth-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px 26px;
+        background: #fff;
+        margin-bottom: 22px;
+      }
+      .auth-title {
+        font-size: 28px;
+        font-weight: 400;
+        margin-bottom: 10px;
+      }
+      .auth-label {
+        font-size: 13px;
+        font-weight: 700;
+        padding-bottom: 2px;
+      }
+      .btn-auth-primary {
+        background: linear-gradient(to bottom, #7602F9, #5610C0);
+        border: 1px solid #351E90;
+        border-radius: 3px;
+        color: #fff;
+        font-size: 13px;
+        height: 31px;
+        padding: 0 10px;
+        width: 100%;
+      }
+      .btn-auth-primary:hover {
+        background: #5610C0;
+        color: #fff !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      }
+      .auth-legal {
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 18px;
+        color: #555;
+      }
+      .auth-help {
+        font-size: 13px;
+        margin-top: 15px;
+      }
+      .auth-help a {
+        text-decoration: none;
+        color: #0066c0;
+      }
+      .auth-help a:hover {
+        color: #c45500;
+        text-decoration: underline;
+      }
+      .auth-divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        color: #767676;
+        font-size: 12px;
+        margin-top: 25px;
+        margin-bottom: 12px;
+      }
+      .auth-divider::before, .auth-divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e7e7e7;
+      }
+      .auth-divider:not(:empty)::before { margin-right: .5em; }
+      .auth-divider:not(:empty)::after { margin-left: .5em; }
+      
+      .btn-auth-secondary {
+        background: #eff1f3;
+        background: linear-gradient(to bottom, #f7f8fa, #e7e9ec);
+        border: 1px solid #adb1b8;
+        border-radius: 3px;
+        color: #111;
+        font-size: 13px;
+        height: 31px;
+        width: 100%;
+        text-align: center;
+        line-height: 29px;
+        text-decoration: none;
+        display: block;
+        box-shadow: 0 1px 0 rgba(255,255,255,.6) inset;
+      }
+      .btn-auth-secondary:hover {
+        background: #e7e9ec;
+        background: linear-gradient(to bottom, #e7e9ec, #d8dee3);
+        border-color: #a2a6ac;
+        color: #111;
+        box-shadow: 0 1px 0 rgba(255,255,255,.4) inset;
+        text-decoration: none;
+      }
+      
+      .form-control:focus {
+        border-color: #e77600;
+        box-shadow: 0 0 3px 2px rgba(228, 121, 17, .5);
+      }
+
+      /* Transitions */
+      .step-fade {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .error-box {
+        border: 1px solid #c40000;
+        border-radius: 4px;
+        padding: 10px 15px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+      }
+      .error-box i { font-size: 1.5rem; color: #c40000; }
+      .error-box h6 { color: #c40000; margin-bottom: 2px; font-weight: 700; }
+      .error-box p { font-size: 13px; margin: 0; }
+
+      .password-container {
+        position: relative;
+      }
+      .password-toggle-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #767676;
+        cursor: pointer;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      .password-toggle-btn:hover {
+        color: #111;
+      }
+    </style>
   </head>
 
   <body>
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
-      <div class="container">
-        <a
-          class="navbar-brand d-flex align-items-center gap-2 fw-bold"
-          href="/index.html"
-        >
-          <img
-            src="/img/cyna-logo.png"
-            alt="Logo CYNA"
-            height="32"
-            class="d-inline-block align-text-top"
-          />
-          CYNA
-        </a>
-        <div class="d-flex align-items-center gap-2">
-          <a class="btn btn-outline-cyna" href="/index.html">Quitter</a>
+    <div class="auth-container">
+      <a href="/index.html" class="auth-logo">
+        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" />
+        CYNA
+      </a>
+
+      <!-- Error Message Area -->
+      <div id="msg" class="d-none">
+        <div class="error-box">
+          <i class="bi bi-exclamation-triangle"></i>
+          <div>
+            <h6 id="msgTitle">There was a problem</h6>
+            <p id="msgText"></p>
+          </div>
         </div>
       </div>
-    </nav>
 
-    <div class="container">
-      <div class="login-card">
-        <h1 class="h4 text-center mb-4">Identification</h1>
+      <div class="auth-card">
+        <h1 class="auth-title" id="authTitle">Sign in</h1>
 
-        <div id="msg" class="alert d-none" role="alert"></div>
-
-        <!-- ÉTAPE 1: Email -->
-        <form id="emailForm">
+        <!-- STEP 1: Email -->
+        <form id="emailForm" class="step-fade">
           <div class="mb-3">
-            <label class="form-label">Email</label>
+            <label class="auth-label">Email or mobile phone number</label>
             <input
               id="email"
               name="email"
               type="email"
               class="form-control"
+              placeholder="Enter your email"
               required
-              placeholder="ex: test@test.fr"
             />
           </div>
-          <button class="btn btn-cyna w-100" type="submit">Continuer</button>
+          <button class="btn btn-auth-primary" type="submit">Continue</button>
+          
+          <div class="auth-legal">
+            By continuing, you agree to CYNA's <a href="#" class="text-decoration-none">Conditions of Use</a> and <a href="#" class="text-decoration-none">Privacy Notice</a>.
+          </div>
+          
+          <div class="auth-help" id="helpTrigger">
+            <i class="bi bi-caret-right-fill small text-muted"></i> <a href="#">Need help?</a>
+            <div id="helpLinks" class="d-none ms-3 mt-1">
+               <div><a href="#" class="small decoration-none">Forgot your password?</a></div>
+               <div><a href="#" class="small decoration-none">Other issues with Sign-In</a></div>
+            </div>
+          </div>
         </form>
 
-        <!-- ÉTAPE 2A: Connexion -->
-        <form id="loginForm" class="d-none">
-          <div class="mb-3 p-3 bg-light rounded shadow-sm">
-            <div class="small text-muted">Email</div>
-            <div id="loginEmail" class="fw-semibold text-break"></div>
+        <!-- STEP 2A: Connexion (Sign In - Password Step) -->
+        <form id="loginForm" class="d-none step-fade">
+          <div class="mb-3 d-flex align-items-center justify-content-between">
+             <span id="loginEmail" class="small fw-bold text-break"></span> 
+             <a href="#" id="back1" class="small text-decoration-none">Change</a>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Mot de passe</label>
-            <div class="password-wrapper">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <label class="auth-label">Password</label>
+              <a href="#" class="small text-decoration-none">Forgot your password?</a>
+            </div>
+            <div class="password-container">
               <input
                 id="loginPassword"
-                name="mot_de_passe"
+                name="password"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="loginPassword"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="loginPassword">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
           </div>
 
-          <div class="hstack gap-2 mt-4">
-            <button class="btn btn-cyna flex-fill" type="submit">
-              Se connecter
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="back1">
-              Retour
-            </button>
+          <button class="btn btn-auth-primary mb-3" type="submit">Sign in</button>
+          
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="rememberMe">
+            <label class="form-check-label small" for="rememberMe">Keep me signed in.</label>
           </div>
         </form>
 
-        <!-- ÉTAPE 2B: Inscription -->
-        <form id="registerForm" class="d-none">
-          <div class="mb-3 p-3 bg-light rounded shadow-sm">
-            <div class="small text-muted">Email</div>
-            <div id="registerEmail" class="fw-semibold text-break"></div>
+        <!-- STEP 2C: 2FA (TOTP Step) -->
+        <form id="twoFAForm" class="d-none step-fade">
+          <h1 class="auth-title">Two-Step Verification</h1>
+          <p class="small">Enter the 6-digit code from your authenticator app.</p>
+          
+          <div class="mb-3">
+            <label class="auth-label">Enter code</label>
+            <input
+              id="totpCodeInput"
+              name="totpCode"
+              type="text"
+              class="form-control text-center fw-bold"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="000000"
+              required
+            />
           </div>
+          
+          <button class="btn btn-auth-primary mb-3" type="submit">Verify and Sign in</button>
+          
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="trustDevice">
+            <label class="form-check-label small" for="trustDevice">Don't ask for codes on this device</label>
+          </div>
+          
+          <a href="#" id="backToLogin" class="small text-decoration-none">Back to password</a>
+        </form>
 
-          <div class="row g-2">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Prénom</label>
-              <input name="prenom" class="form-control" required />
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Nom</label>
-              <input name="nom" class="form-control" required />
-            </div>
+        <!-- STEP 2B: Inscription (Register) -->
+        <form id="registerForm" class="d-none step-fade">
+          <div class="auth-title">Create account</div>
+          
+          <div class="mb-2">
+            <label class="auth-label">First name</label>
+            <input name="firstName" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="auth-label">Last name</label>
+            <input name="lastName" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="auth-label">Email</label>
+            <input id="registerEmailInput" type="email" class="form-control" disabled />
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Téléphone</label>
-            <input name="telephone" class="form-control" />
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label">Mot de passe</label>
-            <div class="password-wrapper">
+            <label class="auth-label">Password</label>
+            <div class="password-container">
               <input
                 id="regPassword"
-                name="mot_de_passe"
+                name="password"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
                 minlength="8"
+                placeholder="At least 8 characters"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="regPassword"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="regPassword">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
-            <div class="form-text">
-              8 caractères min, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère
-              spécial.
-            </div>
+            <div class="small text-muted mt-1"><i class="bi bi-info-circle"></i> Passwords must be at least 8 characters.</div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Confirmer le mot de passe</label>
-            <div class="password-wrapper">
+            <label class="auth-label">Re-enter password</label>
+            <div class="password-container">
               <input
                 id="regPassword2"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
-                minlength="8"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="regPassword2"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="regPassword2">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
           </div>
 
-          <div class="hstack gap-2 mt-4">
-            <button class="btn btn-cyna flex-fill" type="submit">
-              Créer le compte
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="back2">
-              Retour
-            </button>
+          <button class="btn btn-auth-primary" type="submit">Create your CYNA account</button>
+          
+          <div class="auth-legal">
+            By creating an account, you agree to CYNA's <a href="#">Conditions of Use & Sale</a> and <a href="#">Privacy Notice</a>.
+          </div>
+          
+          <hr>
+          <div class="small">
+            Already have an account? <a href="#" id="back2">Sign in</a>
           </div>
         </form>
+      </div>
+
+      <!-- New to Amazon (New to CYNA)? -->
+      <div id="newToCyna" class="text-center">
+        <div class="auth-divider">New to CYNA?</div>
+        <a href="#" id="createAccountBtn" class="btn btn-auth-secondary">Create your CYNA account</a>
       </div>
     </div>
 

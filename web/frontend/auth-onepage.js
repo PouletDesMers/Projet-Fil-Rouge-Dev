@@ -5,22 +5,28 @@ const EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 
 // Elements
 const msg = document.getElementById("msg");
+const msgTitle = document.getElementById("msgTitle");
+const msgText = document.getElementById("msgText");
 
-// Password toggles
-document.querySelectorAll(".password-toggle").forEach((button) => {
-  button.innerHTML = EYE_ICON; // Initial icon
-  button.addEventListener("click", () => {
-    const inputId = button.getAttribute("data-target");
-    const input = document.getElementById(inputId);
-    if (input.type === "password") {
-      input.type = "text";
-      button.innerHTML = EYE_OFF_ICON;
-    } else {
-      input.type = "password";
-      button.innerHTML = EYE_ICON;
-    }
+// Password toggles logic
+function initPasswordToggles() {
+  document.querySelectorAll(".password-toggle-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const inputId = button.getAttribute("data-target");
+      const input = document.getElementById(inputId);
+      const icon = button.querySelector("i");
+      
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace("bi-eye", "bi-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.replace("bi-eye-slash", "bi-eye");
+      }
+    });
   });
-});
+}
+initPasswordToggles();
 
 const emailForm = document.getElementById("emailForm");
 const emailInput = document.getElementById("email");
@@ -29,33 +35,73 @@ const loginForm = document.getElementById("loginForm");
 const loginEmail = document.getElementById("loginEmail");
 const loginPassword = document.getElementById("loginPassword");
 
+const twoFAForm = document.getElementById("twoFAForm");
+const totpCodeInput = document.getElementById("totpCodeInput");
+const backToLogin = document.getElementById("backToLogin");
+
 const registerForm = document.getElementById("registerForm");
-const registerEmail = document.getElementById("registerEmail");
+const registerEmailInput = document.getElementById("registerEmailInput");
 const regPassword = document.getElementById("regPassword");
 const regPassword2 = document.getElementById("regPassword2");
 
 const back1 = document.getElementById("back1");
 const back2 = document.getElementById("back2");
 
+const newToCyna = document.getElementById("newToCyna");
+const createAccountBtn = document.getElementById("createAccountBtn");
+const authTitle = document.getElementById("authTitle");
+
+const helpTrigger = document.getElementById("helpTrigger");
+const helpLinks = document.getElementById("helpLinks");
+
+if (helpTrigger) {
+  helpTrigger.querySelector("a").addEventListener("click", (e) => {
+    e.preventDefault();
+    const icon = helpTrigger.querySelector("i");
+    helpLinks.classList.toggle("d-none");
+    if (helpLinks.classList.contains("d-none")) {
+       icon.className = "bi bi-caret-right-fill small text-muted";
+    } else {
+       icon.className = "bi bi-caret-down-fill small text-muted";
+    }
+  });
+}
+
 // Gestion du bouton 2FA
 const twoFABtn = document.getElementById("twoFABtn");
 
 let currentEmail = "";
 
-function showMsg(type, text) {
-  msg.className = `alert alert-${type}`;
-  msg.textContent = text;
+function showMsg(type, text, title = "There was a problem") {
+  msgTitle.textContent = title;
+  msgText.textContent = text;
   msg.classList.remove("d-none");
+  // type is not used with the new amazon style box but kept for compatibility
 }
 function hideMsg() {
   msg.classList.add("d-none");
 }
 
 function showStep(step) {
-  // step: "email" | "login" | "register"
+  // step: "email" | "login" | "twofa" | "register"
   emailForm.classList.toggle("d-none", step !== "email");
   loginForm.classList.toggle("d-none", step !== "login");
+  twoFAForm.classList.toggle("d-none", step !== "twofa");
   registerForm.classList.toggle("d-none", step !== "register");
+  
+  // Amazon specific: Title changes or disappears
+  if (step === "email" || step === "login") {
+    authTitle.textContent = "Sign in";
+    authTitle.classList.remove("d-none");
+    newToCyna.classList.toggle("d-none", step === "login");
+  } else if (step === "twofa") {
+    authTitle.classList.add("d-none");
+    newToCyna.classList.add("d-none");
+  } else {
+    // Register has its own title inside the form
+    authTitle.classList.add("d-none");
+    newToCyna.classList.add("d-none");
+  }
 }
 
 function isPasswordValid(pwd) {
@@ -110,24 +156,27 @@ emailForm.addEventListener("submit", async (e) => {
   if (!currentEmail) return;
 
   try {
-    showMsg("secondary", "Checking...");
-
     const exists = await emailExists(currentEmail);
 
-    hideMsg();
     if (exists) {
       loginEmail.textContent = currentEmail;
       loginPassword.value = "";
       showStep("login");
     } else {
-      registerEmail.textContent = currentEmail;
-      registerForm.reset();
-      // keep email in memory
-      showStep("register");
+      showMsg("danger", "We cannot find an account with that e-mail address");
     }
   } catch (err) {
     showMsg("danger", err.message);
   }
+});
+
+// Create account button (Amazon style step)
+createAccountBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  hideMsg();
+  currentEmail = emailInput.value.trim().toLowerCase();
+  registerEmailInput.value = currentEmail;
+  showStep("register");
 });
 
 // Back buttons
@@ -146,8 +195,6 @@ loginForm.addEventListener("submit", async (e) => {
   hideMsg();
 
   try {
-    showMsg("secondary", "Connecting...");
-
     const result = await postJSON(`${API_BASE}/api/login`, {
       email: currentEmail,
       password: loginPassword.value,
@@ -155,30 +202,8 @@ loginForm.addEventListener("submit", async (e) => {
 
     // Check if 2FA is required
     if (result?.requires_2fa) {
-      hideMsg();
-      // Show 2FA input
-      const totpCode = prompt("Enter your 2FA code (6 digits):");
-      if (!totpCode) {
-        showMsg("warning", "2FA code required to log in.");
-        return;
-      }
-
-      // Retry login with 2FA code
-      showMsg("secondary", "Verifying 2FA code...");
-      const result2fa = await postJSON(`${API_BASE}/api/login`, {
-        email: currentEmail,
-        password: loginPassword.value,
-        totpCode: totpCode,
-      });
-
-      if (result2fa?.token) {
-        localStorage.setItem("token", result2fa.token);
-        if (result2fa.user_id)
-          localStorage.setItem("user_id", result2fa.user_id);
-      }
-
-      showMsg("success", "Connected ✅");
-      setTimeout(() => (window.location.href = "/index.html"), 500);
+      showStep("twofa");
+      totpCodeInput.focus();
       return;
     }
 
@@ -187,11 +212,47 @@ loginForm.addEventListener("submit", async (e) => {
       if (result.user_id) localStorage.setItem("user_id", result.user_id);
     }
 
-    showMsg("success", "Connected ✅");
+    showMsg("success", "Connected ✅", "Success");
     setTimeout(() => (window.location.href = "/index.html"), 500);
   } catch (err) {
     showMsg("danger", err.message);
   }
+});
+
+// 2FA Submit
+twoFAForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hideMsg();
+  
+  const code = totpCodeInput.value.trim();
+  if (code.length !== 6) {
+    showMsg("danger", "Please enter a valid 6-digit code.");
+    return;
+  }
+
+  try {
+    const result = await postJSON(`${API_BASE}/api/login`, {
+      email: currentEmail,
+      password: loginPassword.value,
+      totpCode: code,
+    });
+
+    if (result?.token) {
+      localStorage.setItem("token", result.token);
+      if (result.user_id) localStorage.setItem("user_id", result.user_id);
+      
+      showMsg("success", "Connected ✅", "Success");
+      setTimeout(() => (window.location.href = "/index.html"), 500);
+    }
+  } catch (err) {
+    showMsg("danger", err.message);
+    totpCodeInput.value = "";
+  }
+});
+
+backToLogin.addEventListener("click", (e) => {
+  e.preventDefault();
+  showStep("login");
 });
 
 // Register submit
@@ -213,23 +274,18 @@ registerForm.addEventListener("submit", async (e) => {
   }
 
   try {
-    showMsg("secondary", "Creating account...");
-
+    const emailToUse = currentEmail || emailInput.value.trim().toLowerCase();
+    
     await postJSON(`${API_BASE}/api/users`, {
-      email: currentEmail,
+      email: emailToUse,
       password: pwd,
       lastName: formData.lastName,
       firstName: formData.firstName,
-      phone: formData.phone || "",
-      // role: "user",
-      // status: "active",
     });
 
-    showMsg("success", "Account created ✅ You can now log in.");
-    setTimeout(() => {
-      showStep("login");
-      loginEmail.textContent = currentEmail;
-    }, 600);
+    showStep("login");
+    loginEmail.textContent = emailToUse;
+    showMsg("success", "Account created ✅ You can now log in.", "Success");
   } catch (err) {
     showMsg("danger", err.message);
   }
