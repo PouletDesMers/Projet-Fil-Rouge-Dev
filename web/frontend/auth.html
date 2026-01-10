@@ -277,21 +277,28 @@
               required
             />
           </div>
-
-          <div class="row g-2">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Prénom</label>
-              <input name="prenom" class="form-control" required />
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Nom</label>
-              <input name="nom" class="form-control" required />
-            </div>
+          
+          <button class="btn btn-auth-primary mb-3" type="submit">Verify and Sign in</button>
+          
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="trustDevice">
+            <label class="form-check-label small" for="trustDevice">Don't ask for codes on this device</label>
           </div>
+          
+          <a href="#" id="backToLogin" class="small text-decoration-none">Back to password</a>
+        </form>
 
-          <div class="mb-3">
-            <label class="form-label">Téléphone</label>
-            <input name="telephone" class="form-control" />
+        <!-- STEP 2B: Inscription (Register) -->
+        <form id="registerForm" class="d-none step-fade">
+          <div class="auth-title">Create account</div>
+          
+          <div class="mb-2">
+            <label class="auth-label">First name</label>
+            <input name="firstName" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="auth-label">Last name</label>
+            <input name="lastName" class="form-control" required />
           </div>
           <div class="mb-2">
             <label class="auth-label">Email</label>
