@@ -160,10 +160,10 @@
         })
         .then((user) => {
           if (!user) return;
-          document.getElementById("prenom").value = user.prenom || "";
-          document.getElementById("nom").value = user.nom || "";
+          document.getElementById("prenom").value = user.firstName || "";
+          document.getElementById("nom").value = user.lastName || "";
           document.getElementById("email").value = user.email || "";
-          document.getElementById("telephone").value = user.telephone || "";
+          document.getElementById("telephone").value = user.phone || "";
 
           if (user.totp_enabled) {
             document.getElementById("setupTotpBtn").style.display = "none";
@@ -184,10 +184,10 @@
       document.getElementById("profileForm").addEventListener("submit", (e) => {
         e.preventDefault();
         const data = {
-          prenom: document.getElementById("prenom").value,
-          nom: document.getElementById("nom").value,
+          firstName: document.getElementById("prenom").value,
+          lastName: document.getElementById("nom").value,
           email: document.getElementById("email").value,
-          telephone: document.getElementById("telephone").value,
+          phone: document.getElementById("telephone").value,
         };
 
         fetch(`/api/user/profile`, {
