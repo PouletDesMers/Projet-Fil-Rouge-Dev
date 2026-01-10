@@ -6,59 +6,59 @@ import (
 )
 
 type Categorie struct {
-	ID          int    `json:"id_categorie"`
-	Nom         string `json:"nom"`
+	ID          int    `json:"id"`
+	Nom         string `json:"name"`
 	Description string `json:"description"`
-	Actif       bool   `json:"actif"`
+	Actif       bool   `json:"active"`
 }
 
 type Service struct {
-	ID          int    `json:"id_service"`
-	Nom         string `json:"nom"`
+	ID          int    `json:"id"`
+	Nom         string `json:"name"`
 	Description string `json:"description"`
-	Actif       bool   `json:"actif"`
-	IDCategorie int    `json:"id_categorie"`
+	Actif       bool   `json:"active"`
+	IDCategorie int    `json:"categoryId"`
 }
 
 type Produit struct {
-	ID          int    `json:"id_produit"`
-	Nom         string `json:"nom"`
+	ID          int    `json:"id"`
+	Nom         string `json:"name"`
 	Description string `json:"description"`
-	SurDevis    bool   `json:"sur_devis"`
-	Actif       bool   `json:"actif"`
-	IDService   int    `json:"id_service"`
+	SurDevis    bool   `json:"onQuote"`
+	Actif       bool   `json:"active"`
+	IDService   int    `json:"serviceId"`
 }
 
 type Tarification struct {
-	ID          int     `json:"id_tarification"`
-	Prix        float64 `json:"prix"`
-	Unite       string  `json:"unite"`
-	Periodicite string  `json:"periodicite"`
-	Actif       bool    `json:"actif"`
-	IDProduit   int     `json:"id_produit"`
+	ID          int     `json:"id"`
+	Prix        float64 `json:"price"`
+	Unite       string  `json:"unit"`
+	Periodicite string  `json:"periodicity"`
+	Actif       bool    `json:"active"`
+	IDProduit   int     `json:"productId"`
 }
 
 type Entreprise struct {
-	ID           int       `json:"id_entreprise"`
-	Nom          string    `json:"nom"`
-	Secteur      string    `json:"secteur"`
-	Taille       string    `json:"taille"`
-	Pays         string    `json:"pays"`
-	DateCreation time.Time `json:"date_creation"`
+	ID           int       `json:"id"`
+	Nom          string    `json:"name"`
+	Secteur      string    `json:"sector"`
+	Taille       string    `json:"size"`
+	Pays         string    `json:"country"`
+	DateCreation time.Time `json:"createdAt"`
 }
 
 type Utilisateur struct {
-	ID                int        `json:"id_utilisateur"`
+	ID                int        `json:"id"`
 	Email             string     `json:"email"`
-	MotDePasse        string     `json:"mot_de_passe"`
-	Nom               string     `json:"nom"`
-	Prenom            string     `json:"prenom"`
-	Telephone         string     `json:"telephone"`
+	MotDePasse        string     `json:"password"`
+	Nom               string     `json:"lastName"`
+	Prenom            string     `json:"firstName"`
+	Telephone         string     `json:"phone"`
 	Role              string     `json:"role"`
-	Statut            string     `json:"statut"`
-	DateCreation      time.Time  `json:"date_creation"`
-	DerniereConnexion *time.Time `json:"derniere_connexion"`
-	IDEntreprise      *int       `json:"id_entreprise"`
+	Statut            string     `json:"status"`
+	DateCreation      time.Time  `json:"createdAt"`
+	DerniereConnexion *time.Time `json:"lastLogin"`
+	IDEntreprise      *int       `json:"companyId"`
 	// 2FA fields
 	TotpSecret           *string `json:"-"`
 	TotpEnabled          bool    `json:"totp_enabled"`
@@ -68,58 +68,58 @@ type Utilisateur struct {
 }
 
 type Abonnement struct {
-	ID                 int        `json:"id_abonnement"`
-	DateDebut          time.Time  `json:"date_debut"`
-	DateFin            *time.Time `json:"date_fin"`
-	Quantite           *int       `json:"quantite"`
-	Statut             string     `json:"statut"`
-	RenouvellementAuto bool       `json:"renouvellement_auto"`
-	IDEntreprise       int        `json:"id_entreprise"`
-	IDProduit          int        `json:"id_produit"`
-	IDTarification     int        `json:"id_tarification"`
+	ID                 int        `json:"id"`
+	DateDebut          time.Time  `json:"startDate"`
+	DateFin            *time.Time `json:"endDate"`
+	Quantite           *int       `json:"quantity"`
+	Statut             string     `json:"status"`
+	RenouvellementAuto bool       `json:"autoRenewal"`
+	IDEntreprise       int        `json:"companyId"`
+	IDProduit          int        `json:"productId"`
+	IDTarification     int        `json:"pricingId"`
 }
 
 type Commande struct {
-	ID            int       `json:"id_commande"`
-	DateCommande  time.Time `json:"date_commande"`
-	MontantTotal  float64   `json:"montant_total"`
-	Statut        string    `json:"statut"`
-	IDUtilisateur int       `json:"id_utilisateur"`
+	ID            int       `json:"id"`
+	DateCommande  time.Time `json:"orderDate"`
+	MontantTotal  float64   `json:"totalAmount"`
+	Statut        string    `json:"status"`
+	IDUtilisateur int       `json:"userId"`
 }
 
 type Facture struct {
-	ID          int       `json:"id_facture"`
-	DateFacture time.Time `json:"date_facture"`
-	Montant     float64   `json:"montant"`
-	LienPDF     string    `json:"lien_pdf"`
-	IDCommande  int       `json:"id_commande"`
+	ID          int       `json:"id"`
+	DateFacture time.Time `json:"invoiceDate"`
+	Montant     float64   `json:"amount"`
+	LienPDF     string    `json:"pdfLink"`
+	IDCommande  int       `json:"orderId"`
 }
 
 type Paiement struct {
-	ID               int       `json:"id_paiement"`
-	Moyen            string    `json:"moyen"`
-	Statut           string    `json:"statut"`
-	DatePaiement     time.Time `json:"date_paiement"`
-	ReferenceExterne string    `json:"reference_externe"`
-	IDCommande       int       `json:"id_commande"`
+	ID               int       `json:"id"`
+	Moyen            string    `json:"method"`
+	Statut           string    `json:"status"`
+	DatePaiement     time.Time `json:"paymentDate"`
+	ReferenceExterne string    `json:"externalReference"`
+	IDCommande       int       `json:"orderId"`
 }
 
 type TicketSupport struct {
-	ID            int       `json:"id_ticket"`
-	Sujet         string    `json:"sujet"`
+	ID            int       `json:"id"`
+	Sujet         string    `json:"subject"`
 	Message       string    `json:"message"`
-	Statut        string    `json:"statut"`
-	DateCreation  time.Time `json:"date_creation"`
-	IDUtilisateur int       `json:"id_utilisateur"`
+	Statut        string    `json:"status"`
+	DateCreation  time.Time `json:"createdAt"`
+	IDUtilisateur int       `json:"userId"`
 }
 
 type Notification struct {
-	ID            int       `json:"id_notification"`
+	ID            int       `json:"id"`
 	Type          string    `json:"type"`
 	Message       string    `json:"message"`
-	Lu            bool      `json:"lu"`
-	DateCreation  time.Time `json:"date_creation"`
-	IDUtilisateur int       `json:"id_utilisateur"`
+	Lu            bool      `json:"read"`
+	DateCreation  time.Time `json:"createdAt"`
+	IDUtilisateur int       `json:"userId"`
 }
 
 type contextKey string

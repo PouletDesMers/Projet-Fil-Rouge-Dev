@@ -1,94 +1,145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CYNA — Accueil</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Accueil</title>
 
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap Icons (loupe + panier) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons (loupe + panier) -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
 
-  <!-- Charte graphique -->
-  <link rel="stylesheet" href="/style.css">
-</head>
+    <!-- Charte graphique -->
+    <link rel="stylesheet" href="/style.css" />
+  </head>
 
-<body>
+  <body>
+    <!-- NAVBAR -->
+    <div id="navbar-container"></div>
 
-  <!-- NAVBAR -->
-  <div id="navbar-container"></div>
-
-<div id="appRoot">
-  <!-- CAROUSEL -->
-  <div class="container mt-3">
-    <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
-      <div class="carousel-indicators">
-        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0"
-                class="active" aria-current="true" aria-label="Slide 1"></button>
-        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"
-                aria-label="Slide 2"></button>
-        <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"
-                aria-label="Slide 3"></button>
-      </div>
-
-      <div class="carousel-inner shadow-sm">
-        <!-- Remplace par tes images locales si tu veux: /img/slide1.jpg -->
-        <div class="carousel-item active">
-          <img src="https://picsum.photos/1200/360?random=1" class="d-block w-100" alt="Slide 1">
-        </div>
-        <div class="carousel-item">
-          <img src="https://picsum.photos/1200/360?random=2" class="d-block w-100" alt="Slide 2">
-        </div>
-        <div class="carousel-item">
-          <img src="https://picsum.photos/1200/360?random=3" class="d-block w-100" alt="Slide 3">
-        </div>
-      </div>
-
-      <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Previous</span>
-      </button>
-      <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Next</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- CONTENU ACCUEIL (exemple) -->
-  <div class="container my-4">
-    <div class="row g-3">
-      <div class="col-lg-8">
-        <div class="card shadow-sm border-0">
-          <div class="card-body">
-            <h2 class="h5 mb-2">Bienvenue sur CYNA</h2>
-            <p class="mb-0 text-muted">
-              Navigation: Accueil / Catégories / Produit, recherche via la barre, panier via icône.
-            </p>
+    <div id="appRoot">
+      <!-- CAROUSEL -->
+      <div class="container mt-3">
+        <div
+          id="carouselExampleIndicators"
+          class="carousel slide"
+          data-bs-ride="carousel"
+        >
+          <div class="carousel-indicators">
+            <button
+              type="button"
+              data-bs-target="#carouselExampleIndicators"
+              data-bs-slide-to="0"
+              class="active"
+              aria-current="true"
+              aria-label="Slide 1"
+            ></button>
+            <button
+              type="button"
+              data-bs-target="#carouselExampleIndicators"
+              data-bs-slide-to="1"
+              aria-label="Slide 2"
+            ></button>
+            <button
+              type="button"
+              data-bs-target="#carouselExampleIndicators"
+              data-bs-slide-to="2"
+              aria-label="Slide 3"
+            ></button>
           </div>
+
+          <div class="carousel-inner shadow-sm">
+            <div class="carousel-item active">
+              <img
+                src="https://placehold.co/1200x360/351E90/FFFFFF?text=Advanced+Endpoint+Protection"
+                class="d-block w-100"
+                alt="Slide 1"
+              />
+            </div>
+            <div class="carousel-item">
+              <img
+                src="https://placehold.co/1200x360/5610C0/FFFFFF?text=Global+SOC+Monitoring"
+                class="d-block w-100"
+                alt="Slide 2"
+              />
+            </div>
+            <div class="carousel-item">
+              <img
+                src="https://placehold.co/1200x360/7602F9/FFFFFF?text=24/7+Security+Assistance"
+                class="d-block w-100"
+                alt="Slide 3"
+              />
+            </div>
+          </div>
+
+          <button
+            class="carousel-control-prev"
+            type="button"
+            data-bs-target="#carouselExampleIndicators"
+            data-bs-slide="prev"
+          >
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button
+            class="carousel-control-next"
+            type="button"
+            data-bs-target="#carouselExampleIndicators"
+            data-bs-slide="next"
+          >
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
         </div>
       </div>
 
-      <div class="col-lg-4">
-        <div class="card shadow-sm border-0">
-          <div class="card-body">
-            <h3 class="h6">Accès rapide</h3>
-            <div class="d-grid gap-2">
-              <a class="btn btn-outline-secondary" href="/produit.html">Voir tous les produits</a>
-              <a class="btn btn-outline-secondary" href="#" id="homeCartBtn">Voir mon panier</a>
-              <a class="btn btn-cyna" href="/auth.html">Connexion / Inscription</a>
+      <!-- CONTENU ACCUEIL (exemple) -->
+      <div class="container my-4">
+        <div class="row g-3">
+          <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <h2 class="h5 mb-2">Bienvenue sur CYNA</h2>
+                <p class="mb-0 text-muted">
+                  Navigation: Accueil / Catégories / Produit, recherche via la
+                  barre, panier via icône.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+              <div class="card-body">
+                <h3 class="h6">Accès rapide</h3>
+                <div class="d-grid gap-2">
+                  <a class="btn btn-outline-secondary" href="/produit.html"
+                    >Voir tous les produits</a
+                  >
+                  <a class="btn btn-outline-secondary" href="#" id="homeCartBtn"
+                    >Voir mon panier</a
+                  >
+                  <a class="btn btn-cyna" href="/auth.html"
+                    >Connexion / Inscription</a
+                  >
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-  <!-- Bootstrap JS (dropdown + carousel) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="/navbar.js"></script>
-  <script src="/cart.js"></script>
-</body>
+    <!-- Bootstrap JS (dropdown + carousel) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/navbar.js"></script>
+    <script src="/cart.js"></script>
+  </body>
 </html>

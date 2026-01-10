@@ -1,355 +1,676 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CYNA — Produits</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Produits</title>
 
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
 
-  <!-- Charte graphique -->
-  <link rel="stylesheet" href="/style.css">
+    <!-- Charte graphique -->
+    <link rel="stylesheet" href="/style.css" />
 
-  <style>
-    /* Styles personnalisés pour les produits */
+    <style>
+      /* Styles personnalisés pour les produits */
 
-    .product-card {
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.45s;
-      border: 0;
-      border-radius: 14px;
-      background: linear-gradient(180deg,#ffffff 0%, #fbfbff 100%);
-      will-change: transform;
-    }
+      .product-card {
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1),
+          box-shadow 0.45s;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+        will-change: transform;
+      }
 
-    .product-card:hover {
-      transform: translateY(-14px) scale(1.02);
-      box-shadow: 0 30px 60px rgba(53, 30, 144, 0.18);
-    }
+      .product-card:hover {
+        transform: translateY(-14px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(53, 30, 144, 0.18);
+      }
 
-    .category-section {
-      border: 2px solid var(--cyna-primary);
-      border-radius: 16px;
-      background: white;
-    }
+      .category-section {
+        border: 2px solid var(--cyna-primary);
+        border-radius: 16px;
+        background: white;
+      }
 
-    .price-badge {
-      background: linear-gradient(135deg, var(--cyna-accent) 0%, var(--cyna-primary) 100%);
-      padding: .35rem .9rem;
-      border-radius: 999px;
-      box-shadow: 0 6px 18px rgba(86,16,192,0.12);
-      transform: translateZ(0);
-    }
+      .price-badge {
+        background: linear-gradient(
+          135deg,
+          var(--cyna-accent) 0%,
+          var(--cyna-primary) 100%
+        );
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        box-shadow: 0 6px 18px rgba(86, 16, 192, 0.12);
+        transform: translateZ(0);
+      }
 
-    .icon-gradient {
-      background: linear-gradient(135deg, var(--cyna-accent) 0%, var(--cyna-primary) 100%);
-    }
-    
-    /* Primary/secondary buttons used by product cards */
-    .btn-primary {
-      background: linear-gradient(90deg, var(--cyna-accent) 0%, var(--cyna-primary) 100%);
-      border: none;
-      color: #fff;
-      box-shadow: 0 10px 30px rgba(86,16,192,0.16);
-      transition: transform .25s, box-shadow .25s;
-    }
-    .btn-primary:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(86,16,192,0.2); }
+      .icon-gradient {
+        background: linear-gradient(
+          135deg,
+          var(--cyna-accent) 0%,
+          var(--cyna-primary) 100%
+        );
+      }
 
-    .btn-secondary {
-      background: var(--cyna-primary);
-      border: none;
-      color: #fff;
-    }
-    .btn-secondary:hover { background: var(--cyna-dark); }
+      /* Primary/secondary buttons used by product cards */
+      .btn-primary {
+        background: linear-gradient(
+          90deg,
+          var(--cyna-accent) 0%,
+          var(--cyna-primary) 100%
+        );
+        border: none;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(86, 16, 192, 0.16);
+        transition: transform 0.25s, box-shadow 0.25s;
+      }
+      .btn-primary:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 40px rgba(86, 16, 192, 0.2);
+      }
 
-    .btn-outline {
-      border: 2px solid #fff;
-      background: transparent;
-      color: #fff;
-    }
-    /* Product icon wrapper: responsive sizing for mobile and desktop */
-    .product-icon-wrap {
-      width: 88px;
-      height: 88px;
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto .75rem auto;
-      background: linear-gradient(135deg, rgba(118,2,249,0.10), rgba(86,16,192,0.07));
-      border-radius: 16px;
-      padding: .45rem;
-      box-shadow: 0 12px 30px rgba(53,30,144,0.08);
-      transition: transform .35s, box-shadow .35s;
-    }
+      .btn-secondary {
+        background: var(--cyna-primary);
+        border: none;
+        color: #fff;
+      }
+      .btn-secondary:hover {
+        background: var(--cyna-dark);
+      }
 
-    .product-icon {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: inline-block;
-      border-radius: 10px;
-      box-shadow: inset 0 4px 10px rgba(0,0,0,0.06);
-    }
+      .btn-outline {
+        border: 2px solid #fff;
+        background: transparent;
+        color: #fff;
+      }
+      /* Product icon wrapper: responsive sizing for mobile and desktop */
+      .product-icon-wrap {
+        width: 88px;
+        height: 88px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem auto;
+        background: linear-gradient(
+          135deg,
+          rgba(118, 2, 249, 0.1),
+          rgba(86, 16, 192, 0.07)
+        );
+        border-radius: 16px;
+        padding: 0.45rem;
+        box-shadow: 0 12px 30px rgba(53, 30, 144, 0.08);
+        transition: transform 0.35s, box-shadow 0.35s;
+      }
 
-    /* Larger on desktop */
-    @media (min-width: 992px) {
-      .product-icon-wrap { width: 120px; height: 120px; }
-    }
+      .product-icon {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: inline-block;
+        border-radius: 10px;
+        box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.06);
+      }
 
-    /* Slightly larger on small screens so the icon is clear */
-    @media (max-width: 576px) {
-      .product-icon-wrap { width: 100px; height: 100px; }
-      .product-card { padding: 1rem; }
-      .product-card h4 { font-size: 1rem; }
-    }
+      /* Larger on desktop */
+      @media (min-width: 992px) {
+        .product-icon-wrap {
+          width: 120px;
+          height: 120px;
+        }
+      }
 
-    /* Ribbon */
-    .ribbon {
-      position: absolute;
-      right: -42px;
-      top: 12px;
-      background: linear-gradient(90deg,var(--cyna-accent),var(--cyna-primary));
-      color: #fff;
-      padding: .35rem 2.8rem;
-      transform: rotate(35deg);
-      font-size: .75rem;
-      font-weight: 700;
-      box-shadow: 0 8px 18px rgba(86,16,192,0.16);
-      border-radius: 4px;
-      z-index: 5;
-    }
+      /* Slightly larger on small screens so the icon is clear */
+      @media (max-width: 576px) {
+        .product-icon-wrap {
+          width: 100px;
+          height: 100px;
+        }
+        .product-card {
+          padding: 1rem;
+        }
+        .product-card h4 {
+          font-size: 1rem;
+        }
+      }
 
-    /* subtle floating animation for icons */
-    @keyframes floaty { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
-    .product-icon { animation: floaty 6s ease-in-out infinite; }
-  </style>
-</head>
+      /* Ribbon */
+      .ribbon {
+        position: absolute;
+        right: -42px;
+        top: 12px;
+        background: linear-gradient(
+          90deg,
+          var(--cyna-accent),
+          var(--cyna-primary)
+        );
+        color: #fff;
+        padding: 0.35rem 2.8rem;
+        transform: rotate(35deg);
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(86, 16, 192, 0.16);
+        border-radius: 4px;
+        z-index: 5;
+      }
 
-<body>
+      /* subtle floating animation for icons */
+      @keyframes floaty {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      .product-icon {
+        animation: floaty 6s ease-in-out infinite;
+      }
+    </style>
+  </head>
 
-  <!-- NAVBAR -->
-  <div id="navbar-container"></div>
+  <body>
+    <!-- NAVBAR -->
+    <div id="navbar-container"></div>
 
-  <div class="container mt-5">
-    <section class="py-5 text-center">
-      <h1 style="color: #351E90;" class="mb-3">Nos produits de cybersécurité</h1>
-      <p class="text-muted">Des offres claires et adaptées aux besoins de chaque entreprise.</p>
-    </section>
+    <div class="container mt-5">
+      <section class="py-5 text-center">
+        <h1 style="color: #351e90" class="mb-3">
+          Nos produits de cybersécurité
+        </h1>
+        <p class="text-muted">
+          Des offres claires et adaptées aux besoins de chaque entreprise.
+        </p>
+      </section>
 
-    <!-- CATÉGORIE 1: DÉTECTION ET RÉPONSE -->
-    <section id="detection-response" class="py-4">
-      <div class="category-section p-4 mb-4">
-        <div class="mb-3">
-          <h2 class="h4 mb-2" style="color: var(--cyna-dark);">DÉTECTION ET RÉPONSE</h2>
-          <p class="text-muted mb-3">Identifier et bloquer rapidement les menaces informatiques.</p>
-        </div>
+      <!-- CATÉGORIE 1: DÉTECTION ET RÉPONSE -->
+      <section id="detection-response" class="py-4">
+        <div class="category-section p-4 mb-4">
+          <div class="mb-3">
+            <h2 class="h4 mb-2" style="color: var(--cyna-dark)">
+              DÉTECTION ET RÉPONSE
+            </h2>
+            <p class="text-muted mb-3">
+              Identifier et bloquer rapidement les menaces informatiques.
+            </p>
+          </div>
 
-        <!-- EDR -->
-        <div class="mb-4">
-          <h3 class="h5 mb-2" style="color: var(--cyna-dark);">EDR (Endpoint Detection &amp; Response)</h3>
-          <p class="text-muted">Protection avancée des ordinateurs et serveurs.</p>
+          <!-- EDR -->
+          <div class="mb-4">
+            <h3 class="h5 mb-2" style="color: var(--cyna-dark)">
+              EDR (Endpoint Detection &amp; Response)
+            </h3>
+            <p class="text-muted">
+              Protection avancée des ordinateurs et serveurs.
+            </p>
 
-          <div class="row g-3 mt-3">
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <span class="ribbon">Meilleure vente</span>
-                <div class="mb-3">
-                  <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"> 
-                    <img src="img/EDR.png" alt="EDR" class="product-icon rounded">
+            <div class="row g-3 mt-3">
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <span class="ribbon">Meilleure vente</span>
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/EDR.png"
+                        alt="EDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA EDR Basic
+                    </h4>
+                    <div
+                      class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                    >
+                      <span class="fw-bold text-white">8,99 €</span>
+                      <small class="text-white-50 ms-1"
+                        >/ endpoint / mois</small
+                      >
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Protection essentielle des postes.
+                    </p>
                   </div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA EDR Basic</h4>
-                  <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">8,99 €</span> <small class="text-white-50 ms-1">/ endpoint / mois</small></div>
-                  <p class="text-muted small mb-0">Protection essentielle des postes.</p>
+                  <div class="mt-auto">
+                    <button
+                      class="btn btn-primary w-100 btn-add-to-cart"
+                      data-id="edr-basic"
+                      data-name="CYNA EDR Basic"
+                      data-price="8.99"
+                    >
+                      Choisir cette offre
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/EDR.png"
+                        alt="EDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA EDR Pro
+                    </h4>
+                    <div
+                      class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                    >
+                      <span class="fw-bold text-white">14,99 €</span>
+                      <small class="text-white-50 ms-1"
+                        >/ endpoint / mois</small
+                      >
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Protection avancée et analyses approfondies.
+                    </p>
+                  </div>
+                  <div class="mt-auto">
+                    <button
+                      class="btn btn-primary w-100 btn-add-to-cart"
+                      data-id="edr-pro"
+                      data-name="CYNA EDR Pro"
+                      data-price="14.99"
+                    >
+                      Choisir cette offre
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/EDR.png"
+                        alt="EDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA EDR Enterprise
+                    </h4>
+                    <div
+                      class="d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                      style="background: var(--cyna-primary)"
+                    >
+                      <span class="fw-bold text-white">Sur devis</span>
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Solution personnalisée pour grandes entreprises.
+                    </p>
+                  </div>
+                  <div class="mt-auto">
+                    <button class="btn btn-secondary w-100">
+                      Demander un devis
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- XDR -->
+          <div class="mb-4">
+            <h3 class="h5 mb-2" style="color: var(--cyna-dark)">
+              XDR (Extended Detection &amp; Response)
+            </h3>
+            <p class="text-muted">
+              Protection globale de l'entreprise (postes, emails, cloud).
+            </p>
+
+            <div class="row g-3 mt-3">
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <span class="ribbon">Populaire</span>
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/XDR.png"
+                        alt="XDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA XDR Standard
+                    </h4>
+                    <div
+                      class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                    >
+                      <span class="fw-bold text-white">15,99 €</span>
+                      <small class="text-white-50 ms-1"
+                        >/ utilisateur / mois</small
+                      >
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Protection étendue multi-environnements.
+                    </p>
+                  </div>
+                  <div class="mt-auto">
+                    <button
+                      class="btn btn-primary w-100 btn-add-to-cart"
+                      data-id="xdr-std"
+                      data-name="CYNA XDR Standard"
+                      data-price="15.99"
+                    >
+                      Choisir cette offre
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/XDR.png"
+                        alt="XDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA XDR Premium
+                    </h4>
+                    <div
+                      class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                    >
+                      <span class="fw-bold text-white">24,99 €</span>
+                      <small class="text-white-50 ms-1"
+                        >/ utilisateur / mois</small
+                      >
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Analyses avancées et corrélation intelligente.
+                    </p>
+                  </div>
+                  <div class="mt-auto">
+                    <button
+                      class="btn btn-primary w-100 btn-add-to-cart"
+                      data-id="xdr-pre"
+                      data-name="CYNA XDR Premium"
+                      data-price="24.99"
+                    >
+                      Choisir cette offre
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div
+                  class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+                >
+                  <div class="mb-3">
+                    <div
+                      class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                    >
+                      <img
+                        src="img/XDR.png"
+                        alt="XDR"
+                        class="product-icon rounded"
+                      />
+                    </div>
+                    <h4 class="h6" style="color: var(--cyna-dark)">
+                      CYNA XDR Ultimate
+                    </h4>
+                    <div
+                      class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                    >
+                      <span class="fw-bold text-white">34,99 €</span>
+                      <small class="text-white-50 ms-1"
+                        >/ utilisateur / mois</small
+                      >
+                    </div>
+                    <p class="text-muted small mb-0">
+                      Protection maximale avec IA prédictive.
+                    </p>
+                  </div>
+                  <div class="mt-auto">
+                    <button class="btn btn-primary w-100">
+                      Choisir cette offre
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CATÉGORIE 2: OPÉRATIONS -->
+      <section id="operations" class="py-4">
+        <div class="category-section p-4">
+          <div class="mb-3">
+            <h2 class="h4 mb-2" style="color: var(--cyna-dark)">OPÉRATIONS</h2>
+            <p class="text-muted">
+              Surveillance humaine et réaction continue face aux incidents.
+            </p>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-4">
+              <div
+                class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+              >
+                <span class="ribbon">Premium</span>
+                <div class="mb-3">
+                  <div
+                    class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                  >
+                    <img
+                      src="img/SOC.png"
+                      alt="SOC"
+                      class="product-icon rounded"
+                    />
+                  </div>
+                  <h4 class="h6" style="color: var(--cyna-dark)">
+                    SOC Essentials
+                  </h4>
+                  <div
+                    class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                  >
+                    <span class="fw-bold text-white">4 999 €</span>
+                    <small class="text-white-50 ms-1">/ mois</small>
+                  </div>
+                  <p class="text-muted small mb-0">
+                    Surveillance de base et alertes.
+                  </p>
                 </div>
                 <div class="mt-auto">
-                  <button class="btn btn-primary w-100 btn-add-to-cart" data-id="edr-basic" data-name="CYNA EDR Basic" data-price="8.99">Choisir cette offre</button>
+                  <button
+                    class="btn btn-primary w-100 btn-add-to-cart"
+                    data-id="soc-ess"
+                    data-name="SOC Essentials"
+                    data-price="4999"
+                  >
+                    Choisir cette offre
+                  </button>
                 </div>
               </div>
             </div>
 
             <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
+              <div
+                class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+              >
                 <div class="mb-3">
-                  <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"> 
-                    <img src="img/EDR.png" alt="EDR" class="product-icon rounded">
+                  <div
+                    class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                  >
+                    <img
+                      src="img/SOC.png"
+                      alt="SOC"
+                      class="product-icon rounded"
+                    />
                   </div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA EDR Pro</h4>
-                  <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">14,99 €</span> <small class="text-white-50 ms-1">/ endpoint / mois</small></div>
-                  <p class="text-muted small mb-0">Protection avancée et analyses approfondies.</p>
+                  <h4 class="h6" style="color: var(--cyna-dark)">
+                    SOC Advanced
+                  </h4>
+                  <div
+                    class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                  >
+                    <span class="fw-bold text-white">8 999 €</span>
+                    <small class="text-white-50 ms-1">/ mois</small>
+                  </div>
+                  <p class="text-muted small mb-0">
+                    Analyse approfondie et réponse rapide.
+                  </p>
                 </div>
                 <div class="mt-auto">
-                  <button class="btn btn-primary w-100 btn-add-to-cart" data-id="edr-pro" data-name="CYNA EDR Pro" data-price="14.99">Choisir cette offre</button>
+                  <button
+                    class="btn btn-primary w-100 btn-add-to-cart"
+                    data-id="soc-adv"
+                    data-name="SOC Advanced"
+                    data-price="8999"
+                  >
+                    Choisir cette offre
+                  </button>
                 </div>
               </div>
             </div>
 
             <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
+              <div
+                class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column"
+              >
                 <div class="mb-3">
-                    <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"> 
-                    <img src="img/EDR.png" alt="EDR" class="product-icon rounded">
+                  <div
+                    class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"
+                  >
+                    <img
+                      src="img/SOC.png"
+                      alt="SOC"
+                      class="product-icon rounded"
+                    />
                   </div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA EDR Enterprise</h4>
-                  <div class="d-inline-flex align-items-baseline px-3 py-1 rounded mb-2" style="background: var(--cyna-primary);"><span class="fw-bold text-white">Sur devis</span></div>
-                  <p class="text-muted small mb-0">Solution personnalisée pour grandes entreprises.</p>
+                  <h4 class="h6" style="color: var(--cyna-dark)">
+                    SOC Premium
+                  </h4>
+                  <div
+                    class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"
+                  >
+                    <span class="fw-bold text-white">14 999 €</span>
+                    <small class="text-white-50 ms-1">/ mois</small>
+                  </div>
+                  <p class="text-muted small mb-0">
+                    Service complet avec accompagnement dédié.
+                  </p>
                 </div>
                 <div class="mt-auto">
-                  <button class="btn btn-secondary w-100">Demander un devis</button>
+                  <button
+                    class="btn btn-primary w-100 btn-add-to-cart"
+                    data-id="soc-pre"
+                    data-name="SOC Premium"
+                    data-price="14999"
+                  >
+                    Choisir cette offre
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- XDR -->
-        <div class="mb-4">
-          <h3 class="h5 mb-2" style="color: var(--cyna-dark);">XDR (Extended Detection &amp; Response)</h3>
-          <p class="text-muted">Protection globale de l'entreprise (postes, emails, cloud).</p>
-
-          <div class="row g-3 mt-3">
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <span class="ribbon">Populaire</span>
-                <div class="mb-3">
-                  <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/XDR.png" alt="XDR" class="product-icon rounded"></div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA XDR Standard</h4>
-                  <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">15,99 €</span> <small class="text-white-50 ms-1">/ utilisateur / mois</small></div>
-                  <p class="text-muted small mb-0">Protection étendue multi-environnements.</p>
-                </div>
-                <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="xdr-std" data-name="CYNA XDR Standard" data-price="15.99">Choisir cette offre</button></div>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <div class="mb-3">
-                  <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/XDR.png" alt="XDR" class="product-icon rounded"></div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA XDR Premium</h4>
-                  <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">24,99 €</span> <small class="text-white-50 ms-1">/ utilisateur / mois</small></div>
-                  <p class="text-muted small mb-0">Analyses avancées et corrélation intelligente.</p>
-                </div>
-                <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="xdr-pre" data-name="CYNA XDR Premium" data-price="24.99">Choisir cette offre</button></div>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <div class="mb-3">
-                  <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/XDR.png" alt="XDR" class="product-icon rounded"></div>
-                  <h4 class="h6" style="color: var(--cyna-dark);">CYNA XDR Ultimate</h4>
-                  <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">34,99 €</span> <small class="text-white-50 ms-1">/ utilisateur / mois</small></div>
-                  <p class="text-muted small mb-0">Protection maximale avec IA prédictive.</p>
-                </div>
-                <div class="mt-auto"><button class="btn btn-primary w-100">Choisir cette offre</button></div>
-              </div>
-            </div>
+      <!-- CTA FINAL -->
+      <section
+        class="py-5 text-center mt-4"
+        style="background: var(--cyna-accent); color: #fff; border-radius: 12px"
+      >
+        <div class="py-4">
+          <h2 id="cta-title" class="h4 mb-2">
+            Besoin d'un accompagnement personnalisé ?
+          </h2>
+          <p class="mb-3 text-white-50">
+            Notre équipe d'experts est à votre disposition pour vous conseiller
+            et vous accompagner dans votre projet de cybersécurité.
+          </p>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-outline px-4 py-2 btn-outline">
+              Demander une démo
+            </button>
+            <button class="btn btn-light px-4 py-2">Contacter un expert</button>
           </div>
         </div>
-
-      </div>
-    </section>
-
-    <!-- CATÉGORIE 2: OPÉRATIONS -->
-    <section id="operations" class="py-4">
-      <div class="category-section p-4">
-        <div class="mb-3">
-          <h2 class="h4 mb-2" style="color: var(--cyna-dark);">OPÉRATIONS</h2>
-          <p class="text-muted">Surveillance humaine et réaction continue face aux incidents.</p>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-              <span class="ribbon">Premium</span>
-                <div class="mb-3">
-                <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/SOC.png" alt="SOC" class="product-icon rounded"></div>
-                <h4 class="h6" style="color: var(--cyna-dark);">SOC Essentials</h4>
-                <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">4 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
-                <p class="text-muted small mb-0">Surveillance de base et alertes.</p>
-              </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-ess" data-name="SOC Essentials" data-price="4999">Choisir cette offre</button></div>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <div class="mb-3">
-                <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/SOC.png" alt="SOC" class="product-icon rounded"></div>
-                <h4 class="h6" style="color: var(--cyna-dark);">SOC Advanced</h4>
-                <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">8 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
-                <p class="text-muted small mb-0">Analyse approfondie et réponse rapide.</p>
-              </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-adv" data-name="SOC Advanced" data-price="8999">Choisir cette offre</button></div>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="product-card p-4 bg-white rounded shadow-sm h-100 d-flex flex-column">
-                <div class="mb-3">
-                <div class="product-icon-wrap d-inline-flex align-items-center justify-content-center rounded mb-3"><img src="img/SOC.png" alt="SOC" class="product-icon rounded"></div>
-                <h4 class="h6" style="color: var(--cyna-dark);">SOC Premium</h4>
-                <div class="price-badge d-inline-flex align-items-baseline px-3 py-1 rounded mb-2"><span class="fw-bold text-white">14 999 €</span> <small class="text-white-50 ms-1">/ mois</small></div>
-                <p class="text-muted small mb-0">Service complet avec accompagnement dédié.</p>
-              </div>
-              <div class="mt-auto"><button class="btn btn-primary w-100 btn-add-to-cart" data-id="soc-pre" data-name="SOC Premium" data-price="14999">Choisir cette offre</button></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CTA FINAL -->
-    <section class="py-5 text-center mt-4" style="background: var(--cyna-accent); color: #fff; border-radius: 12px;">
-      <div class="py-4">
-        <h2 id="cta-title" class="h4 mb-2">Besoin d'un accompagnement personnalisé ?</h2>
-        <p class="mb-3 text-white-50">Notre équipe d'experts est à votre disposition pour vous conseiller et vous accompagner dans votre projet de cybersécurité.</p>
-        <div class="d-flex gap-2 justify-content-center flex-wrap">
-          <button class="btn btn-outline px-4 py-2 btn-outline">Demander une démo</button>
-          <button class="btn btn-light px-4 py-2">Contacter un expert</button>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- FOOTER -->
-  <footer class="footer-cyna">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-4 mb-3 mb-md-0">
-          <h5>À propos de CYNA</h5>
-          <p class="small">Solutions de cybersécurité innovantes pour les entreprises.</p>
-        </div>
-        <div class="col-md-4 mb-3 mb-md-0">
-          <h5>Liens utiles</h5>
-          <ul class="list-unstyled small">
-            <li><a href="/">Accueil</a></li>
-            <li><a href="/categories.html">Catégories</a></li>
-            <li><a href="/produit.html">Produits</a></li>
-          </ul>
-        </div>
-        <div class="col-md-4">
-          <h5>Nous contacter</h5>
-          <ul class="list-unstyled small">
-            <li>Email: <a href="mailto:info@cyna.com">info@cyna.com</a></li>
-            <li>Téléphone: +33 (0)X XX XX XX</li>
-          </ul>
-        </div>
-      </div>
-      <hr class="my-3" style="border-color: rgba(255,255,255,.1);">
-      <div class="text-center small">
-        <p>&copy; 2026 CYNA. Tous droits réservés.</p>
-      </div>
+      </section>
     </div>
-  </footer>
 
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="/navbar.js"></script>
-  <script src="/cart.js"></script>
-</body>
+    <!-- FOOTER -->
+    <footer class="footer-cyna">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-4 mb-3 mb-md-0">
+            <h5>À propos de CYNA</h5>
+            <p class="small">
+              Solutions de cybersécurité innovantes pour les entreprises.
+            </p>
+          </div>
+          <div class="col-md-4 mb-3 mb-md-0">
+            <h5>Liens utiles</h5>
+            <ul class="list-unstyled small">
+              <li><a href="/">Accueil</a></li>
+              <li><a href="/categories.html">Catégories</a></li>
+              <li><a href="/produit.html">Produits</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <h5>Nous contacter</h5>
+            <ul class="list-unstyled small">
+              <li>Email: <a href="mailto:info@cyna.com">info@cyna.com</a></li>
+              <li>Téléphone: +33 (0)X XX XX XX</li>
+            </ul>
+          </div>
+        </div>
+        <hr class="my-3" style="border-color: rgba(255, 255, 255, 0.1)" />
+        <div class="text-center small">
+          <p>&copy; 2026 CYNA. Tous droits réservés.</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/navbar.js"></script>
+    <script src="/cart.js"></script>
+  </body>
 </html>
