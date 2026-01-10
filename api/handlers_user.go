@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp/totp"
@@ -47,7 +48,37 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 
 func createUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var u Utilisateur
-	json.NewDecoder(r.Body).Decode(&u)
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Normalisation de l'email (tout en minuscules et sans espaces)
+	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
+	if u.Email == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Email is required"})
+		return
+	}
+
+	// Vérification si l'utilisateur existe déjà
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM utilisateur WHERE email = $1)", u.Email).Scan(&exists)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Database error: " + err.Error()})
+		return
+	}
+	if exists {
+		// On renvoie un code 409 Conflict pour indiquer que l'email est déjà pris
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "An account with this email already exists"})
+		return
+	}
+
 	if u.Role == "" {
 		u.Role = "client"
 	}
@@ -55,16 +86,27 @@ func createUtilisateur(w http.ResponseWriter, r *http.Request) {
 		u.Statut = "actif"
 	}
 
+	if u.MotDePasse == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Password is required"})
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.MotDePasse), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Error hashing password", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error hashing password: " + err.Error()})
 		return
 	}
 	u.MotDePasse = string(hashedPassword)
 
 	err = db.QueryRow("INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur", u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	json.NewEncoder(w).Encode(u)
@@ -96,7 +138,7 @@ func deleteUtilisateur(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUtilisateurExists(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
+	email := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("email")))
 	if email == "" {
 		http.Error(w, "Email required", http.StatusBadRequest)
 		return
@@ -121,6 +163,8 @@ func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+
+	creds.Email = strings.ToLower(strings.TrimSpace(creds.Email))
 
 	log.Printf("Login attempt for email: '%s'", creds.Email)
 

@@ -263,7 +263,12 @@ registerForm.addEventListener("submit", async (e) => {
   const formData = Object.fromEntries(new FormData(registerForm).entries());
   const pwd = regPassword.value;
   const pwd2 = regPassword2.value;
+  const regEmail = registerEmailInput.value.trim().toLowerCase();
 
+  if (!regEmail) {
+    showMsg("danger", "Email is required.");
+    return;
+  }
   if (!isPasswordValid(pwd)) {
     showMsg("danger", "Password too weak (8+, upper/lower/digit/special).");
     return;
@@ -274,17 +279,15 @@ registerForm.addEventListener("submit", async (e) => {
   }
 
   try {
-    const emailToUse = currentEmail || emailInput.value.trim().toLowerCase();
-    
     await postJSON(`${API_BASE}/api/users`, {
-      email: emailToUse,
+      email: regEmail,
       password: pwd,
       lastName: formData.lastName,
       firstName: formData.firstName,
     });
 
     showStep("login");
-    loginEmail.textContent = emailToUse;
+    loginEmail.textContent = regEmail;
     showMsg("success", "Account created ✅ You can now log in.", "Success");
   } catch (err) {
     showMsg("danger", err.message);

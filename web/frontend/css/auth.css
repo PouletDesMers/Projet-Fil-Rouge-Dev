@@ -1,0 +1,175 @@
+body {
+  background-color: #fff;
+}
+.auth-container {
+  max-width: 350px;
+  margin: 20px auto;
+}
+.auth-logo {
+  display: block;
+  margin: 0 auto 20px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--cyna-dark);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.auth-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px 26px;
+  background: #fff;
+  margin-bottom: 22px;
+}
+.auth-title {
+  font-size: 28px;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+.auth-label {
+  font-size: 13px;
+  font-weight: 700;
+  padding-bottom: 2px;
+}
+.btn-auth-primary {
+  background: linear-gradient(to bottom, #7602F9, #5610C0);
+  border: 1px solid #351E90;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 13px;
+  height: 31px;
+  padding: 0 10px;
+  width: 100%;
+}
+.btn-auth-primary:hover {
+  background: #5610C0;
+  color: #fff !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.auth-legal {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 18px;
+  color: #555;
+}
+.auth-help {
+  font-size: 13px;
+  margin-top: 15px;
+}
+.auth-help a {
+  text-decoration: none;
+  color: #0066c0;
+}
+.auth-help a:hover {
+  color: #c45500;
+  text-decoration: underline;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #767676;
+  font-size: 12px;
+  margin-top: 25px;
+  margin-bottom: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e7e7e7;
+}
+.auth-divider:not(:empty)::before {
+  margin-right: 0.5em;
+}
+.auth-divider:not(:empty)::after {
+  margin-left: 0.5em;
+}
+
+.btn-auth-secondary {
+  background: #eff1f3;
+  background: linear-gradient(to bottom, #f7f8fa, #e7e9ec);
+  border: 1px solid #adb1b8;
+  border-radius: 3px;
+  color: #111;
+  font-size: 13px;
+  height: 31px;
+  width: 100%;
+  text-align: center;
+  line-height: 29px;
+  text-decoration: none;
+  display: block;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+.btn-auth-secondary:hover {
+  background: #e7e9ec;
+  background: linear-gradient(to bottom, #e7e9ec, #d8dee3);
+  border-color: #a2a6ac;
+  color: #111;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+  text-decoration: none;
+}
+
+.form-control:focus {
+  border-color: #e77600;
+  box-shadow: 0 0 3px 2px rgba(228, 121, 17, 0.5);
+}
+
+/* Transitions */
+.step-fade {
+  animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error-box {
+  border: 1px solid #c40000;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+.error-box i {
+  font-size: 1.5rem;
+  color: #c40000;
+}
+.error-box h6 {
+  color: #c40000;
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+.error-box p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.password-container {
+  position: relative;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #767676;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.password-toggle-btn:hover {
+  color: #111;
+}

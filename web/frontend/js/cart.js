@@ -423,13 +423,3 @@ document.addEventListener("navbarLoaded", initCartBindings);
 
 // Expose globalement pour navbar.js
 window.updateCartBadge = updateCartBadge;
-
-// (Optionnel) si tu veux voir le rendu direct sans passer par une page produit :
-// Décommente pour ajouter un item de démo une seule fois.
-/*
-  if (!localStorage.getItem("demoCartDone")) {
-    addToCart({ id: "edr", name: "CYNA EDR", price: 59.99, qty: 1, duration: "Mensuel" });
-    addToCart({ id: "xdr", name: "CYNA XDR", price: 129.99, qty: 1, duration: "Annuel" });
-    localStorage.setItem("demoCartDone", "1");
-  }
-  */
