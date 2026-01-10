@@ -13,14 +13,14 @@ import (
 )
 
 // User Handlers
-func getUtilisateurs(w http.ResponseWriter, r *http.Request) {
+func getusers(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, date_creation, derniere_connexion, id_entreprise FROM utilisateur")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
-	var utilisateurs []Utilisateur
+	var users []Utilisateur
 	for rows.Next() {
 		var u Utilisateur
 		err := rows.Scan(&u.ID, &u.Email, &u.MotDePasse, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
@@ -28,9 +28,9 @@ func getUtilisateurs(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		utilisateurs = append(utilisateurs, u)
+		users = append(users, u)
 	}
-	json.NewEncoder(w).Encode(utilisateurs)
+	json.NewEncoder(w).Encode(users)
 }
 
 func getUtilisateur(w http.ResponseWriter, r *http.Request) {
@@ -112,9 +112,9 @@ func getUtilisateurExists(w http.ResponseWriter, r *http.Request) {
 
 func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var creds struct {
-		Email      string `json:"email"`
-		MotDePasse string `json:"mot_de_passe"`
-		TotpCode   string `json:"totp_code"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		TotpCode string `json:"totpCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		log.Printf("Login: Error decoding body: %v", err)
@@ -136,7 +136,7 @@ func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Login: User ID %d found. totpEnabled: %v, totpSecret.Valid: %v", id, totpEnabled, totpSecret.Valid)
-	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.MotDePasse))
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.Password))
 	if err != nil {
 		log.Printf("Login: Password mismatch: %v", err)
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -253,10 +253,10 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data struct {
-		Prenom    string `json:"prenom"`
-		Nom       string `json:"nom"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
 		Email     string `json:"email"`
-		Telephone string `json:"telephone"`
+		Phone     string `json:"phone"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -265,7 +265,7 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := db.Exec("UPDATE utilisateur SET prenom = $1, nom = $2, email = $3, telephone = $4 WHERE id_utilisateur = $5",
-		data.Prenom, data.Nom, data.Email, data.Telephone, userID)
+		data.FirstName, data.LastName, data.Email, data.Phone, userID)
 
 	if err != nil {
 		log.Printf("Profile Update: Error for user %d: %v", userID, err)

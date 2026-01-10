@@ -7,7 +7,7 @@ const EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const msg = document.getElementById("msg");
 
 // Password toggles
-document.querySelectorAll(".password-toggle").forEach(button => {
+document.querySelectorAll(".password-toggle").forEach((button) => {
   button.innerHTML = EYE_ICON; // Initial icon
   button.addEventListener("click", () => {
     const inputId = button.getAttribute("data-target");
@@ -79,8 +79,13 @@ async function postJSON(url, data) {
     body: JSON.stringify(data),
   });
   let payload = null;
-  try { payload = await res.json(); } catch {}
-  if (!res.ok) throw new Error(payload?.message || payload?.error || `Erreur HTTP ${res.status}`);
+  try {
+    payload = await res.json();
+  } catch {}
+  if (!res.ok)
+    throw new Error(
+      payload?.message || payload?.error || `Erreur HTTP ${res.status}`
+    );
   return payload;
 }
 
@@ -89,7 +94,7 @@ async function emailExists(email) {
   const headers = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const url = `/api/utilisateurs/exists?email=${encodeURIComponent(email)}`;
+  const url = `/api/users/exists?email=${encodeURIComponent(email)}`;
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`Erreur check email (${res.status})`);
   const data = await res.json();
@@ -105,7 +110,7 @@ emailForm.addEventListener("submit", async (e) => {
   if (!currentEmail) return;
 
   try {
-    showMsg("secondary", "Vérification en cours...");
+    showMsg("secondary", "Checking...");
 
     const exists = await emailExists(currentEmail);
 
@@ -117,7 +122,7 @@ emailForm.addEventListener("submit", async (e) => {
     } else {
       registerEmail.textContent = currentEmail;
       registerForm.reset();
-      // on garde l'email en mémoire (pas dans un input visible)
+      // keep email in memory
       showStep("register");
     }
   } catch (err) {
@@ -126,8 +131,14 @@ emailForm.addEventListener("submit", async (e) => {
 });
 
 // Back buttons
-back1.addEventListener("click", () => { hideMsg(); showStep("email"); });
-back2.addEventListener("click", () => { hideMsg(); showStep("email"); });
+back1.addEventListener("click", () => {
+  hideMsg();
+  showStep("email");
+});
+back2.addEventListener("click", () => {
+  hideMsg();
+  showStep("email");
+});
 
 // Login submit
 loginForm.addEventListener("submit", async (e) => {
@@ -135,38 +146,38 @@ loginForm.addEventListener("submit", async (e) => {
   hideMsg();
 
   try {
-    showMsg("secondary", "Connexion...");
+    showMsg("secondary", "Connecting...");
 
-    // ✅ à adapter si ton endpoint login n'est pas /login
     const result = await postJSON(`${API_BASE}/api/login`, {
       email: currentEmail,
-      mot_de_passe: loginPassword.value,
+      password: loginPassword.value,
     });
 
     // Check if 2FA is required
     if (result?.requires_2fa) {
       hideMsg();
       // Show 2FA input
-      const totpCode = prompt("Entrez votre code 2FA (6 chiffres):");
+      const totpCode = prompt("Enter your 2FA code (6 digits):");
       if (!totpCode) {
-        showMsg("warning", "Code 2FA requis pour se connecter.");
+        showMsg("warning", "2FA code required to log in.");
         return;
       }
 
       // Retry login with 2FA code
-      showMsg("secondary", "Vérification du code 2FA...");
+      showMsg("secondary", "Verifying 2FA code...");
       const result2fa = await postJSON(`${API_BASE}/api/login`, {
         email: currentEmail,
-        mot_de_passe: loginPassword.value,
-        totp_code: totpCode,
+        password: loginPassword.value,
+        totpCode: totpCode,
       });
 
       if (result2fa?.token) {
         localStorage.setItem("token", result2fa.token);
-        if (result2fa.user_id) localStorage.setItem("user_id", result2fa.user_id);
+        if (result2fa.user_id)
+          localStorage.setItem("user_id", result2fa.user_id);
       }
-      
-      showMsg("success", "Connecté ✅");
+
+      showMsg("success", "Connected ✅");
       setTimeout(() => (window.location.href = "/index.html"), 500);
       return;
     }
@@ -176,7 +187,7 @@ loginForm.addEventListener("submit", async (e) => {
       if (result.user_id) localStorage.setItem("user_id", result.user_id);
     }
 
-    showMsg("success", "Connecté ✅");
+    showMsg("success", "Connected ✅");
     setTimeout(() => (window.location.href = "/index.html"), 500);
   } catch (err) {
     showMsg("danger", err.message);
@@ -193,30 +204,32 @@ registerForm.addEventListener("submit", async (e) => {
   const pwd2 = regPassword2.value;
 
   if (!isPasswordValid(pwd)) {
-    showMsg("danger", "Mot de passe trop faible (8+, maj/min/chiffre/spécial).");
+    showMsg("danger", "Password too weak (8+, upper/lower/digit/special).");
     return;
   }
   if (pwd !== pwd2) {
-    showMsg("danger", "Les mots de passe ne correspondent pas.");
+    showMsg("danger", "Passwords do not match.");
     return;
   }
 
   try {
-    showMsg("secondary", "Création du compte...");
+    showMsg("secondary", "Creating account...");
 
-    // ✅ à adapter si ton endpoint register n'est pas POST /utilisateurs
-    await postJSON(`${API_BASE}/api/utilisateurs`, {
+    await postJSON(`${API_BASE}/api/users`, {
       email: currentEmail,
-      mot_de_passe: pwd,
-      nom: formData.nom,
-      prenom: formData.prenom,
-      telephone: formData.telephone || "",
+      password: pwd,
+      lastName: formData.lastName,
+      firstName: formData.firstName,
+      phone: formData.phone || "",
       // role: "user",
-      // statut: "actif",
+      // status: "active",
     });
 
-    showMsg("success", "Compte créé ✅ Tu peux te connecter.");
-    setTimeout(() => { showStep("login"); loginEmail.textContent = currentEmail; }, 600);
+    showMsg("success", "Account created ✅ You can now log in.");
+    setTimeout(() => {
+      showStep("login");
+      loginEmail.textContent = currentEmail;
+    }, 600);
   } catch (err) {
     showMsg("danger", err.message);
   }

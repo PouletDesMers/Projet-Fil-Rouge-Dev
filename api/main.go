@@ -103,8 +103,8 @@ func main() {
 
 	// Public routes (No Auth required)
 	r.HandleFunc("/api/login", loginUtilisateur).Methods("POST")
-	r.HandleFunc("/api/utilisateurs", createUtilisateur).Methods("POST")
-	r.HandleFunc("/api/utilisateurs/exists", getUtilisateurExists).Methods("GET")
+	r.HandleFunc("/api/users", createUtilisateur).Methods("POST")
+	r.HandleFunc("/api/users/exists", getUtilisateurExists).Methods("GET")
 
 	// Protected routes
 	api := r.PathPrefix("/api").Subrouter()
@@ -135,10 +135,10 @@ func main() {
 	api.HandleFunc("/entreprises/{id}", getEntreprise).Methods("GET")
 	api.HandleFunc("/entreprises/{id}", updateEntreprise).Methods("PUT")
 	api.HandleFunc("/entreprises/{id}", deleteEntreprise).Methods("DELETE")
-	api.HandleFunc("/utilisateurs", getUtilisateurs).Methods("GET")
-	api.HandleFunc("/utilisateurs/{id}", getUtilisateur).Methods("GET")
-	api.HandleFunc("/utilisateurs/{id}", updateUtilisateur).Methods("PUT")
-	api.HandleFunc("/utilisateurs/{id}", deleteUtilisateur).Methods("DELETE")
+	api.HandleFunc("/users", getusers).Methods("GET")
+	api.HandleFunc("/users/{id}", getUtilisateur).Methods("GET")
+	api.HandleFunc("/users/{id}", updateUtilisateur).Methods("PUT")
+	api.HandleFunc("/users/{id}", deleteUtilisateur).Methods("DELETE")
 	api.HandleFunc("/user/profile", getUserProfile).Methods("GET")
 	api.HandleFunc("/user/profile", updateUserProfile).Methods("PUT")
 
@@ -181,7 +181,7 @@ func main() {
 	api.HandleFunc("/notifications/{id}", updateNotification).Methods("PUT")
 	api.HandleFunc("/notifications/{id}", deleteNotification).Methods("DELETE")
 
-	log.Println("API démarrée en HTTP sur le port 8080")
+	log.Println("API started in HTTP on port 8080")
 
 	http.ListenAndServe(":8080", r)
 }

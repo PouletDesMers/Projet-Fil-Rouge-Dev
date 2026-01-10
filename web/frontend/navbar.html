@@ -1,49 +1,113 @@
 <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
   <div class="container">
-    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/index.html">
-      <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" class="d-inline-block align-text-top">
+    <a
+      class="navbar-brand d-flex align-items-center gap-2 fw-bold"
+      href="/index.html"
+    >
+      <img
+        src="/img/cyna-logo.png"
+        alt="Logo CYNA"
+        height="32"
+        class="d-inline-block align-text-top"
+      />
       <span>CYNA</span>
     </a>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
-            aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#mainNavbar"
+      aria-controls="mainNavbar"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="mainNavbar">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="/index.html">Accueil</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="/index.html">Accueil</a>
+        </li>
         <li class="nav-item"><a class="nav-link" href="#">Catégories</a></li>
-        <li class="nav-item"><a class="nav-link" href="/produit.html">Produits</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="/produit.html">Produits</a>
+        </li>
       </ul>
 
-      <form class="d-flex search-wrap me-lg-3 mb-2 mb-lg-0" action="/recherche.html" method="GET" role="search">
-        <input class="form-control" type="search" name="q" placeholder="Rechercher un produit..." aria-label="Rechercher">
-        <button class="btn btn-cyna" type="submit" aria-label="Lancer la recherche">
+      <form
+        class="d-flex search-wrap me-lg-3 mb-2 mb-lg-0"
+        action="/recherche.html"
+        method="GET"
+        role="search"
+      >
+        <input
+          class="form-control"
+          type="search"
+          name="q"
+          placeholder="Rechercher un produit..."
+          aria-label="Rechercher"
+        />
+        <button
+          class="btn btn-cyna"
+          type="submit"
+          aria-label="Lancer la recherche"
+        >
           <i class="bi bi-search"></i>
         </button>
       </form>
 
       <div class="d-flex align-items-center gap-2">
-        <a class="btn btn-outline-cyna position-relative" href="#" id="navCartBtn" aria-label="Panier">
+        <a
+          class="btn btn-outline-cyna position-relative"
+          href="#"
+          id="navCartBtn"
+          aria-label="Panier"
+        >
           <i class="bi bi-cart3"></i>
-          <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
-                style="background: var(--cyna-accent);">
+          <span
+            id="cartBadge"
+            class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
+            style="background: var(--cyna-accent)"
+          >
             0
           </span>
         </a>
 
         <div class="dropdown d-none" id="accountDropdown">
-          <button class="btn btn-outline-cyna dropdown-toggle" type="button" id="accountMenu"
-                  data-bs-toggle="dropdown" aria-expanded="false">
+          <button
+            class="btn btn-outline-cyna dropdown-toggle"
+            type="button"
+            id="accountMenu"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
             Mon compte
           </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
+          <ul
+            class="dropdown-menu dropdown-menu-end"
+            aria-labelledby="accountMenu"
+          >
             <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
-            <li><a class="dropdown-item" href="/parametres.html">Paramètres</a></li>
-            <li><a class="dropdown-item" href="/mes-commandes.html">Mes commandes</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item text-danger" type="button" id="logoutBtn">Se déconnecter</button></li>
+            <li>
+              <a class="dropdown-item" href="/parametres.html">Paramètres</a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="/mes-commandes.html"
+                >Mes commandes</a
+              >
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <button
+                class="dropdown-item text-danger"
+                type="button"
+                id="logoutBtn"
+              >
+                Se déconnecter
+              </button>
+            </li>
           </ul>
         </div>
         <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S’identifier</a>

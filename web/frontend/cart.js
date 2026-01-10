@@ -1,97 +1,107 @@
-  /***********************
-   * 1) AUTH UI (Moved to navbar.js)
-   ***********************/
+/***********************
+ * 1) AUTH UI (Moved to navbar.js)
+ ***********************/
 
-  /***********************
-   * 2) PANIER STORAGE
-   * On stocke dans localStorage.cartItems :
-   * [{ id, name, price, qty, duration }]
-   ***********************/
-  const CART_KEY = "cartItems";
+/***********************
+ * 2) CART STORAGE
+ * Stored in localStorage.cartItems :
+ * [{ id, name, price, qty, duration }]
+ ***********************/
+const CART_KEY = "cartItems";
 
-  function getCartItems() {
-    try {
-      const raw = localStorage.getItem(CART_KEY);
-      const items = raw ? JSON.parse(raw) : [];
-      return Array.isArray(items) ? items : [];
-    } catch {
-      return [];
-    }
+function getCartItems() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    const items = raw ? JSON.parse(raw) : [];
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
   }
+}
 
-  function saveCartItems(items) {
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
-    updateCartBadge();
+function saveCartItems(items) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  updateCartBadge();
+}
+
+function getCartCount() {
+  return getCartItems().reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
+}
+
+function updateCartBadge() {
+  const cartBadge = document.getElementById("cartBadge");
+  if (!cartBadge) return;
+  const count = getCartCount();
+  if (count > 0) {
+    cartBadge.textContent = String(count);
+    cartBadge.classList.remove("d-none");
+  } else {
+    cartBadge.textContent = "0";
+    cartBadge.classList.add("d-none");
   }
+}
 
-  function getCartCount() {
-    return getCartItems().reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
+// (Optional) helper for later: add a product from the product page
+function addToCart(item) {
+  const items = getCartItems();
+  const idx = items.findIndex(
+    (x) => x.id === item.id && x.duration === item.duration
+  );
+  if (idx >= 0) {
+    items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
+  } else {
+    items.push({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      qty: Number(item.qty) || 1,
+      duration: item.duration || "Monthly",
+    });
   }
+  saveCartItems(items);
+}
 
-  function updateCartBadge() {
-    const cartBadge = document.getElementById("cartBadge");
-    if (!cartBadge) return;
-    const count = getCartCount();
-    if (count > 0) {
-      cartBadge.textContent = String(count);
-      cartBadge.classList.remove("d-none");
-    } else {
-      cartBadge.textContent = "0";
-      cartBadge.classList.add("d-none");
-    }
-  }
+/***********************
+ * 3) SPA ROUTER (Home <-> Cart)
+ ***********************/
+const appRoot = document.getElementById("appRoot");
 
-  // (Optionnel) helper pour plus tard: ajouter un produit depuis la page produit
-  function addToCart(item) {
-    const items = getCartItems();
-    const idx = items.findIndex(x => x.id === item.id && x.duration === item.duration);
-    if (idx >= 0) {
-      items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
-    } else {
-      items.push({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price) || 0,
-        qty: Number(item.qty) || 1,
-        duration: item.duration || "Mensuel",
-      });
-    }
-    saveCartItems(items);
-  }
+// Memorize initial HTML (home) to be able to return to it
+const HOME_HTML = appRoot ? appRoot.innerHTML : "";
 
-  /***********************
-   * 3) SPA ROUTER (Home <-> Panier)
-   ***********************/
-  const appRoot = document.getElementById("appRoot");
+function moneyEUR(n) {
+  return (
+    (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(".", ",") +
+    " €"
+  );
+}
 
-  // On mémorise le HTML initial (accueil) pour pouvoir y revenir
-  const HOME_HTML = appRoot ? appRoot.innerHTML : "";
+function calcTotals(items) {
+  const subtotal = items.reduce(
+    (s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 0),
+    0
+  );
+  const tax = 0; // if you want VAT later
+  const total = subtotal + tax;
+  return { subtotal, tax, total };
+}
 
-  function moneyEUR(n) {
-    return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(".", ",") + " €";
-  }
+function renderHome() {
+  if (!appRoot) return;
+  appRoot.innerHTML = HOME_HTML;
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
 
-  function calcTotals(items) {
-    const subtotal = items.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 0), 0);
-    const tax = 0; // si vous voulez une TVA plus tard
-    const total = subtotal + tax;
-    return { subtotal, tax, total };
-  }
+function renderCart() {
+  if (!appRoot) return;
 
-  function renderHome() {
-    if (!appRoot) return;
-    appRoot.innerHTML = HOME_HTML;
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }
+  const items = getCartItems();
+  const { subtotal, tax, total } = calcTotals(items);
 
-  function renderCart() {
-    if (!appRoot) return;
-
-    const items = getCartItems();
-    const { subtotal, tax, total } = calcTotals(items);
-
-    const itemsHtml = items.length
-      ? items.map((it, index) => `
+  const itemsHtml = items.length
+    ? items
+        .map(
+          (it, index) => `
         <div class="d-flex gap-3 align-items-start border rounded-3 p-3 bg-white shadow-sm">
           <div class="rounded-3 d-flex align-items-center justify-content-center"
                style="width:72px;height:72px;background: var(--cyna-light);">
@@ -102,59 +112,65 @@
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <div class="fw-semibold">${it.name}</div>
-                <div class="text-muted small">Durée : ${it.duration || "Mensuel"}</div>
+                <div class="text-muted small">Duration: ${
+                  it.duration || "Monthly"
+                }</div>
               </div>
 
-              <button class="btn btn-sm btn-outline-danger" data-action="remove" data-index="${index}" aria-label="Supprimer">
+              <button class="btn btn-sm btn-outline-danger" data-action="remove" data-index="${index}" aria-label="Remove">
                 <i class="bi bi-trash"></i>
               </button>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-2">
               <div class="d-flex align-items-center gap-2">
-                <label class="small text-muted mb-0">Quantité</label>
+                <label class="small text-muted mb-0">Quantity</label>
                 <input type="number" min="1" value="${Number(it.qty) || 1}"
                        class="form-control form-control-sm"
                        style="width:90px"
                        data-action="qty" data-index="${index}">
               </div>
 
-              <div class="fw-semibold">${moneyEUR((Number(it.price)||0) * (Number(it.qty)||0))}</div>
+              <div class="fw-semibold">${moneyEUR(
+                (Number(it.price) || 0) * (Number(it.qty) || 0)
+              )}</div>
             </div>
           </div>
         </div>
-      `).join("")
-      : `
+      `
+        )
+        .join("")
+    : `
         <div class="alert alert-light border shadow-sm">
-          Ton panier est vide.
+          Your cart is empty.
         </div>
       `;
 
-    appRoot.innerHTML = `
+  appRoot.innerHTML = `
       <div class="container my-4">
         <div class="d-flex align-items-center justify-content-between mb-3">
-          <h1 class="h4 mb-0">Récapitulatif de mon panier</h1>
+          <h1 class="h4 mb-0">Order Summary</h1>
           <button class="btn btn-outline-secondary btn-sm" id="backToShopBtn">
-            <i class="bi bi-arrow-left"></i> Continuer mes achats
+            <i class="bi bi-arrow-left"></i> Continue shopping
           </button>
         </div>
 
         <div class="row g-3">
-          <!-- COL GAUCHE: Les produits -->
+          <!-- LEFT COL: Products -->
           <div class="col-lg-8">
             <div class="vstack gap-3">
               ${itemsHtml}
             </div>
           </div>
 
-          <!-- COL DROITE: Récap des prix / code promo / chatbot / paiement sécurisé -->
+          <!-- RIGHT COL: Price summary / promo code / chatbot / secure payment -->
           <div class="col-lg-4">
             <div class="card shadow-sm border-0 mb-3">
               <div class="card-body">
-                <h2 class="h6 mb-3">Récap des prix</h2>
+                <h2 class="h6 mb-3">Price Summary</h2>
 
                 <div class="d-flex justify-content-between small mb-2">
-                  <span class="text-muted">Sous-total</span>
+                  <span class="text-muted">Subtotal</span>
                   <span>${moneyEUR(subtotal)}</span>
                 </div>
                 <div class="d-flex justify-content-between small mb-2">
@@ -167,18 +183,20 @@
                   <span>${moneyEUR(total)}</span>
                 </div>
 
-                <button class="btn btn-cyna w-100 mt-3" id="checkoutBtn" ${items.length ? "" : "disabled"}>
-                  Valider ma commande
+                <button class="btn btn-cyna w-100 mt-3" id="checkoutBtn" ${
+                  items.length ? "" : "disabled"
+                }>
+                  Checkout
                 </button>
               </div>
             </div>
 
             <div class="card shadow-sm border-0 mb-3">
               <div class="card-body">
-                <h3 class="h6 mb-2">Code promo</h3>
+                <h3 class="h6 mb-2">Promo Code</h3>
                 <div class="input-group">
-                  <input type="text" class="form-control" placeholder="Mon bon de réduction" id="promoInput">
-                  <button class="btn btn-outline-secondary" type="button" id="promoApplyBtn">Ajouter</button>
+                  <input type="text" class="form-control" placeholder="My discount coupon" id="promoInput">
+                  <button class="btn btn-outline-secondary" type="button" id="promoApplyBtn">Add</button>
                 </div>
                 <div class="small text-muted mt-2" id="promoMsg"></div>
               </div>
@@ -186,30 +204,30 @@
 
             <div class="card shadow-sm border-0 mb-3">
               <div class="card-body">
-                <h3 class="h6 mb-2">Une question ?</h3>
+                <h3 class="h6 mb-2">Any questions?</h3>
                 <button class="btn btn-outline-secondary w-100" type="button" id="chatbotBtn">
                   Contact Me (chatbot)
                 </button>
                 <div class="small text-muted mt-2">
-                  (réponses automatiques aux questions répétitives)
+                  (automated answers to repetitive questions)
                 </div>
               </div>
             </div>
 
             <div class="card shadow-sm border-0">
               <div class="card-body">
-                <h3 class="h6 mb-3">Paiement sécurisé</h3>
+                <h3 class="h6 mb-3">Secure Payment</h3>
                 <div class="d-flex align-items-center gap-2 mb-2">
                   <i class="bi bi-truck"></i>
-                  <span class="small">Activation du service en 24h max</span>
+                  <span class="small">Service activation within 24h</span>
                 </div>
                 <div class="d-flex align-items-center gap-2 mb-2">
                   <i class="bi bi-shield-check"></i>
-                  <span class="small">Transactions sécurisées</span>
+                  <span class="small">Secure transactions</span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                   <i class="bi bi-lock"></i>
-                  <span class="small">Données protégées</span>
+                  <span class="small">Protected data</span>
                 </div>
               </div>
             </div>
@@ -221,15 +239,15 @@
           <div class="card shadow d-none" id="chatbotBox" style="width: 320px;">
             <div class="card-header d-flex justify-content-between align-items-center"
                  style="background: var(--cyna-dark); color: white;">
-              <span>Assistant CYNA</span>
+              <span>CYNA Assistant</span>
               <button class="btn btn-sm btn-outline-light" id="chatbotCloseBtn">X</button>
             </div>
             <div class="card-body" style="max-height: 260px; overflow:auto;">
-              <div class="small text-muted mb-2">Questions fréquentes :</div>
+              <div class="small text-muted mb-2">Frequently Asked Questions:</div>
               <div class="d-grid gap-2">
-                <button class="btn btn-sm btn-outline-secondary" data-q="abo">Comment modifier mon abonnement ?</button>
-                <button class="btn btn-sm btn-outline-secondary" data-q="pay">Quelles méthodes de paiement ?</button>
-                <button class="btn btn-sm btn-outline-secondary" data-q="help">Contacter le support</button>
+                <button class="btn btn-sm btn-outline-secondary" data-q="abo">How to modify my subscription?</button>
+                <button class="btn btn-sm btn-outline-secondary" data-q="pay">What payment methods are available?</button>
+                <button class="btn btn-sm btn-outline-secondary" data-q="help">Contact support</button>
               </div>
               <hr>
               <div class="small" id="chatbotAnswer"></div>
@@ -239,158 +257,176 @@
       </div>
     `;
 
-    // Interactions
-    document.getElementById("backToShopBtn")?.addEventListener("click", renderHome);
+  // Interactions
+  document
+    .getElementById("backToShopBtn")
+    ?.addEventListener("click", renderHome);
 
-    // Gestion qty / suppression
-    appRoot.querySelectorAll("[data-action='remove']").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const idx = Number(btn.getAttribute("data-index"));
-        const items = getCartItems();
-        items.splice(idx, 1);
-        saveCartItems(items);
-        renderCart();
-      });
+  // Gestion qty / suppression
+  appRoot.querySelectorAll("[data-action='remove']").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-index"));
+      const items = getCartItems();
+      items.splice(idx, 1);
+      saveCartItems(items);
+      renderCart();
     });
+  });
 
-    appRoot.querySelectorAll("[data-action='qty']").forEach(input => {
-      input.addEventListener("change", () => {
-        const idx = Number(input.getAttribute("data-index"));
-        const items = getCartItems();
-        const v = Math.max(1, Number(input.value) || 1);
-        items[idx].qty = v;
-        saveCartItems(items);
-        renderCart();
-      });
+  appRoot.querySelectorAll("[data-action='qty']").forEach((input) => {
+    input.addEventListener("change", () => {
+      const idx = Number(input.getAttribute("data-index"));
+      const items = getCartItems();
+      const v = Math.max(1, Number(input.value) || 1);
+      items[idx].qty = v;
+      saveCartItems(items);
+      renderCart();
     });
+  });
 
-    // Code promo (mock)
-    document.getElementById("promoApplyBtn")?.addEventListener("click", () => {
-      const code = (document.getElementById("promoInput")?.value || "").trim().toUpperCase();
-      const msg = document.getElementById("promoMsg");
-      if (!msg) return;
-      if (!code) {
-        msg.textContent = "Entre un code promo.";
-        return;
-      }
-      msg.textContent = "Code promo enregistré (démo) : " + code;
+  // Promo code (mock)
+  document.getElementById("promoApplyBtn")?.addEventListener("click", () => {
+    const code = (document.getElementById("promoInput")?.value || "")
+      .trim()
+      .toUpperCase();
+    const msg = document.getElementById("promoMsg");
+    if (!msg) return;
+    if (!code) {
+      msg.textContent = "Enter a promo code.";
+      return;
+    }
+    msg.textContent = "Promo code registered (demo): " + code;
+  });
+
+  // Checkout (demo)
+  document.getElementById("checkoutBtn")?.addEventListener("click", () => {
+    if (!token) {
+      alert("You must be logged in to confirm the order.");
+      return;
+    }
+    alert("Checkout (demo) — to be connected to your checkout process.");
+  });
+
+  // Chatbot simple
+  const chatbotBox = document.getElementById("chatbotBox");
+  const chatbotAnswer = document.getElementById("chatbotAnswer");
+
+  document.getElementById("chatbotBtn")?.addEventListener("click", () => {
+    chatbotBox?.classList.toggle("d-none");
+  });
+  document.getElementById("chatbotCloseBtn")?.addEventListener("click", () => {
+    chatbotBox?.classList.add("d-none");
+  });
+  appRoot.querySelectorAll("#chatbotBox [data-q]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const q = btn.getAttribute("data-q");
+      if (!chatbotAnswer) return;
+      if (q === "abo")
+        chatbotAnswer.textContent =
+          "Go to My Account > Subscriptions to renew / cancel.";
+      if (q === "pay")
+        chatbotAnswer.textContent =
+          "Payment by card (Stripe) and/or PayPal depending on integration.";
+      if (q === "help")
+        chatbotAnswer.textContent =
+          "You can use the Help/Contact page to open a ticket.";
     });
+  });
 
-    // Checkout (démo)
-    document.getElementById("checkoutBtn")?.addEventListener("click", () => {
-      if (!token) {
-        alert("Tu dois être connecté pour valider la commande (rediriger vers /auth.html dans votre logique).");
-        return;
-      }
-      alert("Checkout (démo) — à brancher sur votre page/étapes checkout.");
-    });
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
 
-    // Chatbot simple
-    const chatbotBox = document.getElementById("chatbotBox");
-    const chatbotAnswer = document.getElementById("chatbotAnswer");
-
-    document.getElementById("chatbotBtn")?.addEventListener("click", () => {
-      chatbotBox?.classList.toggle("d-none");
-    });
-    document.getElementById("chatbotCloseBtn")?.addEventListener("click", () => {
-      chatbotBox?.classList.add("d-none");
-    });
-    appRoot.querySelectorAll("#chatbotBox [data-q]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const q = btn.getAttribute("data-q");
-        if (!chatbotAnswer) return;
-        if (q === "abo") chatbotAnswer.textContent = "Va dans Mon compte > Abonnements pour renouveler / résilier.";
-        if (q === "pay") chatbotAnswer.textContent = "Paiement par carte (Stripe) et/ou PayPal selon intégration.";
-        if (q === "help") chatbotAnswer.textContent = "Tu peux utiliser la page Outils/Contact pour ouvrir un ticket.";
-      });
-    });
-
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }
-
-  /***********************
-   * 4) Bind navbar click + init
-   ***********************/
-  function initCartBindings() {
-      const navCartBtn = document.getElementById("navCartBtn");
-      if (navCartBtn) {
-          navCartBtn.addEventListener("click", (e) => {
-              if (appRoot) {
-                  e.preventDefault();
-                  renderCart();
-              } else {
-                  // Redirection vers l'accueil avec vue panier
-                  window.location.href = "/index.html?view=cart";
-              }
-          });
-      }
-
-      // Gérer le clic sur "Accueil" ou le Logo pour reset la SPA si on est sur index.html
-      const homeLinks = document.querySelectorAll('a[href="/index.html"], .navbar-brand');
+/***********************
+ * 4) Bind navbar click + init
+ ***********************/
+function initCartBindings() {
+  const navCartBtn = document.getElementById("navCartBtn");
+  if (navCartBtn) {
+    navCartBtn.addEventListener("click", (e) => {
       if (appRoot) {
-          homeLinks.forEach(link => {
-              link.addEventListener("click", (e) => {
-                  // Si on est déjà sur l'index (éventuellement avec le panier affiché)
-                  if (window.location.pathname === "/index.html" || window.location.pathname === "/") {
-                      e.preventDefault();
-                      renderHome();
-                      window.history.pushState({}, "", "/index.html");
-                  }
-              });
-          });
-          
-          // Nouveau bouton sur l'accueil
-          const homeCartBtn = document.getElementById("homeCartBtn");
-          if (homeCartBtn) {
-              homeCartBtn.addEventListener("click", (e) => {
-                  e.preventDefault();
-                  renderCart();
-              });
-          }
+        e.preventDefault();
+        renderCart();
+      } else {
+        // Redirect to home with cart view
+        window.location.href = "/index.html?view=cart";
       }
-
-      updateCartBadge();
-      initProductButtons();
+    });
   }
 
-  function initProductButtons() {
-    document.querySelectorAll(".btn-add-to-cart").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const id = btn.getAttribute("data-id");
-        const name = btn.getAttribute("data-name");
-        const price = btn.getAttribute("data-price");
-        if (id && name && price) {
-          addToCart({ id, name, price: Number(price), qty: 1 });
-          // Feedback
-          const originalText = btn.textContent;
-          btn.textContent = "Ajouté !";
-          btn.classList.replace("btn-primary", "btn-success");
-          setTimeout(() => {
-            btn.textContent = originalText;
-            btn.classList.replace("btn-success", "btn-primary");
-          }, 2000);
+  // Handle click on "Home" or Logo to reset SPA if on index.html
+  const homeLinks = document.querySelectorAll(
+    'a[href="/index.html"], .navbar-brand'
+  );
+  if (appRoot) {
+    homeLinks.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        // If we are already on index (potentially with cart displayed)
+        if (
+          window.location.pathname === "/index.html" ||
+          window.location.pathname === "/"
+        ) {
+          e.preventDefault();
+          renderHome();
+          window.history.pushState({}, "", "/index.html");
         }
       });
     });
+
+    // New button on home
+    const homeCartBtn = document.getElementById("homeCartBtn");
+    if (homeCartBtn) {
+      homeCartBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        renderCart();
+      });
+    }
   }
 
-  // Gérer le paramètre ?view=cart au chargement de la page
-  if (appRoot && new URLSearchParams(window.location.search).get("view") === "cart") {
-    renderCart();
-  }
+  updateCartBadge();
+  initProductButtons();
+}
 
-  // Si le DOM est déjà prêt
-  initCartBindings();
-  
-  // Et aussi au chargement de la navbar
-  document.addEventListener("navbarLoaded", initCartBindings);
+function initProductButtons() {
+  document.querySelectorAll(".btn-add-to-cart").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const id = btn.getAttribute("data-id");
+      const name = btn.getAttribute("data-name");
+      const price = btn.getAttribute("data-price");
+      if (id && name && price) {
+        addToCart({ id, name, price: Number(price), qty: 1 });
+        // Feedback
+        const originalText = btn.textContent;
+        btn.textContent = "Added!";
+        btn.classList.replace("btn-primary", "btn-success");
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.replace("btn-success", "btn-primary");
+        }, 2000);
+      }
+    });
+  });
+}
 
-  // Expose globalement pour navbar.js
-  window.updateCartBadge = updateCartBadge;
+// Gérer le paramètre ?view=cart au chargement de la page
+if (
+  appRoot &&
+  new URLSearchParams(window.location.search).get("view") === "cart"
+) {
+  renderCart();
+}
 
-  // (Optionnel) si tu veux voir le rendu direct sans passer par une page produit :
-  // Décommente pour ajouter un item de démo une seule fois.
-  /*
+// Si le DOM est déjà prêt
+initCartBindings();
+
+// Et aussi au chargement de la navbar
+document.addEventListener("navbarLoaded", initCartBindings);
+
+// Expose globalement pour navbar.js
+window.updateCartBadge = updateCartBadge;
+
+// (Optionnel) si tu veux voir le rendu direct sans passer par une page produit :
+// Décommente pour ajouter un item de démo une seule fois.
+/*
   if (!localStorage.getItem("demoCartDone")) {
     addToCart({ id: "edr", name: "CYNA EDR", price: 59.99, qty: 1, duration: "Mensuel" });
     addToCart({ id: "xdr", name: "CYNA XDR", price: 129.99, qty: 1, duration: "Annuel" });
