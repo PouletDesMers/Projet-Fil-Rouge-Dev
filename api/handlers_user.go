@@ -40,6 +40,47 @@ func getusers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func resetUser2FA(w http.ResponseWriter, r *http.Request) {
+	// Get the user ID from URL parameter
+	params := mux.Vars(r)
+	targetUserID, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the requester is an admin
+	adminUserID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var adminRole string
+	err = db.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole)
+	if err != nil || adminRole != "admin" {
+		http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+		return
+	}
+
+	// Reset 2FA for the target user
+	result, err := db.Exec("UPDATE utilisateur SET totp_secret = NULL, totp_enabled = FALSE WHERE id_utilisateur = $1", targetUserID)
+	if err != nil {
+		http.Error(w, "Error resetting 2FA", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "2FA reset successfully"})
+}
+
 func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])

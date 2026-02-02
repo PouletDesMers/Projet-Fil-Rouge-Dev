@@ -132,6 +132,7 @@ func main() {
 	api.HandleFunc("/users/{id}", getUtilisateur).Methods("GET")
 	api.HandleFunc("/users/{id}", updateUtilisateur).Methods("PUT")
 	api.HandleFunc("/users/{id}", deleteUtilisateur).Methods("DELETE")
+	api.HandleFunc("/users/{id}/reset-2fa", resetUser2FA).Methods("POST")
 	api.HandleFunc("/user/profile", getUserProfile).Methods("GET")
 	api.HandleFunc("/user/profile", updateUserProfile).Methods("PUT")
 
