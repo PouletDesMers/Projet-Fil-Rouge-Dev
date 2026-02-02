@@ -1,3 +1,7 @@
+// Global variables for category products management
+let currentCategoryId = null;
+let currentCategoryName = '';
+
 // Get auth token from localStorage
 function getAuthToken() {
   return localStorage.getItem('token');
@@ -233,6 +237,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadUsers();
       } else if (sectionId === 'images-section') {
         loadImages();
+      } else if (sectionId === 'categories-section') {
+        loadCategories();
+      } else if (sectionId === 'products-section') {
+        loadCategoriesForProducts().then(() => {
+          loadProducts();
+        });
       }
     });
   });
@@ -249,6 +259,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Image URL preview
   document.getElementById('imageUrl')?.addEventListener('input', (e) => {
     previewImage(e.target.value);
+  });
+
+  // Categories section handlers
+  document.getElementById('addCategoryBtn')?.addEventListener('click', () => {
+    openCategoryModal();
+  });
+
+  document.getElementById('saveCategoryBtn')?.addEventListener('click', () => {
+    saveCategory();
+  });
+
+  // Products section handlers
+  document.getElementById('addProductBtn')?.addEventListener('click', () => {
+    loadCategoriesForProducts().then(() => {
+      openProductModal();
+    });
+  });
+
+  document.getElementById('saveProductBtn')?.addEventListener('click', () => {
+    saveProduct();
+  });
+
+  // Category filter for products
+  document.getElementById('categoryFilter')?.addEventListener('change', () => {
+    loadProducts();
+  });
+
+  // Add category from product modal
+  document.getElementById('addCategoryFromProductBtn')?.addEventListener('click', () => {
+    openCategoryModal();
+  });
+
+  // Add product to category button
+  document.getElementById('addProductToCategoryBtn')?.addEventListener('click', () => {
+    openProductModal(null, currentCategoryId);
   });
 
   // Handle logout
@@ -981,5 +1026,1117 @@ async function changeImageOrder(imageId, direction) {
   } catch (error) {
     console.error('Error:', error);
     showToast('Erreur: ' + error.message, 'error');
+  }
+}
+
+// ============== CATEGORIES MANAGEMENT ==============
+
+// Load categories from API
+async function loadCategories() {
+  try {
+    const token = getAuthToken();
+    const categoriesContainer = document.getElementById('categoriesContainer');
+
+    categoriesContainer.innerHTML =
+      '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+
+    const response = await fetch('/api/web-categories', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des catégories');
+    }
+
+    const categories = await response.json();
+
+    if (!categories || categories.length === 0) {
+      categoriesContainer.innerHTML =
+        '<div class="alert alert-info">Aucune catégorie trouvée</div>';
+      return;
+    }
+
+    // Display categories in a table
+    const tableHTML = `
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Slug</th>
+              <th>Description</th>
+              <th>Icône</th>
+              <th>Couleur</th>
+              <th>Ordre</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${categories
+              .map(
+                (cat) => `
+              <tr>
+                <td><code>${cat.id_categorie}</code></td>
+                <td><strong>${cat.nom}</strong></td>
+                <td><code>${cat.slug}</code></td>
+                <td>${cat.description ? cat.description.substring(0, 50) + (cat.description.length > 50 ? '...' : '') : '-'}</td>
+                <td><i class="${cat.icone}" style="color: ${cat.couleur}"></i> <small>${cat.icone}</small></td>
+                <td><span class="badge" style="background-color: ${cat.couleur};">${cat.couleur}</span></td>
+                <td>${cat.ordre_affichage}</td>
+                <td>
+                  <span class="badge ${cat.actif ? 'bg-success' : 'bg-secondary'}">
+                    ${cat.actif ? 'Actif' : 'Inactif'}
+                  </span>
+                </td>
+                <td class="table-actions">
+                  <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveCategory(${cat.id_categorie}, 'up')" title="Déplacer vers le haut">
+                      <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveCategory(${cat.id_categorie}, 'down')" title="Déplacer vers le bas">
+                      <i class="bi bi-arrow-down"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-outline-success btn-sm me-2 ms-2" onclick="showCategoryProducts(${cat.id_categorie}, '${cat.nom}')" title="Gérer les produits">
+                    <i class="bi bi-box"></i>
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm me-2" onclick="editCategory(${cat.id_categorie})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-outline-${cat.actif ? 'warning' : 'success'} btn-sm me-2" onclick="toggleCategoryStatus(${cat.id_categorie}, ${!cat.actif})">
+                    <i class="bi bi-${cat.actif ? 'eye-slash' : 'eye'}"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="deleteCategory(${cat.id_categorie}, '${cat.nom}')">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    categoriesContainer.innerHTML = tableHTML;
+  } catch (error) {
+    console.error('Erreur:', error);
+    const categoriesContainer = document.getElementById('categoriesContainer');
+    categoriesContainer.innerHTML =
+      '<div class="alert alert-danger">Erreur lors du chargement des catégories</div>';
+  }
+}
+
+// Open category modal
+function openCategoryModal(category = null) {
+  const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+  const titleText = document.getElementById('categoryModalTitleText');
+  const saveBtn = document.getElementById('saveCategoryBtnText');
+  const form = document.getElementById('categoryForm');
+
+  form.reset();
+
+  if (category) {
+    titleText.textContent = 'Modifier Catégorie';
+    saveBtn.textContent = 'Modifier';
+    
+    document.getElementById('categoryId').value = category.id_categorie;
+    document.getElementById('categoryNom').value = category.nom;
+    document.getElementById('categorySlug').value = category.slug;
+    document.getElementById('categoryDescription').value = category.description || '';
+    document.getElementById('categoryIcone').value = category.icone || '';
+    document.getElementById('categoryCouleur').value = category.couleur || '#7602F9';
+    document.getElementById('categoryOrder').value = category.ordre_affichage || 1;
+    document.getElementById('categoryActive').checked = category.actif;
+  } else {
+    titleText.textContent = 'Ajouter Catégorie';
+    saveBtn.textContent = 'Ajouter';
+    document.getElementById('categoryId').value = '';
+    document.getElementById('categoryCouleur').value = '#7602F9';
+    document.getElementById('categoryOrder').value = '1';
+    document.getElementById('categoryActive').checked = true;
+  }
+
+  modal.show();
+}
+
+// Save category
+async function saveCategory() {
+  try {
+    const token = getAuthToken();
+    const categoryId = document.getElementById('categoryId').value;
+    const isEdit = Boolean(categoryId);
+
+    const categoryData = {
+      nom: document.getElementById('categoryNom').value,
+      slug: document.getElementById('categorySlug').value,
+      description: document.getElementById('categoryDescription').value,
+      icone: document.getElementById('categoryIcone').value || 'bi bi-tag',
+      couleur: document.getElementById('categoryCouleur').value,
+      ordre_affichage: parseInt(document.getElementById('categoryOrder').value) || 1,
+      actif: document.getElementById('categoryActive').checked
+    };
+
+    const url = isEdit ? `/api/web-categories/${categoryId}` : '/api/web-categories';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(categoryData)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error);
+    }
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+    modal.hide();
+
+    showToast(
+      isEdit ? 'Catégorie modifiée avec succès !' : 'Catégorie ajoutée avec succès !',
+      'success'
+    );
+    loadCategories();
+    
+    // Also reload categories for products if we're adding from product modal
+    const productModal = document.getElementById('productModal');
+    if (productModal && productModal.classList.contains('show')) {
+      loadCategoriesForProducts();
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showToast('Erreur: ' + error.message, 'error');
+  }
+}
+
+// Edit category
+async function editCategory(categoryId) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/web-categories', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des catégories');
+    }
+
+    const categories = await response.json();
+    const category = categories.find(c => c.id_categorie === categoryId);
+    
+    if (category) {
+      openCategoryModal(category);
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showToast('Erreur lors du chargement de la catégorie', 'error');
+  }
+}
+
+// Toggle category status
+async function toggleCategoryStatus(categoryId, newStatus) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`/api/web-categories/${categoryId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ actif: newStatus })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la modification du statut');
+    }
+
+    showToast('Statut de la catégorie modifié !', 'success');
+    loadCategories();
+  } catch (error) {
+    console.error('Erreur:', error);
+    showToast('Erreur: ' + error.message, 'error');
+  }
+}
+
+// Delete category
+async function deleteCategory(categoryId, categoryName) {
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer la catégorie "${categoryName}" ?\n\nCette action supprimera également tous les produits associés.`)) {
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`/api/web-categories/${categoryId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression');
+    }
+
+    showToast('Catégorie supprimée avec succès !', 'success');
+    loadCategories();
+  } catch (error) {
+    console.error('Erreur:', error);
+    showToast('Erreur: ' + error.message, 'error');
+  }
+}
+
+// Open product modal
+function openProductModal(product = null, preselectedCategoryId = null) {
+  const modal = new bootstrap.Modal(document.getElementById('productModal'));
+  const titleText = document.getElementById('productModalTitleText');
+  const saveBtn = document.getElementById('saveProductBtnText');
+  const categorieContainer = document.getElementById('productCategorieContainer');
+  const orderContainer = document.getElementById('productOrderContainer');
+  const selectedCategoryInfo = document.getElementById('selectedCategoryInfo');
+  const categorySelect = document.getElementById('productCategorie');
+  const nomInput = document.getElementById('productNom');
+  const slugInput = document.getElementById('productSlug');
+  const form = document.getElementById('productForm');
+
+  form.reset();
+
+  if (product) {
+    // Edit mode - show all fields
+    titleText.textContent = 'Modifier Produit';
+    saveBtn.textContent = 'Modifier';
+    
+    document.getElementById('productId').value = product.id_produit;
+    document.getElementById('productNom').value = product.nom;
+    document.getElementById('productSlug').value = product.slug;
+    document.getElementById('productDescCourte').value = product.description_courte || '';
+    document.getElementById('productDescLongue').value = product.description_longue || '';
+    document.getElementById('productCategorie').value = product.id_categorie || '';
+    document.getElementById('productTag').value = product.tag || 'Standard';
+    document.getElementById('productStatut').value = product.statut || 'Disponible';
+    document.getElementById('productPrix').value = product.prix || '';
+    document.getElementById('productDevise').value = product.devise || 'EUR';
+    document.getElementById('productDuree').value = product.duree || 'mois';
+    document.getElementById('productTypeAchat').value = product.type_achat || 'panier';
+    document.getElementById('productOrder').value = product.ordre_affichage || 1;
+    document.getElementById('productActive').checked = product.actif;
+    
+    // Show all fields for editing
+    categorieContainer.style.display = 'block';
+    orderContainer.style.display = 'block';
+    selectedCategoryInfo.style.display = 'none';
+    
+    // Remove auto-generation listener if exists
+    nomInput.removeEventListener('input', autoGenerateSlug);
+  } else {
+    // Add mode - hide category and order, auto-generate slug
+    titleText.textContent = 'Ajouter Produit';
+    saveBtn.textContent = 'Ajouter';
+    
+    document.getElementById('productId').value = '';
+    document.getElementById('productTag').value = 'Standard';
+    document.getElementById('productStatut').value = 'Disponible';
+    document.getElementById('productDevise').value = 'EUR';
+    document.getElementById('productDuree').value = 'mois';
+    document.getElementById('productTypeAchat').value = 'panier';
+    document.getElementById('productActive').checked = true;
+    
+    // Hide category and order fields, show info
+    categorieContainer.style.display = 'none';
+    orderContainer.style.display = 'none';
+    selectedCategoryInfo.style.display = 'block';
+    selectedCategoryInfo.innerHTML = `Catégorie: <strong>${currentCategoryName}</strong> | Ordre d'affichage: <strong>Automatique</strong>`;
+    
+    // Set category value
+    if (preselectedCategoryId && currentCategoryId) {
+      categorySelect.value = preselectedCategoryId;
+    }
+    
+    // Auto-generate next order
+    setNextOrderForCategory();
+    
+    // Add slug auto-generation
+    nomInput.addEventListener('input', autoGenerateSlug);
+  }
+
+  modal.show();
+}
+
+// Auto-generate slug based on category + product name
+function autoGenerateSlug() {
+  const nomInput = document.getElementById('productNom');
+  const slugInput = document.getElementById('productSlug');
+  const categoryName = currentCategoryName;
+  
+  if (nomInput.value && categoryName) {
+    // Create slug: category-product-name
+    const categorySlug = categoryName.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-'); // Remove multiple hyphens
+    
+    const productSlug = nomInput.value.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-'); // Remove multiple hyphens
+    
+    const generatedSlug = `${categorySlug}-${productSlug}`;
+    slugInput.value = generatedSlug;
+  }
+}
+
+// Set next order for category automatically
+async function setNextOrderForCategory() {
+  if (!currentCategoryId) return;
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/web-products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const products = await response.json();
+      const categoryProducts = products.filter(p => 
+        p.id_categorie && p.id_categorie.toString() === currentCategoryId.toString()
+      );
+      
+      // Find highest order + 1
+      const maxOrder = categoryProducts.reduce((max, product) => {
+        const order = product.ordre_affichage || 1;
+        return order > max ? order : max;
+      }, 0);
+      
+      document.getElementById('productOrder').value = maxOrder + 1;
+    }
+  } catch (error) {
+    // Default to 1 if anything fails
+    document.getElementById('productOrder').value = 1;
+  }
+}
+
+// Load products from API
+async function loadProducts() {
+  try {
+    const token = getAuthToken();
+    const productsContainer = document.getElementById('productsContainer');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const selectedCategory = categoryFilter ? categoryFilter.value : '';
+
+    productsContainer.innerHTML =
+      '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+
+    const response = await fetch('/api/web-products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des produits');
+    }
+
+    let products = await response.json();
+
+    // Apply category filter if selected
+    if (selectedCategory && selectedCategory !== '') {
+      products = products.filter(product => 
+        product.id_categorie && product.id_categorie.toString() === selectedCategory
+      );
+    }
+
+    if (!products || products.length === 0) {
+      productsContainer.innerHTML =
+        '<div class="alert alert-info">Aucun produit trouvé</div>';
+      return;
+    }
+
+    // Display products in a table
+    const tableHTML = `
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Catégorie</th>
+              <th>Prix</th>
+              <th>Tag</th>
+              <th>Statut</th>
+              <th>Type</th>
+              <th>Actif</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products
+              .map(
+                product => `
+              <tr>
+                <td>${product.id_produit}</td>
+                <td>
+                  <strong>${product.nom}</strong><br>
+                  <small class="text-muted">${product.slug}</small>
+                </td>
+                <td>
+                  <span class="badge bg-secondary" id="category-${product.id_produit}">${product.id_categorie || 'N/A'}</span>
+                </td>
+                <td>
+                  ${product.prix ? `${product.prix} ${product.devise}` : 'Sur devis'}
+                  <br><small class="text-muted">par ${product.duree}</small>
+                </td>
+                <td>
+                  <span class="badge ${getTagColor(product.tag)}">${product.tag || 'Standard'}</span>
+                </td>
+                <td>
+                  <span class="badge ${getStatusColor(product.statut)}">${product.statut || 'Disponible'}</span>
+                </td>
+                <td>
+                  <span class="badge ${product.type_achat === 'devis' ? 'bg-info' : 'bg-success'}">${product.type_achat || 'panier'}</span>
+                </td>
+                <td>
+                  <span class="badge ${product.actif ? 'bg-success' : 'bg-danger'}">${
+                  product.actif ? 'Actif' : 'Inactif'
+                }</span>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveProduct(${product.id_produit}, 'up')" title="Déplacer vers le haut">
+                      <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveProduct(${product.id_produit}, 'down')" title="Déplacer vers le bas">
+                      <i class="bi bi-arrow-down"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary me-1 ms-2" onclick="openProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${product.id_produit})">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    productsContainer.innerHTML = tableHTML;
+    
+    // Load category names to replace IDs with names
+    await loadCategoryNamesForProducts();
+    
+  } catch (error) {
+    console.error('Erreur lors du chargement des produits:', error);
+    document.getElementById('productsContainer').innerHTML =
+      '<div class="alert alert-danger">Erreur lors du chargement des produits: ' +
+      error.message +
+      '</div>';
+  }
+}
+
+// Helper functions for badge colors
+function getTagColor(tag) {
+  switch (tag?.toLowerCase()) {
+    case 'premium':
+      return 'bg-warning text-dark';
+    case 'prioritaire':
+      return 'bg-primary';
+    case 'standard':
+    default:
+      return 'bg-secondary';
+  }
+}
+
+function getStatusColor(status) {
+  switch (status?.toLowerCase()) {
+    case 'disponible':
+      return 'bg-success';
+    case 'en rupture':
+      return 'bg-danger';
+    case 'sur commande':
+      return 'bg-warning text-dark';
+    default:
+      return 'bg-secondary';
+  }
+}
+
+// Save product
+async function saveProduct() {
+  try {
+    const token = getAuthToken();
+    const productId = document.getElementById('productId').value;
+
+    // Get category - use current category if we're in category view and adding
+    let categoryId = document.getElementById('productCategorie').value;
+    if (!productId && currentCategoryId && !categoryId) {
+      // Adding new product from category view
+      categoryId = currentCategoryId;
+    }
+
+    // Validate required fields
+    if (!document.getElementById('productNom').value.trim()) {
+      throw new Error('Le nom du produit est requis');
+    }
+    if (!document.getElementById('productSlug').value.trim()) {
+      throw new Error('Le slug est requis');
+    }
+    if (!categoryId) {
+      throw new Error('La catégorie est requise');
+    }
+
+    const productData = {
+      nom: document.getElementById('productNom').value.trim(),
+      slug: document.getElementById('productSlug').value.trim(),
+      description_courte: document.getElementById('productDescCourte').value.trim(),
+      description_longue: document.getElementById('productDescLongue').value.trim(),
+      id_categorie: parseInt(categoryId),
+      tag: document.getElementById('productTag').value,
+      statut: document.getElementById('productStatut').value,
+      prix: parseFloat(document.getElementById('productPrix').value) || null,
+      devise: document.getElementById('productDevise').value,
+      duree: document.getElementById('productDuree').value,
+      type_achat: document.getElementById('productTypeAchat').value,
+      ordre_affichage: parseInt(document.getElementById('productOrder').value) || 1,
+      actif: document.getElementById('productActive').checked
+    };
+
+    const url = productId ? `/api/web-products/${productId}` : '/api/web-products';
+    const method = productId ? 'PUT' : 'POST';
+
+    console.log('Sending product data:', productData); // Debug log
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(productData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`Erreur ${response.status}: ${errorText}`);
+    }
+
+    // Close modal and refresh list
+    const modal = bootstrap.Modal.getInstance(
+      document.getElementById('productModal')
+    );
+    modal.hide();
+    
+    if (currentCategoryId) {
+      loadCategoryProducts();
+    } else {
+      loadProducts();
+    }
+
+    // Show success message
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+      ${productId ? 'Produit modifié' : 'Produit créé'} avec succès!
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    const adminContent = document.querySelector('.admin-content');
+    if (adminContent) {
+      adminContent.insertBefore(alertDiv, adminContent.firstChild);
+    }
+
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde:', error);
+    alert('Erreur lors de la sauvegarde du produit: ' + error.message);
+  }
+}
+
+// Delete product
+async function deleteProduct(productId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+
+    const response = await fetch(`/api/web-products/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression du produit');
+    }
+
+    if (currentCategoryId) {
+      loadCategoryProducts();
+    } else {
+      loadProducts();
+    }
+
+    // Show success message
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+      Produit supprimé avec succès!
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    const adminContent = document.querySelector('.admin-content');
+    if (adminContent) {
+      adminContent.insertBefore(alertDiv, adminContent.firstChild);
+    }
+
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error);
+    alert('Erreur lors de la suppression du produit: ' + error.message);
+  }
+}
+
+// Load categories for product dropdown
+async function loadCategoriesForProducts() {
+  try {
+    const token = getAuthToken();
+
+    const response = await fetch('/api/web-categories', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des catégories');
+    }
+
+    const categories = await response.json();
+    const select = document.getElementById('productCategorie');
+    
+    if (select) {
+      select.innerHTML = '<option value="">Sélectionner une catégorie</option>' +
+        categories.map(cat => `<option value="${cat.id_categorie}">${cat.nom}</option>`).join('');
+    }
+
+    // Also load categories for filter dropdown
+    const filterSelect = document.getElementById('categoryFilter');
+    if (filterSelect) {
+      filterSelect.innerHTML = '<option value="">Toutes les catégories</option>' +
+        categories.map(cat => `<option value="${cat.id_categorie}">${cat.nom}</option>`).join('');
+    }
+
+  } catch (error) {
+    console.error('Erreur lors du chargement des catégories:', error);
+  }
+}
+
+// Move product up or down in order
+async function moveProduct(productId, direction) {
+  try {
+    const token = getAuthToken();
+
+    const response = await fetch(`/api/web-products/${productId}/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ direction: direction })
+    });
+
+    if (!response.ok) {
+      // If the API endpoint doesn't exist, we'll implement it client-side
+      await moveItemClientSide('product', productId, direction);
+    } else {
+      loadProducts();
+      showAlert(`Produit déplacé vers ${direction === 'up' ? 'le haut' : 'le bas'} avec succès!`, 'success');
+    }
+  } catch (error) {
+    // Fallback to client-side implementation
+    await moveItemClientSide('product', productId, direction);
+  }
+}
+
+// Move category up or down in order
+async function moveCategory(categoryId, direction) {
+  try {
+    const token = getAuthToken();
+
+    const response = await fetch(`/api/web-categories/${categoryId}/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ direction: direction })
+    });
+
+    if (!response.ok) {
+      // If the API endpoint doesn't exist, we'll implement it client-side
+      await moveItemClientSide('category', categoryId, direction);
+    } else {
+      loadCategories();
+      showAlert(`Catégorie déplacée vers ${direction === 'up' ? 'le haut' : 'le bas'} avec succès!`, 'success');
+    }
+  } catch (error) {
+    // Fallback to client-side implementation
+    await moveItemClientSide('category', categoryId, direction);
+  }
+}
+
+// Client-side implementation for moving items when API endpoints don't exist
+async function moveItemClientSide(type, itemId, direction) {
+  try {
+    const token = getAuthToken();
+    const apiEndpoint = type === 'product' ? '/api/web-products' : '/api/web-categories';
+    
+    // Get all items
+    const response = await fetch(apiEndpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur lors de la récupération des ${type}s`);
+    }
+
+    const items = await response.json();
+    const orderField = type === 'product' ? 'ordre_affichage' : 'ordre_affichage';
+    const idField = type === 'product' ? 'id_produit' : 'id_categorie';
+    
+    // Sort items by order
+    items.sort((a, b) => (a[orderField] || 999) - (b[orderField] || 999));
+    
+    // Find current item index
+    const currentIndex = items.findIndex(item => item[idField] == itemId);
+    
+    if (currentIndex === -1) {
+      throw new Error(`${type} introuvable`);
+    }
+    
+    // Calculate new position
+    let newIndex;
+    if (direction === 'up') {
+      newIndex = Math.max(0, currentIndex - 1);
+    } else {
+      newIndex = Math.min(items.length - 1, currentIndex + 1);
+    }
+    
+    // If no change needed
+    if (newIndex === currentIndex) {
+      showAlert(`Le ${type} est déjà à ${direction === 'up' ? 'la première' : 'la dernière'} position`, 'info');
+      return;
+    }
+    
+    // Swap orders
+    const currentItem = items[currentIndex];
+    const targetItem = items[newIndex];
+    
+    const currentOrder = currentItem[orderField] || (currentIndex + 1);
+    const targetOrder = targetItem[orderField] || (newIndex + 1);
+    
+    // Update both items
+    await updateItemOrder(type, currentItem[idField], targetOrder);
+    await updateItemOrder(type, targetItem[idField], currentOrder);
+    
+    // Reload the list
+    if (type === 'product') {
+      loadProducts();
+    } else {
+      loadCategories();
+    }
+    
+    showAlert(`${type === 'product' ? 'Produit' : 'Catégorie'} déplacé${type === 'product' ? '' : 'e'} avec succès!`, 'success');
+    
+  } catch (error) {
+    console.error(`Erreur lors du déplacement du ${type}:`, error);
+    showAlert(`Erreur lors du déplacement: ${error.message}`, 'danger');
+  }
+}
+
+// Update item order - Simplified version that works with our API
+async function updateItemOrder(type, itemId, newOrder) {
+  const token = getAuthToken();
+  
+  try {
+    // Get all items to find the one we want to update
+    const listEndpoint = type === 'product' ? '/api/web-products' : '/api/web-categories';
+    const listResponse = await fetch(listEndpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!listResponse.ok) {
+      throw new Error(`Erreur lors de la récupération de la liste des ${type}s`);
+    }
+    
+    const allItems = await listResponse.json();
+    const idField = type === 'product' ? 'id_produit' : 'id_categorie';
+    const currentItem = allItems.find(item => item[idField] == itemId);
+    
+    if (!currentItem) {
+      throw new Error(`${type} avec l'ID ${itemId} introuvable`);
+    }
+    
+    // Update the item with new order
+    const updateData = {
+      ...currentItem,
+      ordre_affichage: newOrder
+    };
+    
+    const updateEndpoint = `${listEndpoint}/${itemId}`;
+    const updateResponse = await fetch(updateEndpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updateData)
+    });
+    
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      throw new Error(`Erreur lors de la mise à jour: ${errorText}`);
+    }
+    
+  } catch (error) {
+    console.error(`Erreur dans updateItemOrder pour ${type} ${itemId}:`, error);
+    throw error;
+  }
+}
+
+// Show alert message
+function showAlert(message, type = 'info') {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  const adminContent = document.querySelector('.admin-content');
+  if (adminContent) {
+    adminContent.insertBefore(alertDiv, adminContent.firstChild);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
+    }, 3000);
+  }
+}
+
+// Show products for a specific category
+function showCategoryProducts(categoryId, categoryName) {
+  currentCategoryId = categoryId;
+  currentCategoryName = categoryName;
+  
+  // Update titles
+  document.getElementById('categoryProductsTitle').textContent = `Produits de ${categoryName}`;
+  document.getElementById('categoryProductsSubtitle').textContent = `Gérer les produits de la catégorie ${categoryName}`;
+  
+  // Hide all sections and show category products section
+  document.querySelectorAll('.section-content').forEach(section => {
+    section.classList.add('d-none');
+  });
+  document.getElementById('category-products-section').classList.remove('d-none');
+  
+  // Update nav
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  
+  // Load products for this category
+  loadCategoryProducts();
+}
+
+function backToCategories() {
+  currentCategoryId = null;
+  currentCategoryName = '';
+  
+  // Hide category products section and show categories
+  document.querySelectorAll('.section-content').forEach(section => {
+    section.classList.add('d-none');
+  });
+  document.getElementById('categories-section').classList.remove('d-none');
+  
+  // Update nav
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  document.querySelector('[data-section="categories"]').classList.add('active');
+}
+
+// Load products for current category
+async function loadCategoryProducts() {
+  if (!currentCategoryId) return;
+  
+  try {
+    const token = getAuthToken();
+    const container = document.getElementById('categoryProductsContainer');
+
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+
+    const response = await fetch('/api/web-products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des produits');
+    }
+
+    let products = await response.json();
+    
+    // Filter products by current category
+    products = products.filter(product => 
+      product.id_categorie && product.id_categorie.toString() === currentCategoryId.toString()
+    );
+
+    if (!products || products.length === 0) {
+      container.innerHTML = `
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i> 
+          Aucun produit trouvé pour la catégorie "${currentCategoryName}".
+          <br>
+          <button class="btn btn-primary btn-sm mt-2" onclick="openProductModal(null, ${currentCategoryId})">
+            <i class="bi bi-plus-circle"></i> Ajouter le premier produit
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Sort by order
+    products.sort((a, b) => (a.ordre_affichage || 999) - (b.ordre_affichage || 999));
+
+    const tableHTML = `
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Ordre</th>
+              <th>Nom</th>
+              <th>Prix</th>
+              <th>Tag</th>
+              <th>Statut</th>
+              <th>Type</th>
+              <th>Actif</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products
+              .map(
+                product => `
+              <tr>
+                <td><span class="badge bg-secondary">${product.ordre_affichage || 1}</span></td>
+                <td>
+                  <strong>${product.nom}</strong><br>
+                  <small class="text-muted">${product.slug}</small>
+                </td>
+                <td>
+                  ${product.prix ? `${product.prix} ${product.devise}` : 'Sur devis'}
+                  <br><small class="text-muted">par ${product.duree}</small>
+                </td>
+                <td>
+                  <span class="badge ${getTagColor(product.tag)}">${product.tag || 'Standard'}</span>
+                </td>
+                <td>
+                  <span class="badge ${getStatusColor(product.statut)}">${product.statut || 'Disponible'}</span>
+                </td>
+                <td>
+                  <span class="badge ${product.type_achat === 'devis' ? 'bg-info' : 'bg-success'}">${product.type_achat || 'panier'}</span>
+                </td>
+                <td>
+                  <span class="badge ${product.actif ? 'bg-success' : 'bg-danger'}">${
+                  product.actif ? 'Actif' : 'Inactif'
+                }</span>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveProduct(${product.id_produit}, 'up')" title="Déplacer vers le haut">
+                      <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="moveProduct(${product.id_produit}, 'down')" title="Déplacer vers le bas">
+                      <i class="bi bi-arrow-down"></i>
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary me-1 ms-2" onclick="openProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${product.id_produit})">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.innerHTML = tableHTML;
+  } catch (error) {
+    console.error('Erreur lors du chargement des produits:', error);
+    document.getElementById('categoryProductsContainer').innerHTML =
+      '<div class="alert alert-danger">Erreur lors du chargement des produits: ' + error.message + '</div>';
+  }
+}
+async function loadCategoryNamesForProducts() {
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/web-categories', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return; // Silently fail if categories can't be loaded
+    }
+
+    const categories = await response.json();
+    const categoryMap = {};
+    categories.forEach(cat => {
+      categoryMap[cat.id_categorie] = cat.nom;
+    });
+
+    // Update category names in product table
+    const categoryBadges = document.querySelectorAll('[id^="category-"]');
+    categoryBadges.forEach(badge => {
+      const productId = badge.id.replace('category-', '');
+      const categoryId = badge.textContent;
+      if (categoryMap[categoryId]) {
+        badge.textContent = categoryMap[categoryId];
+        badge.classList.remove('bg-secondary');
+        badge.classList.add('bg-info');
+      }
+    });
+  } catch (error) {
+    // Silently fail if category names can't be loaded
+    console.debug('Could not load category names:', error);
   }
 }

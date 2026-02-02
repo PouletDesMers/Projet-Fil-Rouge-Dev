@@ -82,6 +82,40 @@ type CarouselImage struct {
 	IDUtilisateurCreation *int      `json:"id_utilisateur_creation"`
 }
 
+type CategorieWeb struct {
+	ID                    int       `json:"id_categorie"`
+	Nom                   string    `json:"nom"`
+	Slug                  string    `json:"slug"`
+	Description           string    `json:"description"`
+	Icone                 string    `json:"icone"`
+	Couleur               string    `json:"couleur"`
+	OrdreAffichage        int       `json:"ordre_affichage"`
+	Actif                 bool      `json:"actif"`
+	DateCreation          time.Time `json:"date_creation"`
+	DateModification      time.Time `json:"date_modification"`
+	IDUtilisateurCreation *int      `json:"id_utilisateur_creation"`
+}
+
+type ProduitWeb struct {
+	ID                    int       `json:"id_produit"`
+	Nom                   string    `json:"nom"`
+	Slug                  string    `json:"slug"`
+	DescriptionCourte     string    `json:"description_courte"`
+	DescriptionLongue     string    `json:"description_longue"`
+	Prix                  *float64  `json:"prix"`
+	Devise                string    `json:"devise"`
+	Duree                 string    `json:"duree"`
+	IDCategorie           int       `json:"id_categorie"`
+	Tag                   string    `json:"tag"`
+	Statut                string    `json:"statut"`
+	TypeAchat             string    `json:"type_achat"`
+	OrdreAffichage        int       `json:"ordre_affichage"`
+	Actif                 bool      `json:"actif"`
+	DateCreation          time.Time `json:"date_creation"`
+	DateModification      time.Time `json:"date_modification"`
+	IDUtilisateurCreation *int      `json:"id_utilisateur_creation"`
+}
+
 type Abonnement struct {
 	ID                 int        `json:"id"`
 	DateDebut          time.Time  `json:"startDate"`

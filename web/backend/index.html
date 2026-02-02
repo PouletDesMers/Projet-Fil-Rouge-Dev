@@ -118,6 +118,11 @@
               </a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="#" data-section="categories">
+                <i class="bi bi-tags"></i> Catégories
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="#" data-section="analytics">
                 <i class="bi bi-bar-chart"></i> Statistiques
               </a>
@@ -182,6 +187,53 @@
             </div>
 
             <div id="imagesContainer">
+              <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Categories Section -->
+          <section id="categories-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-tags"></i> Gestion des Catégories</h1>
+                <p class="text-muted mb-0">Gérer les catégories de services du site</p>
+              </div>
+              <button class="btn btn-primary" id="addCategoryBtn">
+                <i class="bi bi-plus-circle"></i> Ajouter Catégorie
+              </button>
+            </div>
+
+            <div id="categoriesContainer">
+              <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Category Products Section -->
+          <section id="category-products-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-box"></i> <span id="categoryProductsTitle">Produits de la catégorie</span></h1>
+                <p class="text-muted mb-0" id="categoryProductsSubtitle">Gérer les produits de cette catégorie</p>
+              </div>
+              <div>
+                <button class="btn btn-outline-secondary me-2" onclick="backToCategories()">
+                  <i class="bi bi-arrow-left"></i> Retour aux catégories
+                </button>
+                <button class="btn btn-primary" id="addProductToCategoryBtn">
+                  <i class="bi bi-plus-circle"></i> Ajouter Produit
+                </button>
+              </div>
+            </div>
+
+            <div id="categoryProductsContainer">
               <div class="loading-spinner">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Chargement...</span>
@@ -438,6 +490,214 @@
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
             <button type="button" class="btn btn-primary" id="saveImageBtn">
               <i class="bi bi-check-circle"></i> <span id="saveImageBtnText">Ajouter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal pour Ajouter/Éditer Catégorie -->
+    <div class="modal fade" id="categoryModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="categoryModalTitle">
+              <i class="bi bi-tag"></i> <span id="categoryModalTitleText">Ajouter Catégorie</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="categoryAlert" class="alert d-none" role="alert"></div>
+            
+            <form id="categoryForm">
+              <input type="hidden" id="categoryId" value="">
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="categoryNom" class="form-label">Nom *</label>
+                  <input type="text" class="form-control" id="categoryNom" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="categorySlug" class="form-label">Slug (URL) *</label>
+                  <input type="text" class="form-control" id="categorySlug" required placeholder="ex: soc, edr, xdr">
+                  <div class="form-text">Identifiant unique pour l'URL (lettres minuscules, chiffres, tirets)</div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="categoryDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="categoryDescription" rows="3" placeholder="Description de la catégorie"></textarea>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="categoryIcone" class="form-label">Icône</label>
+                  <input type="text" class="form-control" id="categoryIcone" placeholder="bi bi-shield" value="bi bi-tag">
+                  <div class="form-text">Classe d'icône Bootstrap Icons (ex: bi bi-shield)</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="categoryCouleur" class="form-label">Couleur</label>
+                  <input type="color" class="form-control form-control-color" id="categoryCouleur" value="#7602F9">
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="categoryOrder" class="form-label">Ordre d'affichage</label>
+                  <input type="number" class="form-control" id="categoryOrder" min="1" value="1">
+                </div>
+                
+                <div class="col-md-6 mb-3 d-flex align-items-end">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="categoryActive" checked>
+                    <label class="form-check-label" for="categoryActive">
+                      Catégorie active
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+              <i class="bi bi-check-circle"></i> <span id="saveCategoryBtnText">Ajouter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal pour Ajouter/Éditer Produit -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="productModalTitle">
+              <i class="bi bi-box"></i> <span id="productModalTitleText">Ajouter Produit</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="productAlert" class="alert d-none" role="alert"></div>
+            
+            <form id="productForm">
+              <input type="hidden" id="productId" value="">
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="productNom" class="form-label">Nom du produit *</label>
+                  <input type="text" class="form-control" id="productNom" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="productSlug" class="form-label">Slug (URL) *</label>
+                  <input type="text" class="form-control" id="productSlug" required placeholder="ex: soc-pro">
+                  <div class="form-text">Identifiant unique (lettres minuscules, chiffres, tirets)</div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="productDescCourte" class="form-label">Description courte *</label>
+                <input type="text" class="form-control" id="productDescCourte" required maxlength="150" placeholder="Description affichée sur les cartes">
+                <div class="form-text">Maximum 150 caractères</div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="productDescLongue" class="form-label">Description longue</label>
+                <textarea class="form-control" id="productDescLongue" rows="4" placeholder="Description détaillée du produit"></textarea>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-4 mb-3" id="productCategorieContainer">
+                  <label for="productCategorie" class="form-label">Catégorie *</label>
+                  <div class="input-group">
+                    <select class="form-select" id="productCategorie" required>
+                      <option value="">Sélectionner une catégorie</option>
+                    </select>
+                    <button class="btn btn-outline-secondary" type="button" id="addCategoryFromProductBtn" title="Ajouter une nouvelle catégorie">
+                      <i class="bi bi-plus-circle"></i>
+                    </button>
+                  </div>
+                  <div class="form-text" id="selectedCategoryInfo" style="display: none;">
+                    Catégorie automatiquement sélectionnée depuis la page
+                  </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                  <label for="productTag" class="form-label">Tag</label>
+                  <select class="form-select" id="productTag">
+                    <option value="Standard">Standard</option>
+                    <option value="Prioritaire">Prioritaire</option>
+                    <option value="Premium">Premium</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                  <label for="productStatut" class="form-label">Statut</label>
+                  <select class="form-select" id="productStatut">
+                    <option value="Disponible">Disponible</option>
+                    <option value="En rupture">En rupture</option>
+                    <option value="Sur commande">Sur commande</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label for="productPrix" class="form-label">Prix</label>
+                  <input type="number" class="form-control" id="productPrix" step="0.01" min="0" placeholder="0.00">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                  <label for="productDevise" class="form-label">Devise</label>
+                  <select class="form-select" id="productDevise">
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                  <label for="productDuree" class="form-label">Durée</label>
+                  <select class="form-select" id="productDuree">
+                    <option value="mois">Par mois</option>
+                    <option value="année">Par année</option>
+                    <option value="unique">Paiement unique</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                  <label for="productTypeAchat" class="form-label">Type d'achat</label>
+                  <select class="form-select" id="productTypeAchat">
+                    <option value="panier">Ajout au panier</option>
+                    <option value="devis">Demande de devis</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3" id="productOrderContainer">
+                  <label for="productOrder" class="form-label">Ordre d'affichage</label>
+                  <input type="number" class="form-control" id="productOrder" min="1" value="1">
+                </div>
+                
+                <div class="col-md-6 mb-3 d-flex align-items-end">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="productActive" checked>
+                    <label class="form-check-label" for="productActive">
+                      Produit actif
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveProductBtn">
+              <i class="bi bi-check-circle"></i> <span id="saveProductBtnText">Ajouter</span>
             </button>
           </div>
         </div>

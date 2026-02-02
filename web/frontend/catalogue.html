@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title id="pageTitle">Catalogue | CYNA</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <!-- Charte graphique -->
+    <link rel="stylesheet" href="css/style.css" />
+
+    <style>
+      :root {
+        --p-900: #351e90;
+        --p-700: #5610c0;
+        --a-500: #7602f9;
+        --bg: #eeeeee;
+        --card: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --shadow: 0 10px 30px rgba(17, 24, 39, 0.1);
+        --radius: 18px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial;
+        background: radial-gradient(
+            900px 350px at 20% 0%,
+            rgba(118, 2, 249, 0.14),
+            transparent 55%
+          ),
+          radial-gradient(
+            900px 350px at 80% 0%,
+            rgba(86, 16, 192, 0.14),
+            transparent 55%
+          ),
+          var(--bg);
+        color: var(--text);
+      }
+      .container {
+        width: min(1100px, 92vw);
+        margin: 0 auto;
+      }
+      .hero {
+        padding: 18px 0 10px;
+      }
+      .banner {
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(53, 30, 144, 0.18);
+        background: radial-gradient(
+            900px 250px at 20% 40%,
+            rgba(118, 2, 249, 0.42),
+            transparent 55%
+          ),
+          radial-gradient(
+            700px 220px at 80% 30%,
+            rgba(86, 16, 192, 0.42),
+            transparent 55%
+          ),
+          linear-gradient(
+            135deg,
+            rgba(53, 30, 144, 0.92),
+            rgba(86, 16, 192, 0.8)
+          );
+        padding: 18px;
+        color: white;
+      }
+      .crumbs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        opacity: 0.92;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .crumbs a {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        color: white;
+      }
+      .banner h1 {
+        margin: 10px 0 6px;
+        font-size: 20px;
+      }
+      .banner p {
+        margin: 0;
+        opacity: 0.92;
+        max-width: 80ch;
+        line-height: 1.45;
+        font-size: 14px;
+      }
+      .content {
+        padding: 10px 0 36px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: transform 0.12s ease;
+        display: flex;
+        flex-direction: column;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+      }
+      .cover {
+        height: 110px;
+        background: radial-gradient(
+            520px 160px at 20% 30%,
+            rgba(118, 2, 249, 0.35),
+            transparent 55%
+          ),
+          radial-gradient(
+            420px 140px at 80% 20%,
+            rgba(86, 16, 192, 0.35),
+            transparent 55%
+          ),
+          linear-gradient(
+            135deg,
+            rgba(53, 30, 144, 0.88),
+            rgba(118, 2, 249, 0.62)
+          );
+        position: relative;
+      }
+      .tag {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 7px 10px;
+        border-radius: 999px;
+        color: white;
+        font-weight: 900;
+        font-size: 12px;
+        backdrop-filter: blur(8px);
+      }
+      .card-body {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .card-title {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 950;
+        color: var(--p-900);
+      }
+      .card-desc {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+        min-height: 38px;
+      }
+      .card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .price {
+        font-weight: 950;
+        color: var(--p-700);
+        background: rgba(86, 16, 192, 0.08);
+        border: 1px solid rgba(86, 16, 192, 0.15);
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .status {
+        font-weight: 900;
+        font-size: 12px;
+        color: #14532d;
+        background: rgba(20, 83, 45, 0.08);
+        border: 1px solid rgba(20, 83, 45, 0.15);
+        padding: 8px 10px;
+        border-radius: 999px;
+      }
+      .btn-action {
+        margin-top: auto;
+      }
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- NAVBAR -->
+    <div id="navbar-container"></div>
+
+    <section class="hero">
+      <div class="container">
+        <div class="banner">
+          <div class="crumbs" id="breadcrumbs">
+            <a href="/index.html">Accueil</a><span>›</span
+            ><a href="/categories.html">Catégories</a><span>›</span
+            ><span id="categoryName">Chargement...</span>
+          </div>
+          <h1 id="categoryTitle">Catalogue</h1>
+          <p id="categoryDescription">Chargement de la description...</p>
+        </div>
+      </div>
+    </section>
+
+    <main class="content">
+      <div class="container">
+        <section class="grid" id="productsGrid">
+          <!-- Products will be loaded dynamically -->
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/catalogue.js"></script>
+  </body>
+</html>

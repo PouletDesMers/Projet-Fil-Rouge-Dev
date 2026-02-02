@@ -112,17 +112,10 @@ func main() {
 
 	api.HandleFunc("/categories", getCategories).Methods("GET")
 	api.HandleFunc("/categories", createCategorie).Methods("POST")
-	api.HandleFunc("/categories/{id}", getCategorie).Methods("GET")
 	api.HandleFunc("/categories/{id}", updateCategorie).Methods("PUT")
 	api.HandleFunc("/categories/{id}", deleteCategorie).Methods("DELETE")
-	api.HandleFunc("/services", getServices).Methods("GET")
-	api.HandleFunc("/services", createService).Methods("POST")
-	api.HandleFunc("/services/{id}", getService).Methods("GET")
-	api.HandleFunc("/services/{id}", updateService).Methods("PUT")
-	api.HandleFunc("/services/{id}", deleteService).Methods("DELETE")
 	api.HandleFunc("/produits", getProduits).Methods("GET")
 	api.HandleFunc("/produits", createProduit).Methods("POST")
-	api.HandleFunc("/produits/{id}", getProduit).Methods("GET")
 	api.HandleFunc("/produits/{id}", updateProduit).Methods("PUT")
 	api.HandleFunc("/produits/{id}", deleteProduit).Methods("DELETE")
 	api.HandleFunc("/tarifications", getTarifications).Methods("GET")
@@ -189,8 +182,24 @@ func main() {
 	api.HandleFunc("/carousel-images/{id}", deleteCarouselImage).Methods("DELETE")
 	api.HandleFunc("/carousel-images/reorder", reorderCarouselImages).Methods("POST")
 
+	// Web Categories routes (New dynamic system)
+	api.HandleFunc("/web-categories", getCategories).Methods("GET")
+	api.HandleFunc("/web-categories", createCategorie).Methods("POST")
+	api.HandleFunc("/web-categories/{id}", updateCategorie).Methods("PUT")
+	api.HandleFunc("/web-categories/{id}", deleteCategorie).Methods("DELETE")
+
+	// Web Products routes (New dynamic system)
+	api.HandleFunc("/web-products", getProduits).Methods("GET")
+	api.HandleFunc("/web-products", createProduit).Methods("POST")
+	api.HandleFunc("/web-products/{id}", updateProduit).Methods("PUT")
+	api.HandleFunc("/web-products/{id}", deleteProduit).Methods("DELETE")
+
 	// Public carousel images (no auth required)
 	r.HandleFunc("/api/public/carousel-images", getActiveCarouselImages).Methods("GET")
+
+	// Public categories and products (no auth required)
+	r.HandleFunc("/api/public/categories", getActiveCategories).Methods("GET")
+	r.HandleFunc("/api/public/products/{slug}", getActiveProduitsByCategory).Methods("GET")
 
 	log.Println("API started in HTTP on port 8080")
 
