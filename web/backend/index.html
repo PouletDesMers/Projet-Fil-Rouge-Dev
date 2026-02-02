@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CYNA — Admin Panel</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="img/favicon.png" />
 
     <!-- Bootstrap CSS -->
     <link
@@ -15,6 +18,9 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
+    
+    <!-- Swagger UI -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css" />
 
     <style>
       body {
@@ -95,6 +101,11 @@
       <div class="row">
         <!-- Sidebar -->
         <nav class="col-md-3 col-lg-2 admin-sidebar">
+          <div class="mb-4 text-center">
+            <img src="img/logo-admin.png" alt="CYNA Logo" style="width: 80px; height: 80px; margin-bottom: 15px;" />
+            <h4 class="text-white mb-3">CYNA Admin</h4>
+          </div>
+          
           <div class="mb-4">
             <a href="/" class="text-white text-decoration-none d-flex align-items-center gap-2">
               <i class="bi bi-arrow-left"></i>
@@ -125,6 +136,16 @@
             <li class="nav-item">
               <a class="nav-link" href="#" data-section="analytics">
                 <i class="bi bi-bar-chart"></i> Statistiques
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="api-docs">
+                <i class="bi bi-code-slash"></i> API Documentation
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="api-keys">
+                <i class="bi bi-key"></i> Clés API
               </a>
             </li>
             <li class="nav-item">
@@ -234,6 +255,38 @@
             </div>
 
             <div id="categoryProductsContainer">
+              <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- API Documentation Section -->
+          <section id="api-docs-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-code-slash"></i> Documentation API</h1>
+                <p class="text-muted mb-0">Interface Swagger pour tester l'API REST</p>
+              </div>
+            </div>
+            <div id="swagger-ui"></div>
+          </section>
+
+          <!-- API Keys Section -->
+          <section id="api-keys-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-key"></i> Gestion des Clés API</h1>
+                <p class="text-muted mb-0">Créer et gérer les clés d'accès à l'API</p>
+              </div>
+              <button class="btn btn-primary" id="createAPIKeyBtn">
+                <i class="bi bi-plus-circle"></i> Nouvelle Clé
+              </button>
+            </div>
+            
+            <div id="apiKeysContainer">
               <div class="loading-spinner">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Chargement...</span>
@@ -791,6 +844,64 @@
       </div>
     </div>
 
+    <!-- Create API Key Modal -->
+    <div class="modal fade" id="createAPIKeyModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Créer une Clé API</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="createAPIKeyForm">
+              <div class="mb-3">
+                <label for="apiKeyName" class="form-label">Nom de la clé</label>
+                <input type="text" class="form-control" id="apiKeyName" required placeholder="Ex: Integration Production">
+              </div>
+              <div class="mb-3">
+                <label for="apiKeyPermissions" class="form-label">Permissions</label>
+                <input type="text" class="form-control" id="apiKeyPermissions" placeholder="Ex: read,write" value="read,write">
+                <small class="text-muted">Permissions séparées par des virgules</small>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveAPIKeyBtn">Créer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key Result Modal -->
+    <div class="modal fade" id="apiKeyResultModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title">Clé API Créée</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle"></i> <strong>Important :</strong> Sauvegardez cette clé maintenant. Elle ne sera plus affichée.
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Votre clé API :</label>
+              <div class="input-group">
+                <input type="text" class="form-control font-monospace" id="generatedAPIKey" readonly>
+                <button class="btn btn-outline-secondary" type="button" id="copyAPIKeyBtn">
+                  <i class="bi bi-clipboard"></i> Copier
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">J'ai sauvegardé la clé</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer">
       <!-- Toasts will be inserted here dynamically -->
@@ -800,6 +911,10 @@
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"
     ></script>
+    
+    <!-- Swagger UI -->
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js"></script>
 
     <!-- Admin Panel Modules -->
     <script src="js/modules/auth.js"></script>
@@ -809,5 +924,6 @@
     <script src="js/modules/categories.js"></script>
     <script src="js/modules/products.js"></script>
     <script src="js/modules/images.js"></script>
+    <script src="js/modules/apikeys.js"></script>
   </body>
 </html>

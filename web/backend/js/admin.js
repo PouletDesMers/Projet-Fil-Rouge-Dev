@@ -24,7 +24,7 @@ async function checkAdminStatus() {
       return;
     }
 
-    const response = await fetch('/api/user/profile', {
+    const response = await fetch('/admin/api/user/profile', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -59,7 +59,7 @@ async function loadUsers() {
     usersContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/users', {
+    const response = await fetch('/admin/api/users', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function viewUser(userId) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -359,7 +359,7 @@ async function viewUser(userId) {
 async function editUser(userId) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -418,7 +418,7 @@ document.getElementById('saveUserBtn')?.addEventListener('click', async () => {
       est_actif: document.getElementById('editUserActive').checked
     };
     
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -452,7 +452,7 @@ async function promoteUser(userId) {
   
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -481,7 +481,7 @@ async function demoteUser(userId) {
   
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -511,7 +511,7 @@ async function toggleUserStatus(userId, activate) {
   
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -543,7 +543,7 @@ document.getElementById('resetPasswordBtn')?.addEventListener('click', async () 
   
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -606,7 +606,7 @@ document.getElementById('deleteUserBtn')?.addEventListener('click', async () => 
   
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -693,7 +693,7 @@ function generateRandomPassword(length = 12) {
 async function loadImages() {
   try {
     const token = getAuthToken();
-    const response = await fetch('/api/carousel-images', {
+    const response = await fetch('/admin/api/carousel-images', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -814,7 +814,7 @@ function openImageModal(imageId = null) {
 async function loadImageForEdit(imageId) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/carousel-images/${imageId}`, {
+    const response = await fetch(`/admin/api/carousel-images/${imageId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -864,7 +864,7 @@ async function saveImage() {
       return;
     }
 
-    const url = isEdit ? `/api/carousel-images/${imageId}` : '/api/carousel-images';
+    const url = isEdit ? `/admin/api/carousel-images/${imageId}` : '/admin/api/carousel-images';
     const method = isEdit ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
@@ -914,7 +914,7 @@ async function deleteImage(imageId) {
 
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/carousel-images/${imageId}`, {
+    const response = await fetch(`/admin/api/carousel-images/${imageId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -937,7 +937,7 @@ async function deleteImage(imageId) {
 async function toggleImageStatus(imageId, activate) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/carousel-images/${imageId}`, {
+    const response = await fetch(`/admin/api/carousel-images/${imageId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -974,7 +974,7 @@ async function changeImageOrder(imageId, direction) {
     const token = getAuthToken();
     
     // Get current images to calculate new orders
-    const response = await fetch('/api/carousel-images', {
+    const response = await fetch('/admin/api/carousel-images', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1002,7 +1002,7 @@ async function changeImageOrder(imageId, direction) {
     
     if (targetImage) {
       // Update orders
-      const updateResponse = await fetch('/api/carousel-images/reorder', {
+      const updateResponse = await fetch('/admin/api/carousel-images/reorder', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1040,7 +1040,7 @@ async function loadCategories() {
     categoriesContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/web-categories', {
+    const response = await fetch('/admin/admin/api/categories', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1182,7 +1182,7 @@ async function saveCategory() {
       actif: document.getElementById('categoryActive').checked
     };
 
-    const url = isEdit ? `/api/web-categories/${categoryId}` : '/api/web-categories';
+    const url = isEdit ? `/admin/admin/api/categories/${categoryId}` : '/admin/admin/api/categories';
     const method = isEdit ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
@@ -1223,7 +1223,7 @@ async function saveCategory() {
 async function editCategory(categoryId) {
   try {
     const token = getAuthToken();
-    const response = await fetch('/api/web-categories', {
+    const response = await fetch('/admin/admin/api/categories', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1249,7 +1249,7 @@ async function editCategory(categoryId) {
 async function toggleCategoryStatus(categoryId, newStatus) {
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/web-categories/${categoryId}`, {
+    const response = await fetch(`/admin/admin/api/categories/${categoryId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1278,7 +1278,7 @@ async function deleteCategory(categoryId, categoryName) {
 
   try {
     const token = getAuthToken();
-    const response = await fetch(`/api/web-categories/${categoryId}`, {
+    const response = await fetch(`/admin/admin/api/categories/${categoryId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -1402,7 +1402,7 @@ async function setNextOrderForCategory() {
   
   try {
     const token = getAuthToken();
-    const response = await fetch('/api/web-products', {
+    const response = await fetch('/admin/admin/api/products', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1439,7 +1439,7 @@ async function loadProducts() {
     productsContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/web-products', {
+    const response = await fetch('/admin/admin/api/products', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1617,7 +1617,7 @@ async function saveProduct() {
       actif: document.getElementById('productActive').checked
     };
 
-    const url = productId ? `/api/web-products/${productId}` : '/api/web-products';
+    const url = productId ? `/admin/admin/api/products/${productId}` : '/admin/admin/api/products';
     const method = productId ? 'PUT' : 'POST';
 
     console.log('Sending product data:', productData); // Debug log
@@ -1676,7 +1676,7 @@ async function deleteProduct(productId) {
   try {
     const token = getAuthToken();
 
-    const response = await fetch(`/api/web-products/${productId}`, {
+    const response = await fetch(`/admin/admin/api/products/${productId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -1716,7 +1716,7 @@ async function loadCategoriesForProducts() {
   try {
     const token = getAuthToken();
 
-    const response = await fetch('/api/web-categories', {
+    const response = await fetch('/admin/admin/api/categories', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -1751,7 +1751,7 @@ async function moveProduct(productId, direction) {
   try {
     const token = getAuthToken();
 
-    const response = await fetch(`/api/web-products/${productId}/move`, {
+    const response = await fetch(`/admin/admin/api/products/${productId}/move`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1778,7 +1778,7 @@ async function moveCategory(categoryId, direction) {
   try {
     const token = getAuthToken();
 
-    const response = await fetch(`/api/web-categories/${categoryId}/move`, {
+    const response = await fetch(`/admin/admin/api/categories/${categoryId}/move`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1804,7 +1804,7 @@ async function moveCategory(categoryId, direction) {
 async function moveItemClientSide(type, itemId, direction) {
   try {
     const token = getAuthToken();
-    const apiEndpoint = type === 'product' ? '/api/web-products' : '/api/web-categories';
+    const apiEndpoint = type === 'product' ? '/admin/admin/api/products' : '/admin/admin/api/categories';
     
     // Get all items
     const response = await fetch(apiEndpoint, {
@@ -1877,7 +1877,7 @@ async function updateItemOrder(type, itemId, newOrder) {
   
   try {
     // Get all items to find the one we want to update
-    const listEndpoint = type === 'product' ? '/api/web-products' : '/api/web-categories';
+    const listEndpoint = type === 'product' ? '/admin/admin/api/products' : '/admin/admin/api/categories';
     const listResponse = await fetch(listEndpoint, {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -1996,7 +1996,7 @@ async function loadCategoryProducts() {
 
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/web-products', {
+    const response = await fetch('/admin/admin/api/products', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -2108,7 +2108,7 @@ async function loadCategoryProducts() {
 async function loadCategoryNamesForProducts() {
   try {
     const token = getAuthToken();
-    const response = await fetch('/api/web-categories', {
+    const response = await fetch('/admin/admin/api/categories', {
       headers: {
         'Authorization': `Bearer ${token}`
       }

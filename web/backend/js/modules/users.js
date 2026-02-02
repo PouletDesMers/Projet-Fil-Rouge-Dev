@@ -6,14 +6,12 @@
 // Load users from API
 async function loadUsers() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const usersContainer = document.getElementById('usersContainer');
 
     usersContainer.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
 
-    const response = await fetch('/api/users', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch('/admin/api/users');
 
     if (!response.ok) throw new Error('Erreur lors de la récupération des utilisateurs');
 
@@ -103,10 +101,9 @@ async function viewUser(userId) {
     console.log('User ID:', userId);
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
     
-    const token = AdminAuth.getAuthToken();
     
-    const response = await fetch(`/api/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    const response = await fetch(`/admin/api/users/${userId}`, {
     });
 
     if (!response.ok) throw new Error('Utilisateur introuvable');
@@ -180,10 +177,9 @@ async function viewUser(userId) {
 // Edit user
 async function editUser(userId) {
   try {
-    const token = AdminAuth.getAuthToken();
     
-    const response = await fetch(`/api/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    const response = await fetch(`/admin/api/users/${userId}`, {
     });
 
     if (!response.ok) throw new Error('Utilisateur introuvable');
@@ -244,7 +240,7 @@ async function editUser(userId) {
 // Save user
 async function saveUser() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const userId = document.getElementById('editUserId').value;
     
     const userData = {
@@ -259,11 +255,10 @@ async function saveUser() {
       throw new Error('Nom et email requis');
     }
     
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(userData)
     });
@@ -294,19 +289,17 @@ async function promoteUser(userId) {
   if (!confirm('Promouvoir cet utilisateur en administrateur ?')) return;
 
   try {
-    const token = AdminAuth.getAuthToken();
-    const userResponse = await fetch(`/api/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    const userResponse = await fetch(`/admin/api/users/${userId}`, {
     });
     
     if (!userResponse.ok) throw new Error('Utilisateur introuvable');
     const user = await userResponse.json();
     
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ ...user, role: 'admin' })
     });
@@ -326,19 +319,17 @@ async function demoteUser(userId) {
   if (!confirm('Rétrograder cet administrateur en utilisateur ?')) return;
 
   try {
-    const token = AdminAuth.getAuthToken();
-    const userResponse = await fetch(`/api/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    const userResponse = await fetch(`/admin/api/users/${userId}`, {
     });
     
     if (!userResponse.ok) throw new Error('Utilisateur introuvable');
     const user = await userResponse.json();
     
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ ...user, role: 'utilisateur' })
     });
@@ -359,19 +350,17 @@ async function toggleUserStatus(userId, activate) {
   if (!confirm(`Voulez-vous ${action} cet utilisateur ?`)) return;
 
   try {
-    const token = AdminAuth.getAuthToken();
-    const userResponse = await fetch(`/api/users/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    
+    const userResponse = await fetch(`/admin/api/users/${userId}`, {
     });
     
     if (!userResponse.ok) throw new Error('Utilisateur introuvable');
     const user = await userResponse.json();
     
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/admin/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ ...user, est_actif: activate })
     });
@@ -391,11 +380,10 @@ async function reset2FA(userId) {
   if (!confirm('Voulez-vous vraiment réinitialiser le 2FA de cet utilisateur ? L\'utilisateur devra reconfigurer son authentification à deux facteurs.')) return;
 
   try {
-    const token = AdminAuth.getAuthToken();
-    const response = await fetch(`/api/users/${userId}/reset-2fa`, {
+    
+    const response = await fetch(`/admin/api/users/${userId}/reset-2fa`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });

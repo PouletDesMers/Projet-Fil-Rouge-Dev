@@ -5,7 +5,7 @@
 
 // Fix duplicate orders in products
 async function fixDuplicateOrders(products) {
-  const token = AdminAuth.getAuthToken();
+  
   
   // Sort products by their current order first, then by creation date as fallback
   products.sort((a, b) => {
@@ -37,11 +37,10 @@ async function fixDuplicateOrders(products) {
       };
       
       updatePromises.push(
-        fetch(`/api/web-products/${product.id_produit}`, {
+        fetch(`/admin/api/products/${product.id_produit}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -75,14 +74,13 @@ async function loadCategoryProducts() {
   if (!currentCategoryId) return;
   
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const container = document.getElementById('categoryProductsContainer');
 
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/web-products', {
+    const response = await fetch('/admin/api/products', {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -290,10 +288,9 @@ async function setNextOrderForCategory() {
   if (!currentCategoryId) return;
   
   try {
-    const token = AdminAuth.getAuthToken();
-    const response = await fetch('/api/web-products', {
+    
+    const response = await fetch('/admin/api/products', {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
     
@@ -320,7 +317,7 @@ async function setNextOrderForCategory() {
 // Save product
 async function saveProduct() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const productId = document.getElementById('productId').value;
 
     // Get category - use current category if we're in category view and adding
@@ -357,7 +354,7 @@ async function saveProduct() {
       actif: document.getElementById('productActive').checked
     };
 
-    const url = productId ? `/api/web-products/${productId}` : '/api/web-products';
+    const url = productId ? `/admin/api/products/${productId}` : '/admin/api/products';
     const method = productId ? 'PUT' : 'POST';
 
     console.log('Sending product data:', productData);
@@ -366,7 +363,6 @@ async function saveProduct() {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(productData)
     });
@@ -412,12 +408,11 @@ async function deleteProduct(productId) {
   }
 
   try {
-    const token = AdminAuth.getAuthToken();
+    
 
-    const response = await fetch(`/api/web-products/${productId}`, {
+    const response = await fetch(`/admin/api/products/${productId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -450,7 +445,7 @@ async function deleteProduct(productId) {
 // Move product up or down in order
 async function moveProduct(productId, direction) {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     await moveItemClientSide('product', productId, direction);
   } catch (error) {
     console.error(`Erreur lors du déplacement du produit:`, error);
@@ -461,17 +456,17 @@ async function moveProduct(productId, direction) {
 // Client-side implementation for moving items when API endpoints don't exist
 async function moveItemClientSide(type, itemId, direction) {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     let apiEndpoint, idField;
     
     if (type === 'product') {
-      apiEndpoint = '/api/web-products';
+      apiEndpoint = '/admin/api/products';
       idField = 'id_produit';
     } else if (type === 'category') {
-      apiEndpoint = '/api/web-categories';
+      apiEndpoint = '/admin/api/categories';
       idField = 'id_categorie';
     } else if (type === 'image') {
-      apiEndpoint = '/api/carousel-images';
+      apiEndpoint = '/admin/api/carousel-images';
       idField = 'id_image';
     } else {
       throw new Error(`Type ${type} non supporté`);
@@ -480,7 +475,6 @@ async function moveItemClientSide(type, itemId, direction) {
     // Get all items
     const response = await fetch(apiEndpoint, {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -572,19 +566,19 @@ async function moveItemClientSide(type, itemId, direction) {
 
 // Update item order - Simplified version that works with our API
 async function updateItemOrder(type, itemId, newOrder) {
-  const token = AdminAuth.getAuthToken();
+  
   
   try {
     let listEndpoint, idField;
     
     if (type === 'product') {
-      listEndpoint = '/api/web-products';
+      listEndpoint = '/admin/api/products';
       idField = 'id_produit';
     } else if (type === 'category') {
-      listEndpoint = '/api/web-categories';
+      listEndpoint = '/admin/api/categories';
       idField = 'id_categorie';
     } else if (type === 'image') {
-      listEndpoint = '/api/carousel-images';
+      listEndpoint = '/admin/api/carousel-images';
       idField = 'id_image';
     } else {
       throw new Error(`Type ${type} non supporté`);
@@ -593,7 +587,6 @@ async function updateItemOrder(type, itemId, newOrder) {
     // Get all items to find the one we want to update
     const listResponse = await fetch(listEndpoint, {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
     
@@ -619,7 +612,6 @@ async function updateItemOrder(type, itemId, newOrder) {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(updateData)
     });

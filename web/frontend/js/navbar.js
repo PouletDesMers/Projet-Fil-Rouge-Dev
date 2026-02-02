@@ -26,35 +26,51 @@ function deleteCookie(name) {
   setCookie(name, "", -1);
 }
 
-function initNavbarAuth() {
-  const token = localStorage.getItem("token");
-  const loginBtn = document.getElementById("loginBtn");
-  const accountDropdown = document.getElementById("accountDropdown");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const adminMenuItem = document.getElementById("adminMenuItem");
-  const adminMenuItemContainer = document.getElementById("adminMenuItemContainer");
+async function initNavbarAuth() {
+  // Check authentication using secure profile endpoint
+  try {
+    const response = await fetch("/auth/profile");
+    const isAuthenticated = response.ok;
+    
+    const loginBtn = document.getElementById("loginBtn");
+    const accountDropdown = document.getElementById("accountDropdown");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const adminMenuItem = document.getElementById("adminMenuItem");
+    const adminMenuItemContainer = document.getElementById("adminMenuItemContainer");
 
-  if (token) {
-    accountDropdown?.classList.remove("d-none");
-    loginBtn?.classList.add("d-none");
+    if (isAuthenticated) {
+      accountDropdown?.classList.remove("d-none");
+      loginBtn?.classList.add("d-none");
 
-    // Check if user is admin
-    checkUserAdminStatus(token);
-  } else {
-    accountDropdown?.classList.add("d-none");
-    loginBtn?.classList.remove("d-none");
-    adminMenuItem?.classList.add("d-none");
-    adminMenuItemContainer?.classList.add("d-none");
+      // Check if user is admin
+      checkUserAdminStatus();
+    } else {
+      accountDropdown?.classList.add("d-none");
+      loginBtn?.classList.remove("d-none");
+      adminMenuItem?.classList.add("d-none");
+      adminMenuItemContainer?.classList.add("d-none");
+    }
+
+    logoutBtn?.addEventListener("click", async () => {
+      try {
+        // Call secure logout endpoint to clear httpOnly cookie
+        await fetch("/auth/logout", { method: "POST" });
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
+      // Clear any remaining localStorage (for backwards compatibility)
+      localStorage.removeItem("token");
+      localStorage.removeItem("user_id");
+      deleteCookie("token");
+      deleteCookie("user_id");
+      window.location.href = "/index.html";
+    });
+  } catch (error) {
+    console.error("Auth check error:", error);
+    // Show login button if auth check fails
+    document.getElementById("loginBtn")?.classList.remove("d-none");
+    document.getElementById("accountDropdown")?.classList.add("d-none");
   }
-
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_id");
-    // Also remove cookies
-    deleteCookie("token");
-    deleteCookie("user_id");
-    window.location.href = "/index.html";
-  });
 
   // Handle active link
   const currentPath = window.location.pathname;
@@ -68,13 +84,10 @@ function initNavbarAuth() {
   });
 }
 
-async function checkUserAdminStatus(token) {
+async function checkUserAdminStatus() {
   try {
-    const response = await fetch("/api/user/profile", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
+    // Use new secure profile endpoint (uses httpOnly cookie)
+    const response = await fetch("/auth/profile");
 
     if (!response.ok) {
       return;

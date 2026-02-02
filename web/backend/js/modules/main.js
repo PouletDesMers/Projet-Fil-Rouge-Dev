@@ -59,6 +59,10 @@ function setupEventListeners() {
       } else if (sectionId === 'categories-section') {
         AdminCategories.loadCategories();
         AdminCategories.loadCategoriesForProducts();
+      } else if (sectionId === 'api-docs-section') {
+        initSwaggerUI();
+      } else if (sectionId === 'api-keys-section') {
+        AdminAPIKeys.loadAPIKeys();
       }
     });
   });
@@ -149,10 +153,51 @@ function backToCategories() {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeAdmin);
 
+// Initialize Swagger UI
+function initSwaggerUI() {
+  // Check if SwaggerUIBundle is available
+  if (typeof SwaggerUIBundle === 'undefined') {
+    console.error('SwaggerUIBundle not loaded');
+    return;
+  }
+
+  // Fetch the OpenAPI spec and initialize Swagger
+  fetch('/backend/openapi.json')
+    .then(response => response.json())
+    .then(spec => {
+      // Initialize Swagger UI with the spec object
+      const ui = SwaggerUIBundle({
+        spec: spec,
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        requestInterceptor: (request) => {
+          // Requests will use cookies automatically for authentication
+          return request;
+        }
+      });
+
+      window.ui = ui;
+    })
+    .catch(error => {
+      console.error('Failed to load OpenAPI spec:', error);
+      document.getElementById('swagger-ui').innerHTML = 
+        '<div class="alert alert-danger">Erreur de chargement de la documentation API</div>';
+    });
+}
+
 // Export functions
 window.AdminMain = {
   currentCategoryId: () => currentCategoryId,
   currentCategoryName: () => currentCategoryName,
   showCategoryProducts,
-  backToCategories
+  backToCategories,
+  initSwaggerUI
 };

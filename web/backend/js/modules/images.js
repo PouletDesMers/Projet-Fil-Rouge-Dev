@@ -5,7 +5,7 @@
 
 // Fix duplicate orders in images
 async function fixDuplicateImageOrders(images) {
-  const token = AdminAuth.getAuthToken();
+  
   
   // Sort images by their current order first, then by ID as fallback
   images.sort((a, b) => {
@@ -37,11 +37,10 @@ async function fixDuplicateImageOrders(images) {
       };
       
       updatePromises.push(
-        fetch(`/api/carousel-images/${image.id_image}`, {
+        fetch(`/admin/api/carousel-images/${image.id_image}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -72,13 +71,9 @@ async function fixDuplicateImageOrders(images) {
 // Load images
 async function loadImages() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
 
-    const response = await fetch('/api/carousel-images', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const response = await fetch('/admin/api/carousel-images');
 
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des images');
@@ -258,7 +253,7 @@ function getNextImageOrder() {
 // Save image
 async function saveImage() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const imageId = document.getElementById('imageId').value;
 
     // Validate required fields
@@ -277,14 +272,13 @@ async function saveImage() {
       actif: document.getElementById('imageActive').checked
     };
 
-    const url = imageId ? `/api/carousel-images/${imageId}` : '/api/carousel-images';
+    const url = imageId ? `/admin/api/carousel-images/${imageId}` : '/admin/api/carousel-images';
     const method = imageId ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(imageData)
     });
@@ -319,12 +313,11 @@ async function deleteImage(imageId) {
   }
 
   try {
-    const token = AdminAuth.getAuthToken();
+    
 
-    const response = await fetch(`/api/carousel-images/${imageId}`, {
+    const response = await fetch(`/admin/api/carousel-images/${imageId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 

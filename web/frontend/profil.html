@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CYNA — Profil</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
     <!-- Bootstrap CSS -->
     <link
@@ -136,20 +140,13 @@
     <script src="js/cart.js"></script>
 
     <script>
-      const token = localStorage.getItem("token");
-      if (!token) {
-        window.location.href = "/auth.html";
-      }
+      // Utilisation des cookies httpOnly - plus sécurisé
+      // Pas besoin de vérifier localStorage puisque checkAuth middleware gère déjà l'auth
 
       // Load user data
-      fetch(`/api/user/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      fetch(`/auth/profile`)
         .then(async (res) => {
           if (res.status === 401) {
-            localStorage.removeItem("token");
             window.location.href = "/auth.html";
             return;
           }
@@ -194,8 +191,7 @@
         fetch(`/api/user/profile`, {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
           },
           body: JSON.stringify(data),
         })
@@ -221,7 +217,7 @@
         fetch("/api/user/2fa/setup", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
           },
         })
           .then(async (res) => {
@@ -257,8 +253,7 @@
         fetch("/api/user/2fa/verify", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             secret: currentSecret,
@@ -291,7 +286,7 @@
         fetch(`/api/user/2fa/remove`, {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
           },
         })
           .then(() => {

@@ -258,7 +258,7 @@ loginForm.addEventListener("submit", async (e) => {
       console.log("Sending login data:", loginData);
     }
 
-    const result = await postJSON(`${API_BASE}/api/login`, loginData);
+    const result = await postJSON(`${API_BASE}/auth/login`, loginData);
 
     // Check if 2FA is required
     if (result?.requires_2fa) {
@@ -267,17 +267,15 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    if (result?.token) {
-      localStorage.setItem("token", result.token);
-      if (result.user_id) localStorage.setItem("user_id", result.user_id);
+    if (result?.success && result?.user) {
+      // Token is now stored in httpOnly cookie automatically by server
+      // No need to store in localStorage anymore for security
       
-      // Also store token in cookie for server-side access (backend admin panel)
-      setCookie("token", result.token, 30);
-      if (result.user_id) setCookie("user_id", result.user_id, 30);
+      showMsg("success", "Connected ✅", "Success");
+      setTimeout(() => (window.location.href = "/index.html"), 500);
+    } else {
+      showMsg("danger", result?.error || "Login failed");
     }
-
-    showMsg("success", "Connected ✅", "Success");
-    setTimeout(() => (window.location.href = "/index.html"), 500);
   } catch (err) {
     console.error("Login error:", err);
     showMsg("danger", err.message);

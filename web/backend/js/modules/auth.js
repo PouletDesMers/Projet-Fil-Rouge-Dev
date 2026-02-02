@@ -3,33 +3,24 @@
  * Handles user authentication and authorization
  */
 
-// Get auth token from localStorage
+// Auth token is now in httpOnly cookies - no need to access it directly
 function getAuthToken() {
-  return localStorage.getItem('token');
+  // Pour compatibilité avec l'ancien code, mais maintenant les cookies sont gérés automatiquement
+  return null; // Le token est dans un cookie httpOnly, inaccessible au JavaScript
 }
 
 // Redirect to login if not authenticated
 function checkAuth() {
-  const token = getAuthToken();
-  if (!token) {
-    window.location.href = '/auth.html';
-  }
+  // La vérification est maintenant faite côté serveur via les middlewares
+  // Si on arrive ici, c'est que l'authentification a réussi
+  return true;
 }
 
 // Check if user is admin
 async function checkAdminStatus() {
   try {
-    const token = getAuthToken();
-    if (!token) {
-      window.location.href = '/auth.html';
-      return;
-    }
-
-    const response = await fetch('/api/user/profile', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    // Utilisation de /auth/profile qui gère automatiquement les cookies
+    const response = await fetch('/auth/profile');
 
     if (!response.ok) {
       window.location.href = '/auth.html';
@@ -53,8 +44,15 @@ async function checkAdminStatus() {
 
 // Handle logout
 function handleLogout() {
-  localStorage.removeItem('authToken');
-  window.location.href = '/auth.html';
+  // Appel à l'endpoint de déconnexion sécurisé pour effacer le cookie httpOnly
+  fetch('/auth/logout', { method: 'POST' })
+    .then(() => {
+      window.location.href = '/auth.html';
+    })
+    .catch(() => {
+      // En cas d'erreur, redirection quand même
+      window.location.href = '/auth.html';
+    });
 }
 
 // Export functions

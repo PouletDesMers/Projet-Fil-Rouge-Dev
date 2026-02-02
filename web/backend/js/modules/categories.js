@@ -5,7 +5,7 @@
 
 // Fix duplicate orders in categories
 async function fixDuplicateCategoryOrders(categories) {
-  const token = AdminAuth.getAuthToken();
+  
   
   // Sort categories by their current order first, then by ID as fallback
   categories.sort((a, b) => {
@@ -37,11 +37,10 @@ async function fixDuplicateCategoryOrders(categories) {
       };
       
       updatePromises.push(
-        fetch(`/api/web-categories/${category.id_categorie}`, {
+        fetch(`/admin/api/categories/${category.id_categorie}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -72,17 +71,13 @@ async function fixDuplicateCategoryOrders(categories) {
 // Load categories from API
 async function loadCategories() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const categoriesContainer = document.getElementById('categoriesContainer');
 
     categoriesContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/api/web-categories', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const response = await fetch('/admin/api/categories');
 
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des catégories');
@@ -213,7 +208,7 @@ function openCategoryModal(category = null) {
 // Save category
 async function saveCategory() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const categoryId = document.getElementById('categoryId').value;
     const isEdit = Boolean(categoryId);
 
@@ -227,13 +222,12 @@ async function saveCategory() {
       actif: document.getElementById('categoryActive').checked
     };
 
-    const url = isEdit ? `/api/web-categories/${categoryId}` : '/api/web-categories';
+    const url = isEdit ? `/admin/api/categories/${categoryId}` : '/admin/api/categories';
     const method = isEdit ? 'PUT' : 'POST';
 
     const response = await fetch(url, {
       method: method,
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(categoryData)
@@ -267,11 +261,10 @@ async function saveCategory() {
 // Load categories for product dropdown
 async function loadCategoriesForProducts() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
 
-    const response = await fetch('/api/web-categories', {
+    const response = await fetch('/admin/api/categories', {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -302,7 +295,7 @@ async function loadCategoriesForProducts() {
 // Move category
 async function moveCategory(categoryId, direction) {
   try {
-    const token = AdminAuth.getAuthToken();
+    
 
     // Use client-side implementation
     await AdminProducts.moveItemClientSide('category', categoryId, direction);
@@ -315,11 +308,10 @@ async function moveCategory(categoryId, direction) {
 // Edit category
 async function editCategory(categoryId) {
   try {
-    const token = AdminAuth.getAuthToken();
     
-    const response = await fetch('/api/web-categories', {
+    
+    const response = await fetch('/admin/api/categories', {
       headers: {
-        'Authorization': `Bearer ${token}`
       }
     });
 

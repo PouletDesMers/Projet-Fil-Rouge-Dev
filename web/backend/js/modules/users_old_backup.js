@@ -12,7 +12,7 @@ if (typeof bootstrap !== 'undefined') {
 // Load users from API
 async function loadUsers() {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     const usersContainer = document.getElementById('usersContainer');
 
     usersContainer.innerHTML =
@@ -157,7 +157,7 @@ async function viewUser(userId) {
       }
     }
     
-    const token = AdminAuth.getAuthToken();
+    
     
     const response = await fetch(`/api/users/${userId}`, {
       headers: {
@@ -282,7 +282,7 @@ async function viewUser(userId) {
 // Edit user
 async function editUser(userId) {
   try {
-    const token = AdminAuth.getAuthToken();
+    
     
     const response = await fetch(`/api/users/${userId}`, {
       headers: {
@@ -338,7 +338,7 @@ async function editUser(userId) {
 async function saveUser() {
   try {
     console.log('saveUser called'); // Debug
-    const token = AdminAuth.getAuthToken();
+    
     const userId = document.getElementById('editUserId').value;
     
     console.log('User ID:', userId); // Debug
@@ -397,7 +397,7 @@ async function promoteUser(userId) {
   }
 
   try {
-    const token = AdminAuth.getAuthToken();
+    
     
     // First get current user data
     const userResponse = await fetch(`/api/users/${userId}`, {
@@ -443,7 +443,7 @@ async function demoteUser(userId) {
   }
 
   try {
-    const token = AdminAuth.getAuthToken();
+    
     
     // First get current user data
     const userResponse = await fetch(`/api/users/${userId}`, {
@@ -491,7 +491,7 @@ async function toggleUserStatus(userId, activate) {
   }
 
   try {
-    const token = AdminAuth.getAuthToken();
+    
     
     // First get current user data
     const userResponse = await fetch(`/api/users/${userId}`, {
