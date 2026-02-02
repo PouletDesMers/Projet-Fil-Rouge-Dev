@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catégories | Catalogue</title>
+
+  <style>
+    :root{
+      --p-900:#351E90; --p-700:#5610C0; --a-500:#7602F9; --bg:#EEEEEE;
+      --card:#FFFFFF; --text:#111827; --muted:#6B7280;
+      --ring: rgba(118, 2, 249, .22);
+      --shadow: 0 10px 30px rgba(17,24,39,.10);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(900px 350px at 20% 0%, rgba(118,2,249,.16), transparent 55%),
+                  radial-gradient(900px 350px at 80% 0%, rgba(86,16,192,.16), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{ color:inherit; text-decoration:none; }
+    .container{ width:min(1100px, 92vw); margin:0 auto; }
+
+    .header{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter: blur(10px);
+      background: rgba(238,238,238,.75);
+      border-bottom: 1px solid rgba(17,24,39,.08);
+    }
+    .header__inner{ display:flex; align-items:center; gap:14px; padding:14px 0; }
+
+    .logo{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; }
+    .logo__mark{
+      width:38px; height:38px; border-radius:12px;
+      background: linear-gradient(135deg, var(--p-900), var(--a-500));
+      box-shadow: 0 10px 20px rgba(53,30,144,.22);
+    }
+    .logo__text small{ display:block; font-weight:600; color:var(--muted); margin-top:2px; font-size:12px; }
+
+    .search{
+      flex:1; display:flex; align-items:center; gap:10px;
+      background: var(--card);
+      border: 1px solid rgba(17,24,39,.10);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: 0 8px 22px rgba(17,24,39,.08);
+    }
+    .search input{ border:none; outline:none; width:100%; font-size:14px; background:transparent; }
+    .search:focus-within{ border-color: rgba(118,2,249,.45); box-shadow: 0 0 0 6px var(--ring); }
+
+    .nav{ display:flex; gap:10px; margin-left:6px; }
+    .nav a{
+      padding:10px 12px; border-radius:999px;
+      font-weight:700; font-size:13px; color:#1F2937;
+      border: 1px solid transparent;
+    }
+    .nav a.active{ color: var(--p-900); background: rgba(53,30,144,.10); border-color: rgba(53,30,144,.18); }
+    .nav a:hover{ border-color: rgba(118,2,249,.25); background: rgba(118,2,249,.06); }
+
+    .actions{ display:flex; align-items:center; gap:10px; }
+    .icon-btn{
+      position:relative; width:44px; height:44px; border-radius: 14px;
+      border: 1px solid rgba(17,24,39,.10);
+      background: var(--card);
+      display:grid; place-items:center;
+      box-shadow: 0 8px 22px rgba(17,24,39,.08);
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .icon-btn:hover{ transform: translateY(-1px); border-color: rgba(118,2,249,.40); }
+    .dot{ position:absolute; top:10px; right:10px; width:10px; height:10px; border-radius:999px; background: var(--a-500); box-shadow: 0 0 0 3px rgba(118,2,249,.18); }
+
+    .burger{ display:none; }
+    .mobile-panel{
+      display:none; background: var(--card);
+      border-top: 1px solid rgba(17,24,39,.10);
+      padding: 10px 0 14px;
+    }
+    .mobile-panel a{ display:block; padding: 10px 0; font-weight:800; color:#1F2937; }
+
+    .hero{ padding: 26px 0 14px; }
+    .hero__card{
+      background: linear-gradient(135deg, rgba(53,30,144,.96), rgba(118,2,249,.86));
+      border-radius: var(--radius);
+      padding: 22px; color:white;
+      box-shadow: 0 20px 40px rgba(53,30,144,.25);
+      overflow:hidden; position:relative;
+    }
+    .hero__card::after{
+      content:""; position:absolute; inset:-80px -80px auto auto;
+      width:240px; height:240px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.40), transparent 60%);
+      transform: rotate(18deg);
+    }
+    .hero h1{ margin:0 0 6px; font-size: 22px; letter-spacing:.2px; }
+    .hero p{ margin:0; opacity:.92; max-width: 70ch; line-height:1.45; font-size:14px; }
+
+    .content{ padding: 12px 0 36px; }
+    .row{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin: 18px 0 12px; }
+    .row h2{ margin:0; font-size: 16px; letter-spacing:.2px; }
+    .hint{ color:var(--muted); font-size:13px; margin:0; }
+
+    .grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+
+    .cat-card{
+      background: var(--card);
+      border: 1px solid rgba(17,24,39,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+    .cat-card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(118,2,249,.35);
+      box-shadow: 0 18px 40px rgba(17,24,39,.14);
+    }
+
+    .cat-cover{
+      height:120px;
+      background:
+        radial-gradient(520px 160px at 20% 30%, rgba(118,2,249,.55), transparent 55%),
+        radial-gradient(420px 140px at 80% 20%, rgba(86,16,192,.55), transparent 55%),
+        linear-gradient(135deg, rgba(53,30,144,.92), rgba(86,16,192,.80));
+      position:relative;
+    }
+    .badge{
+      position:absolute; left:14px; bottom:14px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.25);
+      padding: 8px 10px; border-radius: 999px;
+      color:white; font-weight:800; font-size:12px;
+      letter-spacing:.2px; backdrop-filter: blur(8px);
+    }
+    .cat-body{ padding:14px; }
+    .cat-title{ margin:0 0 6px; font-size:16px; font-weight:900; color: var(--p-900); }
+    .cat-desc{ margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.45; min-height: 40px; }
+    .cat-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .pill{
+      font-size:12px; font-weight:800;
+      padding:8px 10px; border-radius:999px;
+      background: rgba(53,30,144,.08);
+      border: 1px solid rgba(53,30,144,.15);
+      color: var(--p-900);
+      white-space:nowrap;
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:10px;
+      padding: 10px 12px; border-radius: 14px;
+      font-weight:900; font-size:13px;
+      border: 1px solid rgba(118,2,249,.35);
+      background: linear-gradient(135deg, rgba(118,2,249,.12), rgba(86,16,192,.08));
+      color: var(--p-700);
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 22px rgba(86,16,192,.18); }
+
+    footer{ display:block; padding: 18px 0 30px; color:var(--muted); font-size:13px; }
+    footer .links{ display:flex; flex-wrap:wrap; gap:14px; margin-top:8px; }
+    footer .links a{ padding:8px 10px; border-radius: 999px; background: rgba(17,24,39,.04); border: 1px solid rgba(17,24,39,.06); }
+
+    @media (max-width: 920px){
+      .grid{ grid-template-columns: 1fr; }
+      .nav{ display:none; }
+      .burger{ display:grid; }
+      footer{ display:none; }
+      .hero h1{ font-size:20px; }
+    }
+  </style>
+</head>
+
+<body>
+<header class="header">
+  <div class="container">
+    <div class="header__inner">
+      <a class="logo" href="categories.html">
+        <div class="logo__mark"></div>
+        <div class="logo__text">
+          <div>CyberShop</div>
+          <small>Catalogue SaaS</small>
+        </div>
+      </a>
+
+      <div class="search" role="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="#5610C0" stroke-width="2"/>
+          <path d="M21 21l-4.3-4.3" stroke="#5610C0" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input placeholder="Rechercher un service (SOC, EDR, XDR…)" />
+      </div>
+
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="#">Accueil</a>
+        <a class="active" href="categories.html">Catégories</a>
+        <a href="#">Mon compte</a>
+      </nav>
+
+      <div class="actions">
+        <button class="icon-btn burger" id="burgerBtn" aria-label="Ouvrir le menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="#351E90" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn" aria-label="Panier">
+          <span class="dot"></span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 7h15l-1.5 9H7.2L6 7Z" stroke="#351E90" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M6 7 5 4H2" stroke="#351E90" stroke-width="2" stroke-linecap="round"/>
+            <path d="M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="#351E90"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="mobile-panel" id="mobilePanel">
+      <a href="#">Accueil</a>
+      <a href="categories.html"><strong>Catégories</strong></a>
+      <a href="#">Mon compte</a>
+      <a href="#">CGU</a>
+      <a href="#">Mentions légales</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div class="hero__card">
+      <h1>Catégories de services</h1>
+      <p>Choisis une catégorie pour accéder au catalogue correspondant (SOC, EDR, XDR).</p>
+    </div>
+  </div>
+</section>
+
+<main class="content">
+  <div class="container">
+    <div class="row">
+      <div>
+        <h2>Accéder au catalogue</h2>
+        <p class="hint">3 catégories principales — clique pour voir les services.</p>
+      </div>
+    </div>
+
+    <section class="grid" aria-label="Grille des catégories">
+      <a class="cat-card" href="catalogue-soc.html" aria-label="Voir SOC">
+        <div class="cat-cover"><div class="badge">SOC</div></div>
+        <div class="cat-body">
+          <h3 class="cat-title">Supervision & centre de sécurité</h3>
+          <p class="cat-desc">Surveillance, alerting et réponse aux incidents via dashboard.</p>
+          <div class="cat-meta">
+            <span class="pill">Catalogue SOC</span>
+            <span class="btn">Voir →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="cat-card" href="catalogue-edr.html" aria-label="Voir EDR">
+        <div class="cat-cover"><div class="badge">EDR</div></div>
+        <div class="cat-body">
+          <h3 class="cat-title">Protection endpoints</h3>
+          <p class="cat-desc">Détection & réponse sur postes/serveurs, remédiation, intégrations.</p>
+          <div class="cat-meta">
+            <span class="pill">Catalogue EDR</span>
+            <span class="btn">Voir →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="cat-card" href="catalogue-xdr.html" aria-label="Voir XDR">
+        <div class="cat-cover"><div class="badge">XDR</div></div>
+        <div class="cat-body">
+          <h3 class="cat-title">Corrélation multi-sources</h3>
+          <p class="cat-desc">Corrélation endpoints + réseau + cloud, investigation accélérée.</p>
+          <div class="cat-meta">
+            <span class="pill">Catalogue XDR</span>
+            <span class="btn">Voir →</span>
+          </div>
+        </div>
+      </a>
+    </section>
+
+    <footer>
+      <div><strong>Informations</strong></div>
+      <div class="links">
+        <a href="#">CGU</a><a href="#">Mentions légales</a><a href="#">Contact</a><a href="#">Réseaux sociaux</a>
+      </div>
+    </footer>
+  </div>
+</main>
+
+<script>
+  const btn = document.getElementById("burgerBtn");
+  const panel = document.getElementById("mobilePanel");
+  if (btn && panel) btn.addEventListener("click", () => {
+    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+  });
+</script>
+</body>
+</html>
