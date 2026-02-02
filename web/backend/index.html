@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Admin Panel</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+
+      .admin-sidebar {
+        background-color: #2d3748;
+        color: white;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .admin-sidebar .nav-link {
+        color: #cbd5e0;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 5px;
+      }
+
+      .admin-sidebar .nav-link:hover,
+      .admin-sidebar .nav-link.active {
+        background-color: #4a5568;
+        color: white;
+      }
+
+      .admin-content {
+        padding: 30px;
+      }
+
+      .card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .badge-admin {
+        background-color: #fbbf24 !important;
+        color: #1f2937;
+      }
+
+      .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+      }
+
+      .table-actions button {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+      }
+
+      .header-admin {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .header-admin h1 {
+        margin: 0;
+      }
+
+      .back-link {
+        color: #4a5568;
+        text-decoration: none;
+      }
+
+      .back-link:hover {
+        color: #2d3748;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 admin-sidebar">
+          <div class="mb-4">
+            <a href="/" class="text-white text-decoration-none d-flex align-items-center gap-2">
+              <i class="bi bi-arrow-left"></i>
+              <span>Retour</span>
+            </a>
+          </div>
+
+          <div class="mb-4">
+            <h5 class="text-uppercase text-secondary">Menu Admin</h5>
+          </div>
+
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" href="#" data-section="users">
+                <i class="bi bi-people-fill"></i> Utilisateurs
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="images">
+                <i class="bi bi-images"></i> Images Carrousel
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="analytics">
+                <i class="bi bi-bar-chart"></i> Statistiques
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-section="settings">
+                <i class="bi bi-gear"></i> Paramètres
+              </a>
+            </li>
+          </ul>
+
+          <hr class="bg-secondary" />
+
+          <button
+            type="button"
+            class="btn btn-outline-light btn-sm w-100"
+            id="logoutAdminBtn"
+          >
+            <i class="bi bi-box-arrow-right"></i> Déconnexion
+          </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="col-md-9 col-lg-10 admin-content">
+          <!-- Users Section -->
+          <section id="users-section" class="section-content">
+            <div class="header-admin">
+              <div>
+                <h1>Gestion des Utilisateurs</h1>
+                <p class="text-muted mb-0">
+                  Liste complète des utilisateurs du système
+                </p>
+              </div>
+              <button
+                class="btn btn-primary"
+                id="refreshUsersBtn"
+                title="Actualiser la liste"
+              >
+                <i class="bi bi-arrow-clockwise"></i> Actualiser
+              </button>
+            </div>
+
+            <div id="usersContainer">
+              <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Images Carrousel Section -->
+          <section id="images-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-images"></i> Gestion Images Carrousel</h1>
+                <p class="text-muted mb-0">Gérer les images de la page d'accueil</p>
+              </div>
+              <button class="btn btn-primary" id="addImageBtn">
+                <i class="bi bi-plus-circle"></i> Ajouter Image
+              </button>
+            </div>
+
+            <div id="imagesContainer">
+              <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Analytics Section -->
+          <section id="analytics-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1>Statistiques</h1>
+                <p class="text-muted mb-0">Vue d'ensemble du système</p>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">
+                      Nombre d'utilisateurs
+                    </h6>
+                    <h2 id="totalUsersCount">-</h2>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">
+                      Administrateurs
+                    </h6>
+                    <h2 id="totalAdminsCount">-</h2>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">
+                      Utilisateurs actifs
+                    </h6>
+                    <h2 id="totalActiveCount">-</h2>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Settings Section -->
+          <section id="settings-section" class="section-content d-none">
+            <div class="header-admin">
+              <h1>Paramètres</h1>
+            </div>
+
+            <div class="card">
+              <div class="card-body">
+                <p class="text-muted">Section paramètres à configurer...</p>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editUserModalLabel">Éditer l'utilisateur</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="editUserForm">
+              <input type="hidden" id="editUserId">
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="editUserEmail" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="editUserEmail" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="editUserRole" class="form-label">Rôle</label>
+                  <select class="form-select" id="editUserRole" required>
+                    <option value="client">Client</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="editUserFirstName" class="form-label">Prénom</label>
+                  <input type="text" class="form-control" id="editUserFirstName">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="editUserLastName" class="form-label">Nom</label>
+                  <input type="text" class="form-control" id="editUserLastName">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="editUserPhone" class="form-label">Téléphone</label>
+                  <input type="tel" class="form-control" id="editUserPhone">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="editUserStatus" class="form-label">Statut</label>
+                  <select class="form-select" id="editUserStatus">
+                    <option value="actif">Actif</option>
+                    <option value="inactif">Inactif</option>
+                    <option value="suspendu">Suspendu</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="editUserActive">
+                  <label class="form-check-label" for="editUserActive">
+                    Compte actif
+                  </label>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Authentification 2FA</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <span id="edit2FAStatus" class="badge bg-secondary">Désactivé</span>
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="remove2FABtn" style="display: none;">
+                    <i class="bi bi-trash"></i> Réinitialiser 2FA
+                  </button>
+                </div>
+              </div>
+
+              <hr>
+
+              <div class="mb-3">
+                <label class="form-label">Actions rapides</label>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button type="button" class="btn btn-outline-warning btn-sm" id="resetPasswordBtn">
+                    <i class="bi bi-key"></i> Réinitialiser mot de passe
+                  </button>
+                  <button type="button" class="btn btn-outline-info btn-sm" id="sendWelcomeEmailBtn">
+                    <i class="bi bi-envelope"></i> Envoyer email de bienvenue
+                  </button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" id="deleteUserBtn">
+                    <i class="bi bi-trash"></i> Supprimer l'utilisateur
+                  </button>
+                </div>
+              </div>
+
+              <div id="editUserAlert" class="alert d-none" role="alert"></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveUserBtn">
+              <i class="bi bi-check-lg"></i> Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View User Details Modal -->
+    <div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="viewUserModalLabel">Détails de l'utilisateur</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="userDetailsContent">
+              <!-- Content will be populated dynamically -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            <button type="button" class="btn btn-primary" id="editFromViewBtn">
+              <i class="bi bi-pencil"></i> Éditer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal pour Ajouter/Éditer Image -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="imageModalTitle">
+              <i class="bi bi-image"></i> <span id="imageModalTitleText">Ajouter Image</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="imageAlert" class="alert d-none" role="alert"></div>
+            
+            <form id="imageForm">
+              <input type="hidden" id="imageId" value="">
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="imageTitre" class="form-label">Titre *</label>
+                  <input type="text" class="form-control" id="imageTitre" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="imageOrder" class="form-label">Ordre d'affichage</label>
+                  <input type="number" class="form-control" id="imageOrder" min="1" value="1">
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="imageUrl" class="form-label">URL de l'image *</label>
+                <input type="url" class="form-control" id="imageUrl" required placeholder="https://example.com/image.jpg">
+                <div class="form-text">URL complète vers l'image (HTTPS recommandé)</div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="imageAlt" class="form-label">Texte alternatif</label>
+                <input type="text" class="form-control" id="imageAlt" placeholder="Description de l'image pour l'accessibilité">
+              </div>
+              
+              <div class="mb-3">
+                <label for="imageDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="imageDescription" rows="3" placeholder="Description détaillée (optionnel)"></textarea>
+              </div>
+              
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="imageActive" checked>
+                <label class="form-check-label" for="imageActive">
+                  Image active (visible sur le site)
+                </label>
+              </div>
+              
+              <div class="mb-3" id="imagePreviewContainer" style="display: none;">
+                <label class="form-label">Aperçu</label>
+                <div class="border rounded p-2">
+                  <img id="imagePreview" src="" alt="Aperçu" style="max-width: 100%; max-height: 200px;" class="d-block mx-auto">
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveImageBtn">
+              <i class="bi bi-check-circle"></i> <span id="saveImageBtnText">Ajouter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+    <script src="js/admin.js"></script>
+  </body>
+</html>

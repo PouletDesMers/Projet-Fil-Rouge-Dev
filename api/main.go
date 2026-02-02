@@ -181,6 +181,17 @@ func main() {
 	api.HandleFunc("/notifications/{id}", updateNotification).Methods("PUT")
 	api.HandleFunc("/notifications/{id}", deleteNotification).Methods("DELETE")
 
+	// Carousel Images routes
+	api.HandleFunc("/carousel-images", getCarouselImages).Methods("GET")
+	api.HandleFunc("/carousel-images", createCarouselImage).Methods("POST")
+	api.HandleFunc("/carousel-images/{id}", getCarouselImage).Methods("GET")
+	api.HandleFunc("/carousel-images/{id}", updateCarouselImage).Methods("PUT")
+	api.HandleFunc("/carousel-images/{id}", deleteCarouselImage).Methods("DELETE")
+	api.HandleFunc("/carousel-images/reorder", reorderCarouselImages).Methods("POST")
+
+	// Public carousel images (no auth required)
+	r.HandleFunc("/api/public/carousel-images", getActiveCarouselImages).Methods("GET")
+
 	log.Println("API started in HTTP on port 8080")
 
 	http.ListenAndServe(":8080", r)

@@ -14,23 +14,45 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch((err) => console.error("Error loading navbar:", err));
 });
 
+// Helper functions for cookies
+function setCookie(name, value, days = 30) {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  const expires = "expires=" + date.toUTCString();
+  document.cookie = name + "=" + value + ";" + expires + ";path=/;SameSite=Strict";
+}
+
+function deleteCookie(name) {
+  setCookie(name, "", -1);
+}
+
 function initNavbarAuth() {
   const token = localStorage.getItem("token");
   const loginBtn = document.getElementById("loginBtn");
   const accountDropdown = document.getElementById("accountDropdown");
   const logoutBtn = document.getElementById("logoutBtn");
+  const adminMenuItem = document.getElementById("adminMenuItem");
+  const adminMenuItemContainer = document.getElementById("adminMenuItemContainer");
 
   if (token) {
     accountDropdown?.classList.remove("d-none");
     loginBtn?.classList.add("d-none");
+
+    // Check if user is admin
+    checkUserAdminStatus(token);
   } else {
     accountDropdown?.classList.add("d-none");
     loginBtn?.classList.remove("d-none");
+    adminMenuItem?.classList.add("d-none");
+    adminMenuItemContainer?.classList.add("d-none");
   }
 
   logoutBtn?.addEventListener("click", () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user_id");
+    // Also remove cookies
+    deleteCookie("token");
+    deleteCookie("user_id");
     window.location.href = "/index.html";
   });
 
@@ -44,6 +66,35 @@ function initNavbarAuth() {
       link.classList.remove("active");
     }
   });
+}
+
+async function checkUserAdminStatus(token) {
+  try {
+    const response = await fetch("/api/user/profile", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const user = await response.json();
+
+    const adminMenuItem = document.getElementById("adminMenuItem");
+    const adminMenuItemContainer = document.getElementById("adminMenuItemContainer");
+
+    if (user.role === "admin") {
+      adminMenuItem?.classList.remove("d-none");
+      adminMenuItemContainer?.classList.remove("d-none");
+    } else {
+      adminMenuItem?.classList.add("d-none");
+      adminMenuItemContainer?.classList.add("d-none");
+    }
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+  }
 }
 
 function initializeCartBadge() {

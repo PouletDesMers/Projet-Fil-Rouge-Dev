@@ -15,7 +15,7 @@ import (
 
 // User Handlers
 func getusers(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, date_creation, derniere_connexion, id_entreprise FROM utilisateur")
+	rows, err := db.Query("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -24,11 +24,17 @@ func getusers(w http.ResponseWriter, r *http.Request) {
 	var users []Utilisateur
 	for rows.Next() {
 		var u Utilisateur
-		err := rows.Scan(&u.ID, &u.Email, &u.MotDePasse, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+		err := rows.Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Clear password for security
+		u.MotDePasse = ""
+		// Set est_actif based on statut
+		u.EstActif = (u.Statut == "actif")
+		// Use date_creation as date_inscription
+		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
 	json.NewEncoder(w).Encode(users)
@@ -38,11 +44,17 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 	var u Utilisateur
-	err := db.QueryRow("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.MotDePasse, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+	err := db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	// Clear password for security
+	u.MotDePasse = ""
+	// Set est_actif based on statut
+	u.EstActif = (u.Statut == "actif")
+	// Use date_creation as date_inscription
+	u.DateInscription = u.DateCreation
 	json.NewEncoder(w).Encode(u)
 }
 
@@ -115,15 +127,81 @@ func createUtilisateur(w http.ResponseWriter, r *http.Request) {
 func updateUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
+
+	// Get current user data
+	var currentUser Utilisateur
+	err := db.QueryRow("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&currentUser.ID, &currentUser.Email, &currentUser.MotDePasse, &currentUser.Nom, &currentUser.Prenom, &currentUser.Telephone, &currentUser.Role, &currentUser.Statut, &currentUser.IDEntreprise)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	// Set est_actif based on statut
+	currentUser.EstActif = (currentUser.Statut == "actif")
+
+	// Parse request body
 	var u Utilisateur
-	json.NewDecoder(r.Body).Decode(&u)
-	_, err := db.Exec("UPDATE utilisateur SET email = $1, mot_de_passe = $2, nom = $3, prenom = $4, telephone = $5, role = $6, statut = $7, id_entreprise = $8 WHERE id_utilisateur = $9", u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise, id)
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Merge updates (keep current values if not provided)
+	if u.Email != "" {
+		currentUser.Email = u.Email
+	}
+	if u.Nom != "" {
+		currentUser.Nom = u.Nom
+	}
+	if u.Prenom != "" {
+		currentUser.Prenom = u.Prenom
+	}
+	if u.Telephone != "" {
+		currentUser.Telephone = u.Telephone
+	}
+	if u.Role != "" {
+		currentUser.Role = u.Role
+	}
+	if u.Statut != "" {
+		currentUser.Statut = u.Statut
+	}
+
+	// Handle est_actif update - only change if explicitly different
+	// For role-only updates (promote/demote), don't change the activation status
+	if u.Statut == "" && u.Email == "" && u.Nom == "" && u.Prenom == "" && u.Telephone == "" && u.MotDePasse == "" {
+		// This is likely a role-only update, keep current status
+		u.EstActif = currentUser.EstActif
+	}
+
+	if u.EstActif != currentUser.EstActif {
+		if u.EstActif {
+			currentUser.Statut = "actif"
+		} else {
+			currentUser.Statut = "inactif"
+		}
+		currentUser.EstActif = u.EstActif
+	}
+
+	// Handle password update if provided
+	if u.MotDePasse != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.MotDePasse), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			return
+		}
+		currentUser.MotDePasse = string(hashedPassword)
+	}
+
+	// Execute update
+	_, err = db.Exec("UPDATE utilisateur SET email = $1, mot_de_passe = $2, nom = $3, prenom = $4, telephone = $5, role = $6, statut = $7, id_entreprise = $8 WHERE id_utilisateur = $9",
+		currentUser.Email, currentUser.MotDePasse, currentUser.Nom, currentUser.Prenom, currentUser.Telephone, currentUser.Role, currentUser.Statut, currentUser.IDEntreprise, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	u.ID = id
-	json.NewEncoder(w).Encode(u)
+
+	// Return updated user (without password)
+	currentUser.MotDePasse = ""
+	json.NewEncoder(w).Encode(currentUser)
 }
 
 func deleteUtilisateur(w http.ResponseWriter, r *http.Request) {

@@ -1,5 +1,34 @@
 const API_BASE = "";
 
+// DEBUG: Uncomment to see logs
+const DEBUG = true;
+
+// Helper function to set cookie
+function setCookie(name, value, days = 30) {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  const expires = "expires=" + date.toUTCString();
+  document.cookie = name + "=" + value + ";" + expires + ";path=/;SameSite=Strict";
+}
+
+// Helper function to get cookie
+function getCookie(name) {
+  const nameEQ = name + "=";
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    cookie = cookie.trim();
+    if (cookie.indexOf(nameEQ) === 0) {
+      return cookie.substring(nameEQ.length);
+    }
+  }
+  return null;
+}
+
+// Helper function to delete cookie
+function deleteCookie(name) {
+  setCookie(name, "", -1);
+}
+
 const EYE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
 const EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
@@ -119,15 +148,25 @@ async function postJSON(url, data) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
+  if (DEBUG) {
+    console.log("postJSON request:", { url, data, headers });
+  }
+
   const res = await fetch(url, {
     method: "POST",
     headers: headers,
     body: JSON.stringify(data),
   });
+  
   let payload = null;
   try {
     payload = await res.json();
   } catch {}
+  
+  if (DEBUG) {
+    console.log("postJSON response:", { status: res.status, payload });
+  }
+  
   if (!res.ok)
     throw new Error(
       payload?.message || payload?.error || `Erreur HTTP ${res.status}`
@@ -194,11 +233,32 @@ loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   hideMsg();
 
+  if (DEBUG) {
+    console.log("Login submit - currentEmail:", currentEmail, "password:", loginPassword.value?.length);
+  }
+
+  // Validation: ensure email is not empty
+  if (!currentEmail || currentEmail.trim() === "") {
+    showMsg("danger", "Please enter your email address first.");
+    return;
+  }
+
+  if (!loginPassword.value || loginPassword.value.trim() === "") {
+    showMsg("danger", "Please enter your password.");
+    return;
+  }
+
   try {
-    const result = await postJSON(`${API_BASE}/api/login`, {
+    const loginData = {
       email: currentEmail,
       password: loginPassword.value,
-    });
+    };
+    
+    if (DEBUG) {
+      console.log("Sending login data:", loginData);
+    }
+
+    const result = await postJSON(`${API_BASE}/api/login`, loginData);
 
     // Check if 2FA is required
     if (result?.requires_2fa) {
@@ -210,11 +270,16 @@ loginForm.addEventListener("submit", async (e) => {
     if (result?.token) {
       localStorage.setItem("token", result.token);
       if (result.user_id) localStorage.setItem("user_id", result.user_id);
+      
+      // Also store token in cookie for server-side access (backend admin panel)
+      setCookie("token", result.token, 30);
+      if (result.user_id) setCookie("user_id", result.user_id, 30);
     }
 
     showMsg("success", "Connected ✅", "Success");
     setTimeout(() => (window.location.href = "/index.html"), 500);
   } catch (err) {
+    console.error("Login error:", err);
     showMsg("danger", err.message);
   }
 });

@@ -48,7 +48,7 @@ type Entreprise struct {
 }
 
 type Utilisateur struct {
-	ID                int        `json:"id"`
+	ID                int        `json:"id_utilisateur"`
 	Email             string     `json:"email"`
 	MotDePasse        string     `json:"password"`
 	Nom               string     `json:"lastName"`
@@ -56,15 +56,30 @@ type Utilisateur struct {
 	Telephone         string     `json:"phone"`
 	Role              string     `json:"role"`
 	Statut            string     `json:"status"`
+	EstActif          bool       `json:"est_actif"`
 	DateCreation      time.Time  `json:"createdAt"`
 	DerniereConnexion *time.Time `json:"lastLogin"`
 	IDEntreprise      *int       `json:"companyId"`
+	DateInscription   time.Time  `json:"date_inscription"`
 	// 2FA fields
 	TotpSecret           *string `json:"-"`
 	TotpEnabled          bool    `json:"totp_enabled"`
 	WebAuthnCredentialID *string `json:"webauthn_credential_id,omitempty"`
 	WebAuthnPublicKey    *string `json:"webauthn_public_key,omitempty"`
 	WebAuthnCounter      *int64  `json:"webauthn_counter,omitempty"`
+}
+
+type CarouselImage struct {
+	ID                    int       `json:"id_image"`
+	Titre                 string    `json:"titre"`
+	Description           string    `json:"description"`
+	URLImage              string    `json:"url_image"`
+	AltText               string    `json:"alt_text"`
+	OrdreAffichage        int       `json:"ordre_affichage"`
+	Actif                 bool      `json:"actif"`
+	DateCreation          time.Time `json:"date_creation"`
+	DateModification      time.Time `json:"date_modification"`
+	IDUtilisateurCreation *int      `json:"id_utilisateur_creation"`
 }
 
 type Abonnement struct {

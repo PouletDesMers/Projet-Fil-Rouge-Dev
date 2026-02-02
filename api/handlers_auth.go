@@ -95,14 +95,34 @@ func verify2FA(w http.ResponseWriter, r *http.Request) {
 
 func remove2FA(w http.ResponseWriter, r *http.Request) {
 	// Identity is already validated by the middleware
-	userID, ok := r.Context().Value(UserIDKey).(int)
+	adminUserID, ok := r.Context().Value(UserIDKey).(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// Remove 2FA for user
-	_, err := db.Exec("UPDATE utilisateur SET totp_secret = NULL, totp_enabled = FALSE WHERE id_utilisateur = $1", userID)
+	// Parse request body to get target user ID (for admin use)
+	var requestBody struct {
+		UserID int `json:"user_id"`
+	}
+
+	targetUserID := adminUserID // Default to self
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err == nil {
+		if requestBody.UserID > 0 {
+			// Admin is trying to remove 2FA for another user
+			// Verify admin has permission
+			var adminRole string
+			err := db.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole)
+			if err != nil || adminRole != "admin" {
+				http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+				return
+			}
+			targetUserID = requestBody.UserID
+		}
+	}
+
+	// Remove 2FA for target user
+	_, err := db.Exec("UPDATE utilisateur SET totp_secret = NULL, totp_enabled = FALSE WHERE id_utilisateur = $1", targetUserID)
 	if err != nil {
 		http.Error(w, "Error removing 2FA", http.StatusInternalServerError)
 		return
