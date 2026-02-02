@@ -69,6 +69,7 @@ CREATE TABLE utilisateur (
     id_entreprise INT,
     -- 2FA fields
     totp_secret TEXT,
+    totp_enabled BOOLEAN DEFAULT FALSE,
     webauthn_credential_id TEXT,
     webauthn_public_key TEXT,
     webauthn_counter BIGINT DEFAULT 0,
