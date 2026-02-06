@@ -39,9 +39,8 @@ services:
       - api
     environment:
       API_SECRET: eb736d4f64b3aa4861f22c4830de8eb1
-    volumes:
-      - ./web:/app
-      - /app/node_modules
+    # No bind mounts for production: use the files baked into the image (includes node_modules).
+    # For local development, mount the source and run `npm install` on the host.
 
 volumes:
   postgres_data:
