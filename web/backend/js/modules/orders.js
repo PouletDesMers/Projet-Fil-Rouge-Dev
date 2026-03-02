@@ -12,12 +12,16 @@ const AdminOrders = (() => {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const STATUS_CONFIG = {
-    en_attente:  { label: 'En attente',  cls: 'bg-warning text-dark',  icon: 'bi-clock-history' },
-    confirmee:   { label: 'Confirmée',   cls: 'bg-info text-dark',     icon: 'bi-check-circle' },
-    en_cours:    { label: 'En cours',    cls: 'bg-primary',            icon: 'bi-arrow-repeat' },
-    livree:      { label: 'Livrée',      cls: 'bg-success',            icon: 'bi-bag-check-fill' },
-    annulee:     { label: 'Annulée',     cls: 'bg-danger',             icon: 'bi-x-circle' },
-    remboursee:  { label: 'Remboursée',  cls: 'bg-secondary',          icon: 'bi-arrow-counterclockwise' },
+    en_attente:     { label: 'En attente',     cls: 'bg-warning text-dark',  icon: 'bi-clock-history' },
+    confirmee:      { label: 'Confirmée',      cls: 'bg-info text-dark',     icon: 'bi-check-circle' },
+    en_cours:       { label: 'En cours',       cls: 'bg-primary',            icon: 'bi-arrow-repeat' },
+    livree:         { label: 'Livrée',         cls: 'bg-success',            icon: 'bi-bag-check-fill' },
+    annulee:        { label: 'Annulée',        cls: 'bg-danger',             icon: 'bi-x-circle' },
+    remboursee:     { label: 'Remboursée',     cls: 'bg-secondary',          icon: 'bi-arrow-counterclockwise' },
+    devis_demande:  { label: 'Devis demandé',  cls: 'bg-info text-dark',     icon: 'bi-file-earmark-text' },
+    devis_envoye:   { label: 'Devis envoyé',   cls: 'bg-primary',            icon: 'bi-send' },
+    devis_accepte:  { label: 'Devis accepté',  cls: 'bg-success',            icon: 'bi-check2-all' },
+    devis_refuse:   { label: 'Devis refusé',   cls: 'bg-danger',             icon: 'bi-x-circle-fill' },
   };
 
   function statusBadge(s) {

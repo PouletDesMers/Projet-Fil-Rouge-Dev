@@ -42,6 +42,36 @@
         border-radius: 12px;
         padding: 1.25rem 1.5rem;
       }
+
+      /* Devis */
+      .devis-card { border-left: 4px solid #5610c0; transition: box-shadow .2s; }
+      .devis-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.10) !important; }
+      .devis-card.status-envoye  { border-left-color: #0d6efd; }
+      .devis-card.status-accepte { border-left-color: #198754; }
+      .devis-card.status-refuse  { border-left-color: #dc3545; }
+
+      .devis-status-demande  { background:#e0f2fe; color:#0369a1; }
+      .devis-status-envoye   { background:#dbeafe; color:#1d4ed8; }
+      .devis-status-accepte  { background:#dcfce7; color:#15803d; }
+      .devis-status-refuse   { background:#fee2e2; color:#b91c1c; }
+
+      .quote-cta {
+        background: linear-gradient(135deg,#5610c0,#7602f9);
+        border: none;
+        color: #fff;
+        border-radius: 8px;
+        padding: .6rem 1.4rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        transition: opacity .2s;
+      }
+      .quote-cta:hover { opacity: .88; color:#fff; }
+
+      .nav-tabs .nav-link { color: #495057; font-weight: 500; }
+      .nav-tabs .nav-link.active { color: #5610c0; border-bottom-color: #5610c0; font-weight: 600; }
     </style>
   </head>
 
@@ -64,7 +94,7 @@
         <button onclick="history.back()" class="btn btn-outline-secondary btn-sm px-3">
           <i class="bi bi-arrow-left me-1"></i>Retour
         </button>
-        <h1 class="h3 mb-0 fw-bold">Mes commandes</h1>
+        <h1 class="h3 mb-0 fw-bold">Mon espace</h1>
       </div>
 
       <!-- Bannière succès (checkout Stripe) -->
@@ -78,32 +108,63 @@
         </div>
       </div>
 
-      <!-- Contenu dynamique -->
-      <div id="ordersContainer">
-        <!-- Skeleton loading -->
-        <div id="loadingState" class="d-flex flex-column gap-3">
-          <div class="card border-0 shadow-sm" style="height:72px">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div class="placeholder-glow flex-fill">
-                <span class="placeholder col-3 me-3"></span>
-                <span class="placeholder col-2 me-3"></span>
-                <span class="placeholder col-2 me-3"></span>
-                <span class="placeholder col-1"></span>
-              </div>
-            </div>
-          </div>
-          <div class="card border-0 shadow-sm" style="height:72px">
-            <div class="card-body d-flex align-items-center gap-3">
-              <div class="placeholder-glow flex-fill">
-                <span class="placeholder col-3 me-3"></span>
-                <span class="placeholder col-2 me-3"></span>
-                <span class="placeholder col-2 me-3"></span>
-                <span class="placeholder col-1"></span>
+      <!-- Onglets -->
+      <ul class="nav nav-tabs border-bottom mb-4" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-cmd-btn" data-bs-toggle="tab"
+            data-bs-target="#tab-commandes" type="button" role="tab">
+            <i class="bi bi-bag me-1"></i>Mes commandes
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-devis-btn" data-bs-toggle="tab"
+            data-bs-target="#tab-devis" type="button" role="tab">
+            <i class="bi bi-file-earmark-text me-1"></i>Mes devis
+            <span class="badge rounded-pill bg-primary ms-1 d-none" id="devisBadgeCount"></span>
+          </button>
+        </li>
+      </ul>
+
+      <!-- Contenu des onglets -->
+      <div class="tab-content">
+
+        <!-- Onglet Commandes -->
+        <div class="tab-pane fade show active" id="tab-commandes" role="tabpanel">
+          <div id="ordersContainer">
+            <div class="d-flex flex-column gap-3">
+              <div class="card border-0 shadow-sm" style="height:72px">
+                <div class="card-body d-flex align-items-center gap-3">
+                  <div class="placeholder-glow flex-fill">
+                    <span class="placeholder col-3 me-3"></span>
+                    <span class="placeholder col-2 me-3"></span>
+                    <span class="placeholder col-2 me-3"></span>
+                    <span class="placeholder col-1"></span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+        <!-- Onglet Devis -->
+        <div class="tab-pane fade" id="tab-devis" role="tabpanel">
+          <!-- Info pédagogique -->
+          <div class="alert border-0 mb-4" style="background:#f0ebff;color:#3b1b8f">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Comment fonctionne un devis ?</strong>
+            Vous avez demandé un devis pour un ou plusieurs services.
+            Notre équipe étudie votre besoin, fixe un prix adapté et vous envoie
+            un <strong>devis PDF par email</strong>. Vous pouvez ensuite l'accepter,
+            le refuser ou nous contacter pour négocier.
+          </div>
+          <div id="devisContainer">
+            <div class="d-flex justify-content-center py-5">
+              <div class="spinner-border text-primary"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
 
     </div>
 
@@ -127,10 +188,24 @@
       </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/commandes.js"></script>
+
+    <script>
+      // Activer l'onglet devis si ?tab=devis dans l'URL
+      document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'devis') {
+          const devisTab = document.getElementById('tab-devis-btn');
+          if (devisTab) bootstrap.Tab.getOrCreateInstance(devisTab).show();
+        }
+        // Charger les devis quand on clique sur l'onglet (une seule fois)
+        document.getElementById('tab-devis-btn')?.addEventListener('shown.bs.tab', () => {
+          window._devisLoaded || window.loadDevis?.();
+        });
+      });
+    </script>
   </body>
 </html>

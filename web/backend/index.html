@@ -184,6 +184,11 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link" href="#" data-section="quotes">
+                  <i class="bi bi-file-earmark-text-fill"></i> Devis
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="#" data-section="discounts">
                   <i class="bi bi-percent"></i> Remises
                 </a>
@@ -493,6 +498,10 @@
                       <option value="livree">Livrée</option>
                       <option value="annulee">Annulée</option>
                       <option value="remboursee">Remboursée</option>
+                      <option value="devis_demande">Devis demandé</option>
+                      <option value="devis_envoye">Devis envoyé</option>
+                      <option value="devis_accepte">Devis accepté</option>
+                      <option value="devis_refuse">Devis refusé</option>
                     </select>
                   </div>
                   <div class="col">
@@ -512,23 +521,58 @@
             </div>
           </section>
 
-          <!-- Remises / Codes promo -->
-          <section id="discounts-section" class="section-content d-none">
+          <!-- Devis Section -->
+          <section id="quotes-section" class="section-content d-none">
             <div class="header-admin">
               <div>
-                <h1><i class="bi bi-percent text-primary me-2"></i>Gestion des Remises</h1>
-                <p class="text-muted mb-0">Codes promo locaux et coupons Stripe</p>
+                <h1><i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Gestion des Devis</h1>
+                <p class="text-muted mb-0">Demandes de devis clients — synchronisé avec Stripe</p>
               </div>
-              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#discountCreateModal">
-                <i class="bi bi-plus-circle me-1"></i> Nouveau code
+              <button class="btn btn-outline-secondary btn-sm" onclick="AdminQuotes.loadQuotes()">
+                <i class="bi bi-arrow-clockwise"></i> Actualiser
               </button>
             </div>
 
-            <!-- Indicateur Stripe -->
-            <div id="stripeStatusBadge" class="mb-3"></div>
+            <!-- Stripe status badge -->
+            <div id="quotesStripeStatus" class="mb-3"></div>
 
-            <!-- Tableau des codes -->
-            <div id="discountsContainer">
+            <!-- Filtres -->
+            <div class="card mb-3">
+              <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+                  <div class="col-auto">
+                    <label class="form-label mb-0 small fw-semibold">Statut :</label>
+                  </div>
+                  <div class="col-auto">
+                    <select class="form-select form-select-sm" id="quotesStatusFilter" onchange="AdminQuotes.filterQuotes()">
+                      <option value="">Tous</option>
+                      <option value="devis_demande">Devis demandé</option>
+                      <option value="devis_envoye">Devis envoyé</option>
+                      <option value="devis_accepte">Devis accepté</option>
+                      <option value="devis_refuse">Devis refusé</option>
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <label class="form-label mb-0 small fw-semibold">Stripe :</label>
+                  </div>
+                  <div class="col-auto">
+                    <select class="form-select form-select-sm" id="quotesStripeFilter" onchange="AdminQuotes.filterQuotes()">
+                      <option value="">Tous</option>
+                      <option value="open">Envoyé (open)</option>
+                      <option value="accepted">Accepté</option>
+                      <option value="canceled">Annulé</option>
+                      <option value="draft">Brouillon</option>
+                    </select>
+                  </div>
+                  <div class="col">
+                    <input type="text" class="form-control form-control-sm" id="quotesSearchInput"
+                           placeholder="Rechercher par client, email, réf..." oninput="AdminQuotes.filterQuotes()">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="quotesContainer">
               <div class="d-flex justify-content-center py-5">
                 <div class="spinner-border text-primary"></div>
               </div>
@@ -1353,6 +1397,7 @@
     <script src="js/modules/images.js"></script>
     <script src="js/modules/apikeys.js"></script>
     <script src="js/modules/orders.js"></script>
+    <script src="js/modules/quotes.js"></script>
     <script src="js/modules/discounts.js"></script>
   </body>
 </html>

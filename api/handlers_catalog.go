@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -369,4 +371,75 @@ func deleteProduit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// searchProduits - Public search across active products (no auth required)
+func searchProduits(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		json.NewEncoder(w).Encode([]interface{}{})
+		return
+	}
+
+	pattern := "%" + q + "%"
+
+	rows, err := db.Query(`
+		SELECT p.id_produit, p.nom, p.slug, p.description_courte, p.description_longue,
+		       p.description_html, COALESCE(p.images::text, '[]'),
+		       p.prix, p.devise, p.duree, p.tag, p.statut, p.type_achat, p.ordre_affichage,
+		       c.nom as categorie_nom, c.slug as categorie_slug
+		FROM produits p
+		JOIN categories c ON p.id_categorie = c.id_categorie
+		WHERE p.actif = TRUE AND c.actif = TRUE
+		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.description_longue ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
+		ORDER BY p.ordre_affichage ASC, p.nom ASC
+	`, pattern)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type SearchResult struct {
+		ID                int     `json:"id_produit"`
+		Nom               string  `json:"nom"`
+		Slug              string  `json:"slug"`
+		DescriptionCourte string  `json:"description_courte"`
+		DescriptionLongue string  `json:"description_longue"`
+		DescriptionHTML   string  `json:"description_html"`
+		Images            string  `json:"images"`
+		Prix              float64 `json:"prix"`
+		Devise            string  `json:"devise"`
+		Duree             string  `json:"duree"`
+		Tag               string  `json:"tag"`
+		Statut            string  `json:"statut"`
+		TypeAchat         string  `json:"type_achat"`
+		OrdreAffichage    int     `json:"ordre_affichage"`
+		CategorieNom      string  `json:"categorie_nom"`
+		CategorieSlug     string  `json:"categorie_slug"`
+	}
+
+	var results []SearchResult
+	for rows.Next() {
+		var p SearchResult
+		err := rows.Scan(
+			&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+			&p.DescriptionHTML, &p.Images,
+			&p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut, &p.TypeAchat, &p.OrdreAffichage,
+			&p.CategorieNom, &p.CategorieSlug,
+		)
+		if err != nil {
+			log.Printf("searchProduits scan error: %v", err)
+			continue
+		}
+		results = append(results, p)
+	}
+
+	if results == nil {
+		results = []SearchResult{}
+	}
+
+	json.NewEncoder(w).Encode(results)
 }

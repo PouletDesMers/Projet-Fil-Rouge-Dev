@@ -71,6 +71,8 @@ function setupEventListeners() {
         AdminAPIKeys.loadAPIKeys();
       } else if (sectionId === 'orders-section') {
         AdminOrders.loadOrders();
+      } else if (sectionId === 'quotes-section') {
+        AdminQuotes.loadQuotes();
       } else if (sectionId === 'discounts-section') {
         AdminDiscounts.loadDiscounts();
       }

@@ -4,6 +4,9 @@ ALTER TABLE utilisateur ADD COLUMN IF NOT EXISTS webauthn_credential_id TEXT;
 ALTER TABLE utilisateur ADD COLUMN IF NOT EXISTS webauthn_public_key TEXT;
 ALTER TABLE utilisateur ADD COLUMN IF NOT EXISTS webauthn_counter BIGINT DEFAULT 0;
 
+-- Fix commande table: promo_code doit être TEXT (peut contenir JSON metadata ou qt_xxx Stripe ID)
+ALTER TABLE commande ALTER COLUMN promo_code TYPE TEXT;
+
 -- Create session table if missing
 CREATE TABLE IF NOT EXISTS session_utilisateur (
     id_session SERIAL PRIMARY KEY,

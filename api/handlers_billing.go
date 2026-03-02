@@ -128,7 +128,16 @@ func updateCommande(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(params["id"])
 	var c Commande
 	json.NewDecoder(r.Body).Decode(&c)
-	_, err := db.Exec("UPDATE commande SET montant_total = $1, statut = $2, id_utilisateur = $3 WHERE id_commande = $4", c.MontantTotal, c.Statut, c.IDUtilisateur, id)
+	var err error
+	if c.PromoCode != "" && c.IDUtilisateur > 0 {
+		_, err = db.Exec("UPDATE commande SET montant_total = $1, statut = $2, id_utilisateur = $3, promo_code = $4 WHERE id_commande = $5", c.MontantTotal, c.Statut, c.IDUtilisateur, c.PromoCode, id)
+	} else if c.PromoCode != "" {
+		_, err = db.Exec("UPDATE commande SET montant_total = $1, statut = $2, promo_code = $3 WHERE id_commande = $4", c.MontantTotal, c.Statut, c.PromoCode, id)
+	} else if c.IDUtilisateur > 0 {
+		_, err = db.Exec("UPDATE commande SET montant_total = $1, statut = $2, id_utilisateur = $3 WHERE id_commande = $4", c.MontantTotal, c.Statut, c.IDUtilisateur, id)
+	} else {
+		_, err = db.Exec("UPDATE commande SET montant_total = $1, statut = $2 WHERE id_commande = $3", c.MontantTotal, c.Statut, id)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

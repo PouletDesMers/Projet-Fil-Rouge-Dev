@@ -450,10 +450,12 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data struct {
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-		Email     string `json:"email"`
-		Phone     string `json:"phone"`
+		FirstName   string `json:"firstName"`
+		LastName    string `json:"lastName"`
+		Email       string `json:"email"`
+		Phone       string `json:"phone"`
+		Password    string `json:"motDePasse"`
+		OldPassword string `json:"ancienMotDePasse"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -461,6 +463,41 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle password change if requested
+	if data.Password != "" {
+		// Verify current password first
+		var currentHash string
+		err := db.QueryRow("SELECT mot_de_passe FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&currentHash)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		if data.OldPassword == "" {
+			http.Error(w, "Current password required", http.StatusBadRequest)
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(data.OldPassword)); err != nil {
+			http.Error(w, "Current password is incorrect", http.StatusUnauthorized)
+			return
+		}
+		// Hash the new password
+		newHash, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			return
+		}
+		_, err = db.Exec("UPDATE utilisateur SET mot_de_passe = $1 WHERE id_utilisateur = $2", string(newHash), userID)
+		if err != nil {
+			log.Printf("Profile Update password: Error for user %d: %v", userID, err)
+			http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
+		return
+	}
+
+	// Standard profile update (no password change)
 	_, err := db.Exec("UPDATE utilisateur SET prenom = $1, nom = $2, email = $3, telephone = $4 WHERE id_utilisateur = $5",
 		data.FirstName, data.LastName, data.Email, data.Phone, userID)
 
@@ -471,5 +508,6 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Success response
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
 }

@@ -348,12 +348,106 @@
       <img id="lightboxImg" src="" style="max-width:90vw;max-height:90vh;border-radius:12px;">
     </div>
 
+    <!-- Modal Demande de devis -->
+    <div class="modal fade" id="quoteModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:16px;overflow:hidden">
+
+          <div class="modal-header py-3 px-4" style="background:linear-gradient(135deg,#5610c0,#7602f9);color:#fff">
+            <h5 class="modal-title fw-semibold mb-0">
+              <i class="bi bi-file-earmark-text me-2"></i>Demande de devis
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+
+          <!-- Form section -->
+          <div id="quoteFormSection">
+            <form id="quoteForm" class="modal-body p-4" onsubmit="submitQuote(event)">
+              <p class="text-muted small mb-3 border-start border-3 border-primary ps-2" id="quoteProductName"></p>
+
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">Nom *</label>
+                  <input type="text" class="form-control" id="quoteName" required placeholder="Dupont">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">Prénom *</label>
+                  <input type="text" class="form-control" id="quoteFirstName" required placeholder="Jean">
+                </div>
+                <div class="col-sm-7">
+                  <label class="form-label small fw-semibold">Email *</label>
+                  <input type="email" class="form-control" id="quoteEmail" required placeholder="jean.dupont@entreprise.com">
+                </div>
+                <div class="col-sm-5">
+                  <label class="form-label small fw-semibold">Téléphone</label>
+                  <input type="tel" class="form-control" id="quotePhone" placeholder="+33 6 00 00 00 00">
+                </div>
+                <div class="col-sm-8">
+                  <label class="form-label small fw-semibold">Société</label>
+                  <input type="text" class="form-control" id="quoteCompany" placeholder="Mon Entreprise SAS">
+                </div>
+                <div class="col-sm-4">
+                  <label class="form-label small fw-semibold">Quantité</label>
+                  <input type="number" class="form-control" id="quoteQty" value="1" min="1">
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-semibold">Vos besoins / message</label>
+                  <textarea class="form-control" id="quoteMessage" rows="3"
+                    placeholder="Décrivez votre contexte, vos besoins, votre volumetrie..."></textarea>
+                </div>
+              </div>
+
+              <div id="quoteError" class="alert alert-danger mt-3 d-none small"></div>
+
+              <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-lg fw-semibold text-white" id="quoteSubmitBtn"
+                  style="background:linear-gradient(135deg,#5610c0,#7602f9);border:none">
+                  <span id="quoteSubmitText"><i class="bi bi-send me-2"></i>Envoyer la demande</span>
+                  <span id="quoteSubmitSpinner" class="d-none">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Envoi en cours...
+                  </span>
+                </button>
+              </div>
+
+              <p class="text-center text-muted mt-2" style="font-size:12px">
+                <i class="bi bi-shield-lock me-1"></i>Vos données sont transmises de façon sécurisée.
+              </p>
+            </form>
+          </div>
+
+          <!-- Success section -->
+          <div id="quoteSuccessSection" class="modal-body p-5 text-center d-none">
+            <div style="font-size:72px;color:#5610C0"><i class="bi bi-check-circle-fill"></i></div>
+            <h4 class="fw-bold mt-3 mb-2">Demande envoyée !</h4>
+            <p class="text-muted">
+              Votre demande de devis pour <strong id="quoteSuccessProduct"></strong> a bien été enregistrée.<br>
+              Notre équipe va analyser vos besoins et vous enverra un <strong>devis PDF par email</strong> à
+              <strong id="quoteSuccessEmail"></strong> sous 24–48h.
+            </p>
+            <p class="text-muted small mb-4">
+              <i class="bi bi-info-circle me-1"></i>Vous pourrez accepter, refuser ou négocier le devis directement depuis votre email ou depuis votre espace personnel.
+            </p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+              <a href="/mes-commandes.html?tab=devis" class="btn btn-cyna px-4">
+                <i class="bi bi-file-earmark-text me-1"></i>Voir mes devis
+              </a>
+              <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                Fermer
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/cart.js"></script>
     <script>
-      // Get product from URL parameters
+      // Current product loaded on this page
+      let currentProduct = null;
       function getProductFromURL() {
         const params = new URLSearchParams(window.location.search);
         return {
@@ -414,6 +508,7 @@
 
       // Render product
       function renderProduct(product) {
+        currentProduct = product;
         // Update page title
         document.getElementById('pageTitle').textContent = `${product.nom} | CYNA`;
         document.getElementById('productName').textContent = product.nom;
@@ -462,10 +557,10 @@
         const orderButtons = document.getElementById('orderButtons');
         if (product.type_achat === 'devis') {
           orderButtons.innerHTML = `
-            <button class="btn btn-primary" onclick="requestQuote('${product.nom}')">
-              <i class="bi bi-envelope"></i> Demander un devis
+            <button class="btn btn-primary" onclick="openQuoteModal()">
+              <i class="bi bi-file-earmark-text"></i> Demander un devis
             </button>
-            <button class="btn btn-secondary" onclick="contactSupport('${product.nom}')">
+            <button class="btn btn-secondary" onclick="openQuoteModal()">
               <i class="bi bi-chat-dots"></i> Nous contacter
             </button>
           `;
@@ -476,8 +571,8 @@
             <button class="btn btn-primary" onclick="addToCart({id:${product.id_produit},name:'${safeName}',price:${product.prix || 0},qty:1,duration:'${product.duree || 'mois'}'})">
               <i class="bi bi-cart-plus"></i> Ajouter au panier
             </button>
-            <button class="btn btn-secondary" onclick="requestQuote('${safeName}')">
-              <i class="bi bi-envelope"></i> Demander un devis
+            <button class="btn btn-secondary" onclick="openQuoteModal()">
+              <i class="bi bi-file-earmark-text"></i> Demander un devis
             </button>
           `;
         }
@@ -493,13 +588,96 @@
         document.getElementById('errorState').style.display = 'block';
       }
 
-      // Contact functions
-      function requestQuote(productName) {
-        alert(`Demande de devis pour "${productName}" - Redirection vers le formulaire de contact...`);
+      // ── Devis modal ──────────────────────────────────────────────────────────
+      let _quoteModal = null;
+
+      function openQuoteModal() {
+        if (!currentProduct) return;
+        if (!_quoteModal) _quoteModal = new bootstrap.Modal(document.getElementById('quoteModal'));
+
+        // Reset to form state
+        document.getElementById('quoteFormSection').classList.remove('d-none');
+        document.getElementById('quoteSuccessSection').classList.add('d-none');
+        document.getElementById('quoteForm').reset();
+        document.getElementById('quoteError').classList.add('d-none');
+        document.getElementById('quoteSubmitBtn').disabled = false;
+        document.getElementById('quoteSubmitText').classList.remove('d-none');
+        document.getElementById('quoteSubmitSpinner').classList.add('d-none');
+        document.getElementById('quoteQty').value = 1;
+
+        // Product info line — le prix sera fixé par l'équipe CYNA après étude
+        document.getElementById('quoteProductName').textContent = currentProduct.nom;
+
+        // Pre-fill from profile if logged in
+        fetch('/auth/profile', { credentials: 'include' })
+          .then(r => r.ok ? r.json() : null)
+          .then(p => {
+            if (!p) return;
+            if (p.lastName)  document.getElementById('quoteName').value      = p.lastName;
+            if (p.firstName) document.getElementById('quoteFirstName').value = p.firstName;
+            if (p.email)     document.getElementById('quoteEmail').value     = p.email;
+            if (p.phone)     document.getElementById('quotePhone').value     = p.phone;
+          }).catch(() => {});
+
+        _quoteModal.show();
       }
 
-      function contactSupport(productName) {
-        alert(`Contact support pour "${productName}" - Redirection vers le support...`);
+      async function submitQuote(e) {
+        e.preventDefault();
+        const btn     = document.getElementById('quoteSubmitBtn');
+        const spinner = document.getElementById('quoteSubmitSpinner');
+        const btnText = document.getElementById('quoteSubmitText');
+        const errEl   = document.getElementById('quoteError');
+
+        btn.disabled = true;
+        btnText.classList.add('d-none');
+        spinner.classList.remove('d-none');
+        errEl.classList.add('d-none');
+
+        const { category } = getProductFromURL();
+        const email = document.getElementById('quoteEmail').value.trim();
+
+        try {
+          const res = await fetch('/api/request-quote', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productName:     currentProduct.nom,
+              productSlug:     currentProduct.slug,
+              productCategory: category,
+              productId:       currentProduct.id_produit,
+              quantity:        parseInt(document.getElementById('quoteQty').value) || 1,
+              name:            document.getElementById('quoteName').value.trim(),
+              firstName:       document.getElementById('quoteFirstName').value.trim(),
+              email,
+              company:         document.getElementById('quoteCompany').value.trim(),
+              phone:           document.getElementById('quotePhone').value.trim(),
+              message:         document.getElementById('quoteMessage').value.trim()
+            })
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+
+          // Afficher la confirmation — le devis sera envoyé par l'équipe CYNA
+          document.getElementById('quoteSuccessEmail').textContent = email;
+          document.getElementById('quoteSuccessProduct').textContent = currentProduct.nom;
+          document.getElementById('quoteFormSection').classList.add('d-none');
+          document.getElementById('quoteSuccessSection').classList.remove('d-none');
+
+        } catch (err) {
+          const msg = err.message;
+          if (msg.includes('connect')) {
+            errEl.innerHTML = `${msg} &nbsp;<a href="/auth.html?redirect=${encodeURIComponent(window.location.href)}" class="alert-link">Se connecter →</a>`;
+          } else {
+            errEl.textContent = msg;
+          }
+          errEl.classList.remove('d-none');
+          btn.disabled = false;
+          btnText.classList.remove('d-none');
+          spinner.classList.add('d-none');
+        }
       }
 
       // Gallery helpers
@@ -520,5 +698,6 @@
         loadProduct();
       });
     </script>
+
   </body>
 </html>

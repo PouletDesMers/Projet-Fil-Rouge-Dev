@@ -256,6 +256,18 @@ app.get('/api/public/carousel-images', async (req, res) => {
   }
 });
 
+app.get('/api/public/search', async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    const response = await axios.get(`http://api:8080/api/public/search?q=${encodeURIComponent(q)}`);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Search failed'
+    });
+  }
+});
+
 // Routes d'inscription (publiques)
 app.post('/api/users', async (req, res) => {
   try {
@@ -382,6 +394,184 @@ app.get('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 app.put('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 app.delete('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 
+// GET /admin/api/quotes — Devis (commandes devis_* en DB + enrichissement Stripe)
+app.get('/admin/api/quotes', checkAdminAuth, async (req, res) => {
+  const token = getAuthToken(req);
+  try {
+    // Récupérer toutes les commandes depuis l'API Go
+    const resp = await axios.get('http://api:8080/api/commandes', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    const all = Array.isArray(resp.data) ? resp.data : [];
+
+    // Filtrer uniquement les devis
+    const DEVIS_STATUTS = ['devis_demande', 'devis_envoye', 'devis_accepte', 'devis_refuse'];
+    const devis = all.filter(c => DEVIS_STATUTS.includes(c.status));
+
+    // Récupérer les quotes Stripe pour enrichir les données (avec line_items et customer expandés)
+    let stripeMap = {};
+    if (stripe) {
+      try {
+        const sq = await stripe.quotes.list({ limit: 100, expand: ['data.line_items', 'data.customer'] });
+        sq.data.forEach(q => { stripeMap[q.id] = q; });
+      } catch (_) {}
+    }
+
+    // Construire la liste enrichie
+    const enriched = devis.map(c => {
+      const stripeId = c.promoCode && c.promoCode.startsWith('qt_') ? c.promoCode : null;
+      const sq       = stripeId && stripeMap[stripeId] ? stripeMap[stripeId] : null;
+      // Lire le JSON compact local si promoCode n'est pas encore un qt_xxx
+      let localMeta = {};
+      if (c.promoCode && !c.promoCode.startsWith('qt_')) {
+        try { localMeta = JSON.parse(c.promoCode); } catch (_) {}
+      }
+      return {
+        id:       c.id,
+        date:     c.orderDate,
+        amount:   c.totalAmount,
+        status:   c.status,
+        userId:   c.userId,
+        stripeId: c.promoCode || null,
+        stripeQuote: sq ? {
+          id:             sq.id,
+          status:         sq.status,
+          hosted_url:     sq.hosted_quote_url,
+          amount_total:   (sq.amount_total || 0) / 100,
+          // customer peut être un objet expandé ou un ID string
+          customer_email: sq.metadata?.customerEmail || (typeof sq.customer === 'object' ? sq.customer?.email : '') || localMeta.e || '',
+          customer_name:  sq.metadata?.customerName  || (typeof sq.customer === 'object' ? sq.customer?.name  : '') || localMeta.n || '',
+          company:        sq.metadata?.company        || localMeta.c || '',
+          phone:          sq.metadata?.phone          || localMeta.p || '',
+          message:        sq.metadata?.message        || localMeta.m || '',
+          product:        sq.metadata?.productName    || sq.line_items?.data?.[0]?.description || localMeta.pr || '',
+        } : {
+          // Pas encore de quote Stripe — on expose les données locales directement
+          id: null, status: null, hosted_url: null, amount_total: 0,
+          customer_email: localMeta.e || '',
+          customer_name:  localMeta.n || '',
+          company:        localMeta.c || '',
+          phone:          localMeta.p || '',
+          message:        localMeta.m || '',
+          product:        localMeta.pr || '',
+        }
+      };
+    });
+
+    res.json({ devis: enriched, total: enriched.length, stripeActive: !!stripe });
+  } catch (err) {
+    console.error('[admin/quotes]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /admin/api/quotes/:id/send-stripe — L'admin crée + envoie un devis Stripe avec son prix
+app.post('/admin/api/quotes/:id/send-stripe', checkAdminAuth, async (req, res) => {
+  const token    = getAuthToken(req);
+  const id       = parseInt(req.params.id);
+  const { email, productName, unitPrice, quantity, notes } = req.body || {};
+
+  if (!email || !productName || !unitPrice) {
+    return res.status(400).json({ error: 'email, productName et unitPrice sont requis' });
+  }
+
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe non configuré sur ce serveur' });
+  }
+
+  try {
+    const qty   = Number(quantity) || 1;
+    const price = Number(unitPrice);
+
+    // 0. Récupérer la commande pour lire le JSON metadata original (nom/email/société/téléphone du client)
+    let clientMeta = {};
+    try {
+      const cmdResp = await axios.get(`http://api:8080/api/commandes/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const promoCode = cmdResp.data?.promoCode || '';
+      if (promoCode && !promoCode.startsWith('qt_')) {
+        clientMeta = JSON.parse(promoCode);
+      }
+    } catch (_) {}
+
+    // 1. Récupérer ou créer un Customer Stripe (l'API Quotes n'accepte pas customer_email directement)
+    let customerId;
+    const clientName = clientMeta.n || '';
+    const existing = await stripe.customers.list({ email, limit: 1 });
+    if (existing.data.length > 0) {
+      customerId = existing.data[0].id;
+      // Mettre à jour le nom s'il manquait
+      if (clientName && !existing.data[0].name) {
+        await stripe.customers.update(customerId, { name: clientName });
+      }
+    } else {
+      const customer = await stripe.customers.create({
+        email,
+        name: clientName || undefined,
+        metadata: { commandeId: String(id) }
+      });
+      customerId = customer.id;
+    }
+
+    // 2. Créer un produit Stripe éphémère (l'API Quotes exige un product ID dans price_data, pas product_data inline)
+    const desc = notes ? notes.substring(0, 300) : undefined;
+    const product = await stripe.products.create({
+      name: productName,
+      ...(desc ? { description: desc } : {})
+    });
+
+    // 3. Créer le devis Stripe (brouillon)
+    const quote = await stripe.quotes.create({
+      customer: customerId,
+      line_items: [{
+        price_data: {
+          currency:    'eur',
+          product:     product.id,
+          unit_amount: Math.round(price * 100)
+        },
+        quantity: qty
+      }],
+      metadata: {
+        commandeId:    String(id),
+        adminSent:     'true',
+        productName,
+        quantity:      String(qty),
+        customerName:  clientMeta.n || '',
+        customerEmail: email,
+        company:       clientMeta.c || '',
+        phone:         clientMeta.p || '',
+        message:       clientMeta.m || ''
+      }
+    });
+
+    // 3. Finaliser → génère le PDF et envoie l'email au client
+    const finalized = await stripe.quotes.finalizeQuote(quote.id);
+
+    // 3. Mettre à jour la commande en DB : statut → devis_envoye, montant, quoteId
+    await axios.put(
+      `http://api:8080/api/commandes/${id}`,
+      {
+        totalAmount: price * qty,
+        status:      'devis_envoye',
+        promoCode:   finalized.id   // stocker l'ID Stripe Quote (userId omis → préservé)
+      },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+
+    res.json({
+      success:   true,
+      quoteId:   finalized.id,
+      hostedUrl: finalized.hosted_quote_url,
+      status:    finalized.status
+    });
+
+  } catch (err) {
+    console.error('[admin/quotes/send-stripe]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Discounts (admin) ────────────────────────────────────────────────────────
 
 // GET /admin/api/discounts — liste codes locaux + coupons Stripe si dispo
@@ -471,9 +661,64 @@ app.get('/api/mes-commandes', checkAuth, async (req, res) => {
     res.json(commandes);
   } catch (err) {
     console.error('Mes commandes error:', err.message);
-    // Si la table n'existe pas ou autre erreur serveur → liste vide
     if (err.response && err.response.status >= 500) return res.json([]);
     res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
+  }
+});
+
+// GET /api/mes-devis — Devis de l'utilisateur connecté (avec enrichissement Stripe si qt_xxx)
+app.get('/api/mes-devis', checkAuth, async (req, res) => {
+  try {
+    const token  = getAuthToken(req);
+    const userId = req.user.id_utilisateur;
+    const response = await axios.get('http://api:8080/api/commandes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const DEVIS_STATUTS = ['devis_demande', 'devis_envoye', 'devis_accepte', 'devis_refuse'];
+    const devis = (response.data || []).filter(c =>
+      c.userId === userId && DEVIS_STATUTS.includes(c.status)
+    );
+
+    // Enrichir avec Stripe si le promoCode est un qt_xxx
+    let stripeMap = {};
+    if (stripe) {
+      const quoteIds = devis.filter(d => d.promoCode?.startsWith('qt_')).map(d => d.promoCode);
+      for (const qid of quoteIds) {
+        try {
+          stripeMap[qid] = await stripe.quotes.retrieve(qid, { expand: ['line_items'] });
+        } catch (_) {}
+      }
+    }
+
+    const enriched = devis.map(d => {
+      let meta = {};
+      if (d.promoCode && !d.promoCode.startsWith('qt_')) {
+        try { meta = JSON.parse(d.promoCode); } catch (_) {}
+      }
+      const sq = d.promoCode && stripeMap[d.promoCode] ? stripeMap[d.promoCode] : null;
+      // Priorité : metadata Stripe (fiable) > JSON compact local > line_items Stripe
+      const productName = sq?.metadata?.productName
+        || meta.pr
+        || sq?.line_items?.data?.[0]?.description
+        || '—';
+      const quantity = Number(sq?.metadata?.quantity || meta.q || 1);
+      return {
+        id:          d.id,
+        date:        d.orderDate,
+        status:      d.status,
+        amount:      d.totalAmount,
+        productName,
+        quantity,
+        message:     meta.m  || '',
+        hostedUrl:   sq?.hosted_quote_url || null,
+        stripeStatus: sq?.status || null,
+      };
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('[mes-devis]', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -702,6 +947,68 @@ app.post('/api/validate-promo', async (req, res) => {
   }
 });
 
+// POST /api/request-quote — Demande de devis (enregistrement uniquement, pas de prix)
+// Le prix est fixé par l'admin qui crée ensuite le devis Stripe via /admin/api/quotes/:id/send-stripe
+app.post('/api/request-quote', async (req, res) => {
+  const token = getAuthToken(req);
+  const {
+    productName, productId,
+    quantity, name, firstName, email, company, phone, message
+  } = req.body || {};
+
+  if (!email || !productName) {
+    return res.status(400).json({ error: 'Email et nom du produit requis' });
+  }
+
+  const fullName = [firstName, name].filter(Boolean).join(' ');
+
+  // Récupérer le profil si l'utilisateur est connecté
+  let userId = null;
+  if (token) {
+    try {
+      const profile = await axios.get('http://api:8080/api/user/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      userId = profile.data.id_utilisateur;
+    } catch (_) {}
+  }
+
+  // Stocker les métadonnées de la demande dans promo_code (JSON compact)
+  const meta = JSON.stringify({
+    e: email,
+    n: fullName.substring(0, 60),
+    c: (company || '').substring(0, 60),
+    p: (phone   || '').substring(0, 20),
+    q: Number(quantity) || 1,
+    pr: productName.substring(0, 80),
+    m: (message || '').substring(0, 200)
+  });
+
+  // Sauvegarder en base comme commande "devis_demande" (montant = 0, sera défini par l'admin)
+  if (!userId) {
+    return res.status(401).json({ error: 'Vous devez être connecté pour soumettre une demande de devis.' });
+  }
+
+  try {
+    await axios.post(
+      'http://api:8080/api/commandes',
+      {
+        totalAmount: 0,
+        status:      'devis_demande',
+        userId:      userId,
+        promoCode:   meta
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } catch (e) {
+    console.error('[request-quote] DB save failed:', e.message);
+    return res.status(500).json({ error: 'Erreur lors de l\'enregistrement de votre demande. Veuillez réessayer.' });
+  }
+
+  console.log(`[request-quote] Nouvelle demande de devis : ${fullName || email} — ${productName}`);
+  return res.json({ success: true });
+});
+
 // POST /api/create-checkout-session — Crée une session de paiement Stripe
 app.post('/api/create-checkout-session', checkAuth, async (req, res) => {
   const { items, promoCode } = req.body || {};
@@ -844,6 +1151,16 @@ app.get('/produit.html', (req, res) => {
 // Page protégée - profil utilisateur
 app.get('/profil.html', checkAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'profil.html'));
+});
+
+// Page protégée - paramètres du compte
+app.get('/parametres.html', checkAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'parametres.html'));
+});
+
+// Page publique - résultats de recherche
+app.get('/recherche.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'recherche.html'));
 });
 
 // Page protégée - mes commandes

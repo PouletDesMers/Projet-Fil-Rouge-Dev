@@ -256,6 +256,7 @@ func main() {
 	// Public categories and products (no auth required)
 	r.HandleFunc("/api/public/categories", getActiveCategories).Methods("GET")
 	r.HandleFunc("/api/public/products/{slug}", getActiveProduitsByCategory).Methods("GET")
+	r.HandleFunc("/api/public/search", searchProduits).Methods("GET")
 
 	// Dynamic OpenAPI spec (public — no auth required)
 	r.HandleFunc("/api/swagger.json", getSwaggerSpec).Methods("GET")

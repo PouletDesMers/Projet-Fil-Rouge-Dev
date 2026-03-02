@@ -15,6 +15,35 @@
     remboursee:  { label: 'Remboursée',  cls: 'badge-remboursee' },
   };
 
+  const DEVIS_STATUTS = ['devis_demande', 'devis_envoye', 'devis_accepte', 'devis_refuse'];
+
+  const DEVIS_STATUS_CONFIG = {
+    devis_demande: {
+      cls:    'devis-status-demande',
+      icon:   'bi-hourglass-split',
+      label:  'En attente de notre équipe',
+      detail: 'Votre demande a bien été reçue. Notre équipe étudie votre besoin et vous enverra un devis personnalisé sous 24–48h.',
+    },
+    devis_envoye: {
+      cls:    'devis-status-envoye status-envoye',
+      icon:   'bi-envelope-check-fill',
+      label:  'Devis envoyé — en attente de votre réponse',
+      detail: 'Vous avez reçu notre devis par email. Consultez-le, acceptez-le ou contactez-nous pour négocier.',
+    },
+    devis_accepte: {
+      cls:    'devis-status-accepte status-accepte',
+      icon:   'bi-check-circle-fill',
+      label:  'Devis accepté',
+      detail: 'Merci ! Votre accord a bien été enregistré. Notre équipe vous contactera pour les prochaines étapes.',
+    },
+    devis_refuse: {
+      cls:    'devis-status-refuse status-refuse',
+      icon:   'bi-x-circle-fill',
+      label:  'Devis refusé',
+      detail: 'Vous avez refusé ce devis. N’hésitez pas à nous contacter pour discuter d’une autre solution.',
+    },
+  };
+
   function statusBadge(s) {
     const cfg = STATUS_CONFIG[s] || { label: s || 'Inconnu', cls: 'bg-secondary text-white' };
     return `<span class="badge ${cfg.cls} px-2 py-1 rounded-pill">${cfg.label}</span>`;
@@ -58,7 +87,10 @@
   }
 
   function renderOrders(container, commandes) {
-    if (!commandes || commandes.length === 0) {
+    // Exclure les devis — ils ont leur propre onglet
+    const orders = commandes.filter(c => !DEVIS_STATUTS.includes(c.status));
+
+    if (!orders || orders.length === 0) {
       container.innerHTML = `
         <div class="text-center empty-state">
           <i class="bi bi-bag-x d-block text-muted"></i>
@@ -71,7 +103,7 @@
       return;
     }
 
-    const rows = commandes.map((c) => `
+    const rows = orders.map((c) => `
       <tr style="cursor:pointer" onclick="window._showOrderDetail(${c.id})">
         <td class="fw-semibold text-muted ps-4">#${c.id}</td>
         <td>${formatDate(c.orderDate)}</td>
@@ -101,12 +133,99 @@
           </div>
         </div>
       </div>
-      <p class="text-muted small mt-3 text-end">${commandes.length} commande${commandes.length > 1 ? 's' : ''}</p>`;
+      <p class="text-muted small mt-3 text-end">${orders.length} commande${orders.length > 1 ? 's' : ''}</p>`;
 
     // Expose showOrderDetail globally with the orders data
-    const ordersMap = Object.fromEntries(commandes.map(o => [o.id, o]));
+    const ordersMap = Object.fromEntries(orders.map(o => [o.id, o]));
     window._showOrderDetail = (id) => showOrderDetail(ordersMap[id]);
   }
+
+  // ── Devis ──────────────────────────────────────────────────────────────────
+
+  function renderDevis(container, devis) {
+    if (!devis || devis.length === 0) {
+      container.innerHTML = `
+        <div class="text-center empty-state">
+          <i class="bi bi-file-earmark-text d-block text-muted"></i>
+          <h5 class="mt-4 fw-semibold">Aucun devis pour l'instant</h5>
+          <p class="text-muted mb-4">Vous pouvez demander un devis personnalisé depuis la page d'un produit.</p>
+          <a href="/catalogue.html" class="btn btn-cyna px-4">
+            <i class="bi bi-grid me-2"></i>Voir le catalogue
+          </a>
+        </div>`;
+      // Update badge
+      const badge = document.getElementById('devisBadgeCount');
+      if (badge) { badge.textContent = '0'; badge.classList.add('d-none'); }
+      return;
+    }
+
+    // Update badge
+    const badge = document.getElementById('devisBadgeCount');
+    if (badge) { badge.textContent = devis.length; badge.classList.remove('d-none'); }
+
+    const cards = devis.map(d => {
+      const cfg     = DEVIS_STATUS_CONFIG[d.status] || { cls: 'bg-secondary text-white', icon: 'bi-question-circle', label: d.status, detail: '' };
+      const statusCls = cfg.cls.split(' ').find(c => c.startsWith('status-')) || '';
+      const amount  = d.amount > 0
+        ? `<span class="fw-bold fs-5">${Number(d.amount).toFixed(2)} €</span> <span class="text-muted small">TTC</span>`
+        : `<span class="text-muted fst-italic">Prix en cours de définition</span>`;
+
+      const ctaBtn = d.hostedUrl
+        ? `<a href="${d.hostedUrl}" target="_blank" class="quote-cta mt-3">
+             <i class="bi bi-file-earmark-pdf-fill"></i>Voir et répondre au devis
+           </a>`
+        : '';
+
+      const msgLine = d.message
+        ? `<p class="text-muted small mb-0 mt-2"><i class="bi bi-chat-left-text me-1"></i><em>${d.message}</em></p>`
+        : '';
+
+      return `
+        <div class="card border-0 shadow-sm devis-card ${statusCls} mb-3">
+          <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+              <div class="flex-fill">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="text-muted small">#${d.id}</span>
+                  <span class="text-muted small">·</span>
+                  <span class="text-muted small">${formatDate(d.date)}</span>
+                </div>
+                <h6 class="fw-bold mb-1 fs-5">${d.productName}<span class="text-muted fw-normal fs-6 ms-2">&times;${d.quantity}</span></h6>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <span class="badge rounded-3 px-3 py-2 ${cfg.cls}">
+                    <i class="bi ${cfg.icon} me-1"></i>${cfg.label}
+                  </span>
+                </div>
+                <p class="text-muted small mb-0 mt-2">${cfg.detail}</p>
+                ${msgLine}
+              </div>
+              <div class="text-end">
+                ${amount}
+                ${ctaBtn}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = cards +
+      `<p class="text-muted small text-end mt-1">${devis.length} devis</p>`;
+  }
+
+  window.loadDevis = async function() {
+    window._devisLoaded = true;
+    const container = document.getElementById('devisContainer');
+    if (!container) return;
+    try {
+      const res = await fetch('/api/mes-devis', { credentials: 'include' });
+      if (res.status === 401) { window.location.href = '/auth.html?redirect=/mes-commandes.html?tab=devis'; return; }
+      if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
+      const devis = await res.json();
+      renderDevis(container, Array.isArray(devis) ? devis : []);
+    } catch (err) {
+      container.innerHTML = `<div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Impossible de charger vos devis. <a href="#" onclick="location.reload()">Réessayer</a></div>`;
+    }
+  };
 
   async function loadCommandes() {
     const container = document.getElementById('ordersContainer');
