@@ -2,11 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy lockfile first for deterministic installs and leverage Docker cache
+# Copy package files
 COPY package*.json ./
 
-# Use `npm ci` for reproducible, faster installs in CI/containers
-RUN npm ci --only=production
+# Use npm install to handle package.json changes without requiring an up-to-date lock file
+RUN npm install --only=production
 
 # Copy rest of the app
 COPY . .

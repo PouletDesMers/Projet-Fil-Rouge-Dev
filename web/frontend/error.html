@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title id="page-title">Erreur — CYNA</title>
+
+    <link rel="icon" type="image/png" href="/img/favicon.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+
+    <style>
+      html, body {
+        height: 100%;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: #0d0d1a;
+        color: #fff;
+        overflow: hidden;
+      }
+      .error-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        position: relative;
+      }
+      /* Animated background grid */
+      .grid-bg {
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(86, 16, 192, 0.12) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(86, 16, 192, 0.12) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: grid-move 20s linear infinite;
+        z-index: 0;
+      }
+      @keyframes grid-move {
+        0%   { transform: translateY(0); }
+        100% { transform: translateY(50px); }
+      }
+      /* Glowing orbs */
+      .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.25;
+        z-index: 0;
+        animation: orb-float 8s ease-in-out infinite;
+      }
+      .orb-1 {
+        width: 400px; height: 400px;
+        background: #5610C0;
+        top: -100px; left: -100px;
+        animation-delay: 0s;
+      }
+      .orb-2 {
+        width: 300px; height: 300px;
+        background: #7602F9;
+        bottom: -80px; right: -80px;
+        animation-delay: 4s;
+      }
+      @keyframes orb-float {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50%       { transform: translateY(-30px) scale(1.05); }
+      }
+
+      .error-card {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+      }
+      .error-code {
+        font-size: clamp(7rem, 20vw, 12rem);
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, #7602F9, #5610C0, #351E90);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 40px rgba(118, 2, 249, 0.5));
+        animation: pulse-glow 3s ease-in-out infinite;
+      }
+      @keyframes pulse-glow {
+        0%, 100% { filter: drop-shadow(0 0 40px rgba(118, 2, 249, 0.5)); }
+        50%       { filter: drop-shadow(0 0 70px rgba(118, 2, 249, 0.9)); }
+      }
+      .error-icon {
+        font-size: 3rem;
+        color: #7602F9;
+        margin-bottom: 1rem;
+        display: block;
+      }
+      .error-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #fff;
+      }
+      .error-message {
+        color: rgba(255,255,255,0.6);
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+      }
+      .divider {
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, #5610C0, #7602F9);
+        border-radius: 2px;
+        margin: 1.25rem auto;
+      }
+      .btn-home {
+        background: linear-gradient(135deg, #5610C0, #7602F9);
+        border: none;
+        color: #fff;
+        padding: 0.75rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(118, 2, 249, 0.4);
+      }
+      .btn-home:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(118, 2, 249, 0.6);
+        color: #fff;
+      }
+      .btn-back {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.7);
+        padding: 0.75rem 2rem;
+        border-radius: 50px;
+        font-weight: 500;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+      }
+      .btn-back:hover {
+        border-color: rgba(255,255,255,0.5);
+        color: #fff;
+        transform: translateY(-2px);
+      }
+      .badge-code {
+        display: inline-block;
+        background: rgba(118, 2, 249, 0.15);
+        border: 1px solid rgba(118, 2, 249, 0.3);
+        color: #a370f7;
+        font-size: 0.8rem;
+        font-family: monospace;
+        padding: 0.2rem 0.7rem;
+        border-radius: 50px;
+        margin-bottom: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="error-wrapper">
+      <div class="error-card">
+        <span class="error-code" id="error-code">404</span>
+        <i class="bi error-icon" id="error-icon"></i>
+        <div class="badge-code" id="badge-code"></div>
+        <div class="divider"></div>
+        <h1 class="error-title" id="error-title">Page introuvable</h1>
+        <p class="error-message" id="error-message">La page que vous recherchez n'existe pas ou a été déplacée.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+          <a href="javascript:history.back()" class="btn-back">
+            <i class="bi bi-arrow-left"></i> Retour
+          </a>
+          <a href="/index.html" class="btn-home">
+            <i class="bi bi-house-fill"></i> Accueil
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const ERRORS = {
+        400: {
+          icon: 'bi-exclamation-triangle-fill',
+          title: 'Requête invalide',
+          message: 'La requête envoyée est incorrecte ou mal formée.',
+          badge: 'Bad Request',
+        },
+        401: {
+          icon: 'bi-lock-fill',
+          title: 'Non autorisé',
+          message: 'Vous devez être connecté pour accéder à cette page.',
+          badge: 'Unauthorized',
+        },
+        403: {
+          icon: 'bi-shield-fill-x',
+          title: 'Accès refusé',
+          message: 'Vous ne disposez pas des permissions nécessaires pour accéder à cette ressource.',
+          badge: 'Forbidden',
+        },
+        404: {
+          icon: 'bi-search',
+          title: 'Page introuvable',
+          message: 'La page que vous recherchez n\'existe pas ou a été déplacée.',
+          badge: 'Not Found',
+        },
+        429: {
+          icon: 'bi-hourglass-split',
+          title: 'Trop de requêtes',
+          message: 'Vous avez effectué trop de requêtes. Veuillez patienter quelques instants.',
+          badge: 'Too Many Requests',
+        },
+        500: {
+          icon: 'bi-bug-fill',
+          title: 'Erreur serveur',
+          message: 'Une erreur interne s\'est produite. Notre équipe a été notifiée. Réessayez dans quelques instants.',
+          badge: 'Internal Server Error',
+        },
+        502: {
+          icon: 'bi-wifi-off',
+          title: 'Passerelle incorrecte',
+          message: 'Le serveur a reçu une réponse invalide d\'un service en amont.',
+          badge: 'Bad Gateway',
+        },
+        503: {
+          icon: 'bi-tools',
+          title: 'Service indisponible',
+          message: 'Le service est temporairement indisponible. Une maintenance est peut-être en cours.',
+          badge: 'Service Unavailable',
+        },
+      };
+
+      // Read code from URL param ?code=404 or default 404
+      const params = new URLSearchParams(window.location.search);
+      const code = parseInt(params.get('code')) || 404;
+      const info = ERRORS[code] || ERRORS[404];
+
+      document.getElementById('page-title').textContent = `Erreur ${code} — CYNA`;
+      document.getElementById('error-code').textContent = code;
+      document.getElementById('error-icon').className = `bi ${info.icon} error-icon`;
+      document.getElementById('badge-code').textContent = `HTTP ${code} · ${info.badge}`;
+      document.getElementById('error-title').textContent = info.title;
+      document.getElementById('error-message').textContent = info.message;
+    </script>
+  </body>
+</html>

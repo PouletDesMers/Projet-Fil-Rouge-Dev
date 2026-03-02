@@ -24,10 +24,25 @@ func getusers(w http.ResponseWriter, r *http.Request) {
 	var users []Utilisateur
 	for rows.Next() {
 		var u Utilisateur
-		err := rows.Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+		var nom, prenom, telephone, role, statut sql.NullString
+		var derniereConnexion sql.NullTime
+		var idEntreprise sql.NullInt64
+		err := rows.Scan(&u.ID, &u.Email, &nom, &prenom, &telephone, &role, &statut, &u.TotpEnabled, &u.DateCreation, &derniereConnexion, &idEntreprise)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		u.Nom = nom.String
+		u.Prenom = prenom.String
+		u.Telephone = telephone.String
+		u.Role = role.String
+		u.Statut = statut.String
+		if derniereConnexion.Valid {
+			u.DerniereConnexion = &derniereConnexion.Time
+		}
+		if idEntreprise.Valid {
+			val := int(idEntreprise.Int64)
+			u.IDEntreprise = &val
 		}
 		// Clear password for security
 		u.MotDePasse = ""
@@ -37,6 +52,7 @@ func getusers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
 
@@ -356,6 +372,7 @@ func getUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	var u Utilisateur
 	var totpSecret, webauthnCredID, webauthnPubKey sql.NullString
+	var telephone sql.NullString
 	var webauthnCounter sql.NullInt64
 	var derniereConnexion sql.NullTime
 	var idEntreprise sql.NullInt64
@@ -367,7 +384,7 @@ func getUserProfile(w http.ResponseWriter, r *http.Request) {
 		WHERE id_utilisateur = $1`
 
 	err := db.QueryRow(query, userID).Scan(
-		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation,
+		&u.ID, &u.Email, &u.Nom, &u.Prenom, &telephone, &u.Role, &u.Statut, &u.DateCreation,
 		&derniereConnexion, &idEntreprise, &totpSecret, &u.TotpEnabled, &webauthnCredID, &webauthnPubKey, &webauthnCounter)
 
 	if err != nil {
@@ -381,6 +398,9 @@ func getUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle nullable fields
+	if telephone.Valid {
+		u.Telephone = telephone.String
+	}
 	if totpSecret.Valid {
 		u.TotpSecret = &totpSecret.String
 	}

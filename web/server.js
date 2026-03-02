@@ -6,6 +6,21 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Stripe (facultatif — désactivé si la clé n'est pas configurée)
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
+let stripe = null;
+if (STRIPE_SECRET_KEY && STRIPE_SECRET_KEY !== 'sk_test_VOTRE_CLE_ICI') {
+  try { stripe = require('stripe')(STRIPE_SECRET_KEY); console.log('[Stripe] SDK chargé'); } catch (e) { console.warn('[Stripe] SDK non disponible:', e.message); }
+}
+
+// Codes promo locaux (demo — utilisés quand Stripe n'est pas actif ou en complément)
+let DEMO_PROMO_CODES = [
+  { code: 'WELCOME20', type: 'percent', discount: 20, label: 'WELCOME20 (−20%)', active: true, timesRedeemed: 0 },
+  { code: 'CYNA10',    type: 'percent', discount: 10, label: 'CYNA10 (−10%)',    active: true, timesRedeemed: 0 },
+  { code: 'PROMO50',   type: 'amount',  discount: 50, label: 'PROMO50 (−50€)',   active: true, timesRedeemed: 0 },
+];
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -103,6 +118,11 @@ app.post('/auth/login', async (req, res) => {
     const response = await axios.post('http://api:8080/api/login', req.body);
     const data = response.data;
     
+    // 2FA required: forward the response with 200 so the frontend can show the 2FA step
+    if (data.requires_2fa) {
+      return res.json({ requires_2fa: true });
+    }
+
     if (data.token) {
       // SÉCURISÉ: httpOnly cookie avec options strictes
       res.cookie('authToken', data.token, {
@@ -133,8 +153,7 @@ app.post('/auth/login', async (req, res) => {
       return res.json({
         success: true,
         user: userProfile,
-        message: data.message || 'Login successful',
-        requires_2fa: data.requires_2fa || false
+        message: data.message || 'Login successful'
       });
     }
     
@@ -333,8 +352,176 @@ app.post('/admin/api/api-tokens', proxyToApiWithAuth('/api-tokens'));
 app.delete('/admin/api/api-tokens/:id', proxyToApiWithAuth('/api-tokens/:id'));
 app.put('/admin/api/api-tokens/:id/status', proxyToApiWithAuth('/api-tokens/:id/status'));
 
+// Commandes (admin)
+app.get('/admin/api/commandes', proxyToApiWithAuth('/commandes'));
+app.post('/admin/api/commandes', proxyToApiWithAuth('/commandes'));
+app.get('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
+app.put('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
+app.delete('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
+
+// ── Discounts (admin) ────────────────────────────────────────────────────────
+
+// GET /admin/api/discounts — liste codes locaux + coupons Stripe si dispo
+app.get('/admin/api/discounts', checkAdminAuth, async (req, res) => {
+  const local = DEMO_PROMO_CODES.map(c => ({ ...c, source: 'local' }));
+  if (!stripe) return res.json({ codes: local, stripeActive: false });
+
+  try {
+    const [coupons, promos] = await Promise.all([
+      stripe.coupons.list({ limit: 50 }),
+      stripe.promotionCodes.list({ limit: 50, active: true }),
+    ]);
+    const stripeCodes = promos.data.map(p => ({
+      code:     p.code,
+      type:     p.coupon.percent_off ? 'percent' : 'amount',
+      discount: p.coupon.percent_off || (p.coupon.amount_off || 0) / 100,
+      label:    p.coupon.name || p.code,
+      active:   p.active,
+      source:   'stripe',
+      stripeId: p.id,
+      couponId: p.coupon.id,
+      maxRedemptions: p.max_redemptions,
+      timesRedeemed: p.times_redeemed,
+    }));
+    res.json({ codes: [...local, ...stripeCodes], stripeActive: true });
+  } catch (err) {
+    res.json({ codes: local, stripeActive: false, stripeError: err.message });
+  }
+});
+
+// POST /admin/api/discounts — créer un code local ou Stripe
+app.post('/admin/api/discounts', checkAdminAuth, async (req, res) => {
+  const { code, type, discount, createInStripe } = req.body || {};
+  if (!code || !type || discount == null) {
+    return res.status(400).json({ error: 'Champs manquants : code, type, discount' });
+  }
+  const upper = code.toUpperCase().replace(/\s+/g, '');
+  if (DEMO_PROMO_CODES.find(c => c.code === upper)) {
+    return res.status(409).json({ error: 'Ce code existe déjà localement' });
+  }
+
+  const newCode = {
+    code:     upper,
+    type:     type,   // 'percent' | 'amount'
+    discount: Number(discount),
+    label:    `${upper} (${type === 'percent' ? `−${discount}%` : `−${Number(discount).toFixed(2).replace('.', ',')} €`})`,
+    active:   true,
+    timesRedeemed: 0,
+  };
+  DEMO_PROMO_CODES.push(newCode);
+
+  // Créer aussi dans Stripe si demandé et que Stripe est actif
+  if (createInStripe && stripe) {
+    try {
+      const couponParams = type === 'percent'
+        ? { percent_off: Number(discount), duration: 'once', name: upper }
+        : { amount_off: Math.round(Number(discount) * 100), currency: 'eur', duration: 'once', name: upper };
+      const coupon = await stripe.coupons.create(couponParams);
+      await stripe.promotionCodes.create({ coupon: coupon.id, code: upper });
+      newCode.source = 'local+stripe';
+    } catch (e) {
+      newCode.stripeError = e.message;
+    }
+  }
+
+  res.status(201).json(newCode);
+});
+
+// DELETE /admin/api/discounts/:code — désactiver un code local
+app.delete('/admin/api/discounts/:code', checkAdminAuth, async (req, res) => {
+  const upper = req.params.code.toUpperCase();
+  const idx = DEMO_PROMO_CODES.findIndex(c => c.code === upper);
+  if (idx < 0) return res.status(404).json({ error: 'Code introuvable' });
+  DEMO_PROMO_CODES.splice(idx, 1);
+  res.json({ deleted: upper });
+});
+
+// Commandes (utilisateur connecté — filtrées par son ID)
+app.get('/api/mes-commandes', checkAuth, async (req, res) => {
+  try {
+    const token = getAuthToken(req);
+    const userId = req.user.id_utilisateur;
+    const response = await axios.get('http://api:8080/api/commandes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const commandes = (response.data || []).filter(c => c.userId === userId);
+    res.json(commandes);
+  } catch (err) {
+    console.error('Mes commandes error:', err.message);
+    // Si la table n'existe pas ou autre erreur serveur → liste vide
+    if (err.response && err.response.status >= 500) return res.json([]);
+    res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
+  }
+});
+
 app.get('/admin/api/user/profile', proxyToApiWithAuth('/user/profile'));
 app.post('/admin/api/upload', proxyToApiWithAuth('/upload'));
+
+// =============================================================================
+// SWAGGER DYNAMIQUE — spec générée par l'API Go, paths patchés via proxy
+// =============================================================================
+
+// Retourne la spec OpenAPI dynamique avec les paths réécrits pour passer par /admin/api
+app.get('/admin/api/swagger.json', checkAdminAuth, async (req, res) => {
+  try {
+    const response = await axios.get('http://api:8080/api/swagger.json');
+    const spec = response.data;
+
+    // Réécrire le server URL en relatif (origine courante = port 3000)
+    spec.servers = [{ url: '', description: 'Via proxy admin (auth par cookie)' }];
+
+    // Réécrire tous les paths : /api/X → /admin/api/X
+    const patchedPaths = {};
+    for (const [p, methods] of Object.entries(spec.paths || {})) {
+      const newPath = p.replace(/^\/api\//, '/admin/api/');
+      patchedPaths[newPath] = methods;
+    }
+    spec.paths = patchedPaths;
+
+    res.json(spec);
+  } catch (error) {
+    console.error('Failed to fetch swagger spec:', error.message);
+    res.status(500).json({ error: 'Failed to load API spec' });
+  }
+});
+
+// Catch-all admin proxy — utilisé par Swagger UI "Try it out" pour les routes non explicites
+// DOIT être placé après toutes les routes admin explicites
+app.all('/admin/api/*', async (req, res) => {
+  try {
+    const token = getAuthToken(req);
+    if (!token) return res.status(401).json({ error: 'Authentication required' });
+
+    // Vérifier admin
+    const userResponse = await axios.get('http://api:8080/api/user/profile', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (userResponse.data.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // /admin/api/X → /api/X sur l'API Go
+    const apiPath = req.path.replace(/^\/admin\/api/, '/api');
+    let url = `http://api:8080${apiPath}`;
+
+    if (Object.keys(req.query).length > 0) {
+      url += '?' + new URLSearchParams(req.query).toString();
+    }
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+    const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? req.body : undefined;
+    const response = await axios({ method: req.method.toLowerCase(), url, headers, data: body });
+    res.json(response.data);
+  } catch (error) {
+    console.error(`Admin proxy error for ${req.path}:`, error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Internal server error'
+    });
+  }
+});
 
 // Routes utilisateur (authentification requise mais pas forcément admin)
 app.get('/api/user/profile', checkAuth, async (req, res) => {
@@ -350,10 +537,9 @@ app.get('/api/user/profile', checkAuth, async (req, res) => {
 app.put('/api/user/profile', checkAuth, async (req, res) => {
   try {
     const token = getAuthToken(req);
-    const userId = req.user.id_utilisateur;
     
     // Transférer la requête vers l'API
-    const response = await axios.put(`http://api:8080/api/users/${userId}/profile`, req.body, {
+    const response = await axios.put(`http://api:8080/api/user/profile`, req.body, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -432,6 +618,153 @@ app.post('/api/user/2fa/verify', checkAuth, async (req, res) => {
 // PLUS DE PROXY GÉNÉRIQUE - SÉCURITÉ RENFORCÉE
 // =============================================================================
 
+// =============================================================================
+// STRIPE — Validation code promo + Checkout Session
+// =============================================================================
+
+// GET /api/stripe-config — Retourne la clé publique Stripe pour le frontend
+app.get('/api/stripe-config', (req, res) => {
+  res.json({ publishableKey: STRIPE_PUBLISHABLE_KEY || null });
+});
+
+// POST /api/validate-promo — Valide un code promo Stripe
+app.post('/api/validate-promo', async (req, res) => {
+  const { code } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'Code manquant' });
+
+  // Toujours vérifier les codes locaux en premier
+  const localMatch = DEMO_PROMO_CODES.find(c => c.code === code.toUpperCase() && c.active);
+  if (localMatch) {
+    localMatch.timesRedeemed = (localMatch.timesRedeemed || 0) + 1;
+    return res.json({ valid: true, code: localMatch.code, type: localMatch.type, discount: localMatch.discount, label: localMatch.label });
+  }
+
+  if (!stripe) {
+    return res.status(400).json({ valid: false, error: 'Code promo invalide' });
+  }
+
+  try {
+    // Chercher parmi les promotion codes Stripe
+    const promos = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+    if (!promos.data.length) {
+      return res.status(400).json({ valid: false, error: 'Code promo invalide ou expiré' });
+    }
+    const promo = promos.data[0];
+    const coupon = promo.coupon;
+
+    let type, discount, label;
+    if (coupon.percent_off) {
+      type = 'percent';
+      discount = coupon.percent_off;
+      label = `${code.toUpperCase()} (−${discount}%)`;
+    } else {
+      type = 'amount';
+      discount = (coupon.amount_off || 0) / 100; // centimes → euros
+      label = `${code.toUpperCase()} (−${discount.toFixed(2).replace('.', ',')} €)`;
+    }
+
+    return res.json({ valid: true, code: promo.code, type, discount, label });
+  } catch (err) {
+    console.error('Stripe promo error:', err.message);
+    return res.status(500).json({ error: 'Erreur Stripe' });
+  }
+});
+
+// POST /api/create-checkout-session — Crée une session de paiement Stripe
+app.post('/api/create-checkout-session', checkAuth, async (req, res) => {
+  const { items, promoCode } = req.body || {};
+  if (!items || !items.length) return res.status(400).json({ error: 'Panier vide' });
+
+  const origin = `${req.protocol}://${req.get('host')}`;
+
+  if (!stripe) {
+    return res.json({
+      url: `${origin}/mes-commandes.html?checkout=success&demo=1`,
+      demo: true,
+    });
+  }
+
+  try {
+    const lineItems = items.map((it) => ({
+      price_data: {
+        currency: 'eur',
+        product_data: { name: it.name },
+        unit_amount: Math.round((Number(it.price) || 0) * 100),
+      },
+      quantity: Number(it.qty) || 1,
+    }));
+
+    const sessionParams = {
+      mode: 'payment',
+      line_items: lineItems,
+      success_url: `${origin}/mes-commandes.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/index.html?view=cart`,
+      automatic_tax: { enabled: false },
+    };
+
+    // Appliquer le code promo
+    if (promoCode) {
+      // 1. Code local → créer un coupon Stripe à la volée
+      const localCode = DEMO_PROMO_CODES.find(c => c.code === promoCode.toUpperCase() && c.active);
+      if (localCode) {
+        const couponParams = localCode.type === 'percent'
+          ? { percent_off: localCode.discount, duration: 'once', name: localCode.code }
+          : { amount_off: Math.round(localCode.discount * 100), currency: 'eur', duration: 'once', name: localCode.code };
+        const coupon = await stripe.coupons.create(couponParams);
+        sessionParams.discounts = [{ coupon: coupon.id }];
+      } else {
+        // 2. Code Stripe (promotion code)
+        const promos = await stripe.promotionCodes.list({ code: promoCode, active: true, limit: 1 });
+        if (promos.data.length) {
+          sessionParams.discounts = [{ promotion_code: promos.data[0].id }];
+        }
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    // NE PAS sauvegarder la commande ici — seulement après confirmation via /api/confirm-order
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error('Stripe checkout error:', err.message);
+    return res.status(500).json({ error: err.message || 'Erreur Stripe' });
+  }
+});
+
+// POST /api/confirm-order — Appelé depuis mes-commandes.html après paiement confirmé
+app.post('/api/confirm-order', checkAuth, async (req, res) => {
+  const { sessionId, totalAmount, demo, promoCode } = req.body || {};
+  const token  = getAuthToken(req);
+  const userId = req.user && req.user.id_utilisateur;
+  if (!userId) return res.status(401).json({ error: 'Non connecté' });
+
+  let amount = Number(totalAmount) || 0;
+
+  // Récupérer le montant réel depuis Stripe si possible
+  if (sessionId && stripe && !demo) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      amount = (session.amount_total || 0) / 100; // centimes → euros
+    } catch (e) {
+      console.warn('[confirm-order] Impossible de récupérer la session Stripe:', e.message);
+    }
+  }
+
+  try {
+    const r = await axios.post('http://api:8080/api/commandes',
+      { totalAmount: amount, status: 'confirmee', userId, promoCode: promoCode || '' },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    res.status(201).json(r.data);
+  } catch (e) {
+    console.error('[confirm-order] Erreur:', e.message);
+    res.status(500).json({ error: 'Impossible de sauvegarder la commande' });
+  }
+});
+
+// =============================================================================
+// HEALTH CHECK
+// =============================================================================
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -481,15 +814,27 @@ app.get('/profil.html', checkAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'profil.html'));
 });
 
+// Page protégée - mes commandes
+app.get('/mes-commandes.html', checkAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'mes-commandes.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  if (req.path.startsWith('/api/') || req.path.startsWith('/admin/api/') || req.path.startsWith('/auth/')) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+  res.status(500).sendFile(path.join(__dirname, 'frontend', 'error.html'));
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+  // API routes return JSON, HTML routes return the error page
+  if (req.path.startsWith('/api/') || req.path.startsWith('/admin/api/') || req.path.startsWith('/auth/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.status(404).sendFile(path.join(__dirname, 'frontend', 'error.html'));
 });
 
 // Start server

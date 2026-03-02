@@ -294,18 +294,19 @@ twoFAForm.addEventListener("submit", async (e) => {
   }
 
   try {
-    const result = await postJSON(`${API_BASE}/api/login`, {
+    const result = await postJSON(`${API_BASE}/auth/login`, {
       email: currentEmail,
       password: loginPassword.value,
       totpCode: code,
     });
 
-    if (result?.token) {
-      localStorage.setItem("token", result.token);
-      if (result.user_id) localStorage.setItem("user_id", result.user_id);
-      
+    if (result?.success && result?.user) {
+      // Token stored in httpOnly cookie by server
       showMsg("success", "Connected ✅", "Success");
       setTimeout(() => (window.location.href = "/index.html"), 500);
+    } else {
+      showMsg("danger", result?.error || "Invalid 2FA code");
+      totpCodeInput.value = "";
     }
   } catch (err) {
     showMsg("danger", err.message);

@@ -134,6 +134,7 @@ type Commande struct {
 	MontantTotal  float64   `json:"totalAmount"`
 	Statut        string    `json:"status"`
 	IDUtilisateur int       `json:"userId"`
+	PromoCode     string    `json:"promoCode,omitempty"`
 }
 
 type Facture struct {

@@ -143,6 +143,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+	mainRouter = r // expose globally for dynamic swagger spec
 
 	// Apply CORS middleware globally
 	r.Use(corsMiddleware)
@@ -255,6 +256,9 @@ func main() {
 	// Public categories and products (no auth required)
 	r.HandleFunc("/api/public/categories", getActiveCategories).Methods("GET")
 	r.HandleFunc("/api/public/products/{slug}", getActiveProduitsByCategory).Methods("GET")
+
+	// Dynamic OpenAPI spec (public — no auth required)
+	r.HandleFunc("/api/swagger.json", getSwaggerSpec).Methods("GET")
 
 	log.Println("API started in HTTP on port 8080")
 

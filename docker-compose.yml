@@ -29,7 +29,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: mydb
-      API_SECRET: eb736d4f64b3aa4861f22c4830de8eb1
+      API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
 
   web:
     build: ./web
@@ -38,7 +38,9 @@ services:
     depends_on:
       - api
     environment:
-      API_SECRET: eb736d4f64b3aa4861f22c4830de8eb1
+      API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     # No bind mounts for production: use the files baked into the image (includes node_modules).
     # For local development, mount the source and run `npm install` on the host.
 

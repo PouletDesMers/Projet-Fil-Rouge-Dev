@@ -77,7 +77,7 @@ func deleteAbonnement(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCommandes(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur FROM commande")
+	rows, err := db.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, '') FROM commande")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,7 +86,7 @@ func getCommandes(w http.ResponseWriter, r *http.Request) {
 	var commandes []Commande
 	for rows.Next() {
 		var c Commande
-		err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur)
+		err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -100,7 +100,7 @@ func getCommande(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 	var c Commande
-	err := db.QueryRow("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur FROM commande WHERE id_commande = $1", id).Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur)
+	err := db.QueryRow("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, '') FROM commande WHERE id_commande = $1", id).Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -111,7 +111,11 @@ func getCommande(w http.ResponseWriter, r *http.Request) {
 func createCommande(w http.ResponseWriter, r *http.Request) {
 	var c Commande
 	json.NewDecoder(r.Body).Decode(&c)
-	err := db.QueryRow("INSERT INTO commande (montant_total, statut, id_utilisateur) VALUES ($1, $2, $3) RETURNING id_commande", c.MontantTotal, c.Statut, c.IDUtilisateur).Scan(&c.ID)
+	var promoCode *string
+	if c.PromoCode != "" {
+		promoCode = &c.PromoCode
+	}
+	err := db.QueryRow("INSERT INTO commande (montant_total, statut, id_utilisateur, promo_code) VALUES ($1, $2, $3, $4) RETURNING id_commande", c.MontantTotal, c.Statut, c.IDUtilisateur, promoCode).Scan(&c.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
