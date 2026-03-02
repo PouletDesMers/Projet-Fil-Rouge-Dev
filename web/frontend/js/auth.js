@@ -267,7 +267,7 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    if (result?.success && result?.user) {
+    if (result?.success) {
       // Token is now stored in httpOnly cookie automatically by server
       // No need to store in localStorage anymore for security
       
@@ -300,7 +300,7 @@ twoFAForm.addEventListener("submit", async (e) => {
       totpCode: code,
     });
 
-    if (result?.success && result?.user) {
+    if (result?.success) {
       // Token stored in httpOnly cookie by server
       showMsg("success", "Connected ✅", "Success");
       setTimeout(() => (window.location.href = "/index.html"), 500);

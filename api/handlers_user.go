@@ -101,10 +101,23 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id, _ := strconv.Atoi(params["id"])
 	var u Utilisateur
-	err := db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+	var telephone sql.NullString
+	var derniereConnexion sql.NullTime
+	var idEntreprise sql.NullInt64
+	err := db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &derniereConnexion, &idEntreprise)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
+	}
+	if telephone.Valid {
+		u.Telephone = telephone.String
+	}
+	if derniereConnexion.Valid {
+		u.DerniereConnexion = &derniereConnexion.Time
+	}
+	if idEntreprise.Valid {
+		val := int(idEntreprise.Int64)
+		u.IDEntreprise = &val
 	}
 	// Clear password for security
 	u.MotDePasse = ""
@@ -112,6 +125,7 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 	u.EstActif = (u.Statut == "actif")
 	// Use date_creation as date_inscription
 	u.DateInscription = u.DateCreation
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(u)
 }
 
