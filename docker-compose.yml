@@ -41,8 +41,12 @@ services:
       API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     # No bind mounts for production: use the files baked into the image (includes node_modules).
     # For local development, mount the source and run `npm install` on the host.
 
 volumes:
   postgres_data:
+  uploads_data:

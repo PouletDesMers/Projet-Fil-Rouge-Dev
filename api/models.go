@@ -102,6 +102,8 @@ type ProduitWeb struct {
 	Slug                  string    `json:"slug"`
 	DescriptionCourte     string    `json:"description_courte"`
 	DescriptionLongue     string    `json:"description_longue"`
+	DescriptionHTML       string    `json:"description_html"`
+	Images                string    `json:"images"` // JSON array stocké comme string
 	Prix                  *float64  `json:"prix"`
 	Devise                string    `json:"devise"`
 	Duree                 string    `json:"duree"`

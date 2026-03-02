@@ -174,6 +174,7 @@ func getProduits(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT p.id_produit, p.nom, p.slug, p.description_courte, p.description_longue,
+		       p.description_html, COALESCE(p.images::text, '[]'),
 		       p.prix, p.devise, p.duree, p.id_categorie, p.tag, p.statut, p.type_achat,
 		       p.ordre_affichage, p.actif, p.date_creation, p.date_modification,
 		       c.nom as categorie_nom
@@ -186,6 +187,7 @@ func getProduits(w http.ResponseWriter, r *http.Request) {
 	if categoryFilter != "" {
 		query = `
 			SELECT p.id_produit, p.nom, p.slug, p.description_courte, p.description_longue,
+			       p.description_html, COALESCE(p.images::text, '[]'),
 			       p.prix, p.devise, p.duree, p.id_categorie, p.tag, p.statut, p.type_achat,
 			       p.ordre_affichage, p.actif, p.date_creation, p.date_modification,
 			       c.nom as categorie_nom
@@ -215,8 +217,10 @@ func getProduits(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p ProduitWeb
 		var categorieNom sql.NullString
+		var descHTML sql.NullString
 
 		err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+			&descHTML, &p.Images,
 			&p.Prix, &p.Devise, &p.Duree, &p.IDCategorie, &p.Tag, &p.Statut,
 			&p.TypeAchat, &p.OrdreAffichage, &p.Actif, &p.DateCreation,
 			&p.DateModification, &categorieNom)
@@ -224,8 +228,9 @@ func getProduits(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		// Note: categorieNom n'est pas stocké dans la struct mais utilisé temporairement
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
+		}
 
 		produits = append(produits, p)
 	}
@@ -241,6 +246,7 @@ func getActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query(`
 		SELECT p.id_produit, p.nom, p.slug, p.description_courte, p.description_longue,
+		       p.description_html, COALESCE(p.images::text, '[]'),
 		       p.prix, p.devise, p.duree, p.tag, p.statut, p.type_achat, p.ordre_affichage
 		FROM produits p
 		JOIN categories c ON p.id_categorie = c.id_categorie
@@ -257,11 +263,16 @@ func getActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	var produits []ProduitWeb
 	for rows.Next() {
 		var p ProduitWeb
+		var descHTML sql.NullString
 		err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+			&descHTML, &p.Images,
 			&p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut, &p.TypeAchat, &p.OrdreAffichage)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
 		}
 		produits = append(produits, p)
 	}
@@ -280,12 +291,17 @@ func createProduit(w http.ResponseWriter, r *http.Request) {
 
 	userID := getUserIDFromContext(r)
 
+	images := p.Images
+	if images == "" {
+		images = "[]"
+	}
+
 	err := db.QueryRow(`
-		INSERT INTO produits (nom, slug, description_courte, description_longue, prix, devise, duree,
+		INSERT INTO produits (nom, slug, description_courte, description_longue, description_html, images, prix, devise, duree,
 		                     id_categorie, tag, statut, type_achat, ordre_affichage, actif, id_utilisateur_creation)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id_produit, date_creation, date_modification
-	`, p.Nom, p.Slug, p.DescriptionCourte, p.DescriptionLongue, p.Prix, p.Devise, p.Duree,
+	`, p.Nom, p.Slug, p.DescriptionCourte, p.DescriptionLongue, p.DescriptionHTML, images, p.Prix, p.Devise, p.Duree,
 		p.IDCategorie, p.Tag, p.Statut, p.TypeAchat, p.OrdreAffichage, p.Actif, userID).Scan(
 		&p.ID, &p.DateCreation, &p.DateModification)
 
@@ -313,13 +329,20 @@ func updateProduit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	imagesVal := p.Images
+	if imagesVal == "" {
+		imagesVal = "[]"
+	}
+
 	_, err = db.Exec(`
 		UPDATE produits 
 		SET nom = $1, slug = $2, description_courte = $3, description_longue = $4,
-		    prix = $5, devise = $6, duree = $7, id_categorie = $8, tag = $9, statut = $10,
-		    type_achat = $11, ordre_affichage = $12, actif = $13, date_modification = CURRENT_TIMESTAMP
-		WHERE id_produit = $14
-	`, p.Nom, p.Slug, p.DescriptionCourte, p.DescriptionLongue, p.Prix, p.Devise, p.Duree,
+		    description_html = $5, images = $6::jsonb,
+		    prix = $7, devise = $8, duree = $9, id_categorie = $10, tag = $11, statut = $12,
+		    type_achat = $13, ordre_affichage = $14, actif = $15, date_modification = CURRENT_TIMESTAMP
+		WHERE id_produit = $16
+	`, p.Nom, p.Slug, p.DescriptionCourte, p.DescriptionLongue, p.DescriptionHTML, imagesVal,
+		p.Prix, p.Devise, p.Duree,
 		p.IDCategorie, p.Tag, p.Statut, p.TypeAchat, p.OrdreAffichage, p.Actif, id)
 
 	if err != nil {

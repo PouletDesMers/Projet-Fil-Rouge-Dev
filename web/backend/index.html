@@ -19,6 +19,9 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
     
+    <!-- Quill Rich Text Editor CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" />
+
     <!-- Swagger UI -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css" />
     <!-- Chart.js -->
@@ -950,9 +953,56 @@
                 <div class="form-text">Maximum 150 caractères</div>
               </div>
               
+              <!-- Onglets description -->
               <div class="mb-3">
-                <label for="productDescLongue" class="form-label">Description longue</label>
-                <textarea class="form-control" id="productDescLongue" rows="4" placeholder="Description détaillée du produit"></textarea>
+                <ul class="nav nav-tabs" id="descTabs" role="tablist">
+                  <li class="nav-item">
+                    <button class="nav-link active" id="tab-rich" data-bs-toggle="tab" data-bs-target="#pane-rich" type="button">
+                      <i class="bi bi-pencil-square me-1"></i>Éditeur riche
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link" id="tab-plain" data-bs-toggle="tab" data-bs-target="#pane-plain" type="button">
+                      <i class="bi bi-card-text me-1"></i>Texte simple
+                    </button>
+                  </li>
+                </ul>
+                <div class="tab-content border border-top-0 rounded-bottom p-0">
+                  <div class="tab-pane fade show active" id="pane-rich">
+                    <!-- Toolbar Quill -->
+                    <div id="quill-toolbar" style="border-radius:0">
+                      <span class="ql-formats"><select class="ql-header"><option selected></option><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option></select></span>
+                      <span class="ql-formats"><button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button></span>
+                      <span class="ql-formats"><button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button></span>
+                      <span class="ql-formats"><button class="ql-link"></button><button class="ql-blockquote"></button><button class="ql-code-block"></button></span>
+                      <span class="ql-formats"><button class="ql-clean"></button></span>
+                    </div>
+                    <div id="quill-editor" style="min-height:200px;max-height:400px;overflow-y:auto;border:none;font-size:14px;"></div>
+                  </div>
+                  <div class="tab-pane fade" id="pane-plain">
+                    <textarea class="form-control border-0 rounded-0" id="productDescLongue" rows="7" placeholder="Description longue (texte simple)"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Gestion des images -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold"><i class="bi bi-images me-1"></i>Images du produit</label>
+                <div class="border rounded p-3 bg-light">
+                  <div id="productImagesPreview" class="d-flex flex-wrap gap-2 mb-2"></div>
+                  <div class="d-flex gap-2 align-items-center">
+                    <input type="url" class="form-control form-control-sm" id="productImageUrl" placeholder="https://... ou coller une URL d'image">
+                    <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" onclick="AdminProducts.addImageUrl()">
+                      <i class="bi bi-plus-circle me-1"></i>Ajouter URL
+                    </button>
+                    <label class="btn btn-outline-secondary btn-sm text-nowrap mb-0">
+                      <i class="bi bi-upload me-1"></i>Upload
+                      <input type="file" id="productImageUpload" accept="image/*" style="display:none" onchange="AdminProducts.uploadImage(this)">
+                    </label>
+                  </div>
+                  <div class="form-text mt-1">Cliquez sur ✕ pour supprimer une image. La première image sera l'image principale.</div>
+                </div>
+                <input type="hidden" id="productImages" value="[]">
               </div>
               
               <div class="row">
@@ -1288,6 +1338,9 @@
     <!-- Swagger UI -->
     <script src="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js"></script>
     <script src="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js"></script>
+
+    <!-- Quill Rich Text Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 
     <!-- Admin Panel Modules -->
     <script src="js/modules/auth.js"></script>

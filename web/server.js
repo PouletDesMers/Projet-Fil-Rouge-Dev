@@ -1,10 +1,33 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const cookieParser = require('cookie-parser');
+const multer = require('multer');
 const app = express();
 const port = process.env.PORT || 3000;
+
+// ── Upload configuration ────────────────────────────────────────────────
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const multerStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
+  }
+});
+const upload = multer({
+  storage: multerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Seules les images sont acceptées'), false);
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Stripe (facultatif — désactivé si la clé n'est pas configurée)
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
@@ -455,7 +478,16 @@ app.get('/api/mes-commandes', checkAuth, async (req, res) => {
 });
 
 app.get('/admin/api/user/profile', proxyToApiWithAuth('/user/profile'));
-app.post('/admin/api/upload', proxyToApiWithAuth('/upload'));
+
+// — Upload d'images pour les produits (admin seulement) —
+app.post('/admin/api/upload', checkAdminAuth, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Aucun fichier envoyé' });
+  const url = `/uploads/${req.file.filename}`;
+  res.json({ url, filename: req.file.filename });
+});
+
+// Serve uploaded images
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // =============================================================================
 // SWAGGER DYNAMIQUE — spec générée par l'API Go, paths patchés via proxy

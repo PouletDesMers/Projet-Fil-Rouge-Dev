@@ -3,6 +3,88 @@
  * Handles product management in admin panel
  */
 
+// ── Module-level state ───────────────────────────────────────────────────────
+let quillEditor = null;
+let productImagesList = [];
+
+/**
+ * Initialize Quill editor once (called when modal is first shown).
+ * Quill v2 requires the container to be visible in the DOM.
+ */
+function initQuillOnce() {
+  if (quillEditor) return;
+  const editorEl = document.getElementById('quill-editor');
+  if (!editorEl) return;
+  quillEditor = new Quill('#quill-editor', {
+    theme: 'snow',
+    modules: { toolbar: '#quill-toolbar' }
+  });
+}
+
+// ── Image helpers ─────────────────────────────────────────────────────────────
+
+/** Render thumbnail strip in #productImagesPreview */
+function renderImagesPreview() {
+  const el = document.getElementById('productImagesPreview');
+  if (!el) return;
+  if (productImagesList.length === 0) {
+    el.innerHTML = '<span class="text-muted small fst-italic">Aucune image pour l\'instant</span>';
+    return;
+  }
+  el.innerHTML = productImagesList.map((url, i) => `
+    <div class="position-relative d-inline-block">
+      <img src="${url}" alt="Image ${i + 1}"
+           style="width:80px;height:60px;object-fit:cover;border-radius:6px;
+                  border:2px solid ${i === 0 ? '#5610C0' : '#dee2e6'}">
+      <button type="button" onclick="AdminProducts.removeImage(${i})"
+        class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0"
+        style="width:18px;height:18px;font-size:10px;line-height:1;transform:translate(50%,-50%)">✕</button>
+      ${i === 0 ? '<span class="badge bg-primary position-absolute bottom-0 start-0 m-1" style="font-size:9px">Principale</span>' : ''}
+    </div>`).join('');
+}
+
+/** Add image from the URL text input */
+function addImageUrl() {
+  const input = document.getElementById('productImageUrl');
+  const url = (input.value || '').trim();
+  if (!url) return;
+  productImagesList.push(url);
+  document.getElementById('productImages').value = JSON.stringify(productImagesList);
+  input.value = '';
+  renderImagesPreview();
+}
+
+/** Upload an image file to /api/upload and add the returned URL */
+async function uploadImage(input) {
+  if (!input.files || !input.files.length) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  try {
+    const res = await fetch('/admin/api/upload', { method: 'POST', credentials: 'include', body: fd });
+    if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.url) {
+      productImagesList.push(data.url);
+      document.getElementById('productImages').value = JSON.stringify(productImagesList);
+      renderImagesPreview();
+    } else {
+      throw new Error('URL non retournée par le serveur');
+    }
+  } catch (e) {
+    alert('Erreur upload : ' + e.message);
+  }
+  input.value = '';
+}
+
+/** Remove one image by its index in the list */
+function removeImage(index) {
+  productImagesList.splice(index, 1);
+  document.getElementById('productImages').value = JSON.stringify(productImagesList);
+  renderImagesPreview();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Fix duplicate orders in products
 async function fixDuplicateOrders(products) {
   
@@ -263,6 +345,21 @@ function openProductModal(product = null, preselectedCategoryId = null) {
     nomInput.addEventListener('input', autoGenerateSlug);
   }
 
+  // Init Quill + load description_html and images once the modal is visible
+  document.getElementById('productModal').addEventListener('shown.bs.modal', function () {
+    initQuillOnce();
+
+    if (product) {
+      quillEditor.clipboard.dangerouslyPasteHTML(product.description_html || '');
+      productImagesList = JSON.parse(product.images || '[]');
+    } else {
+      quillEditor.clipboard.dangerouslyPasteHTML('');
+      productImagesList = [];
+    }
+    renderImagesPreview();
+    document.getElementById('productImages').value = JSON.stringify(productImagesList);
+  }, { once: true });
+
   modal.show();
 }
 
@@ -343,6 +440,8 @@ async function saveProduct() {
       slug: document.getElementById('productSlug').value.trim(),
       description_courte: document.getElementById('productDescCourte').value.trim(),
       description_longue: document.getElementById('productDescLongue').value.trim(),
+      description_html: quillEditor ? quillEditor.root.innerHTML : '',
+      images: document.getElementById('productImages').value || '[]',
       id_categorie: parseInt(categoryId),
       tag: document.getElementById('productTag').value,
       statut: document.getElementById('productStatut').value,
@@ -637,5 +736,9 @@ window.AdminProducts = {
   moveItemClientSide,
   autoGenerateSlug,
   setNextOrderForCategory,
-  fixDuplicateOrders
+  fixDuplicateOrders,
+  // Rich editor & image helpers
+  addImageUrl,
+  uploadImage,
+  removeImage
 };

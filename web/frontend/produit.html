@@ -303,7 +303,18 @@
         <div class="product-details" id="productContent" style="display: none;">
           <div class="card">
             <h2><i class="bi bi-info-circle"></i> Description détaillée</h2>
-            <p id="productLongDescription">Chargement...</p>
+
+            <!-- Galerie d'images -->
+            <div id="productGallery" class="mb-4" style="display:none">
+              <div id="productMainImg" class="mb-2" style="text-align:center">
+                <img id="galleryMain" src="" alt="Image principale"
+                     style="max-width:100%;max-height:420px;border-radius:12px;object-fit:cover;cursor:zoom-in;"
+                     onclick="openLightbox(this.src)">
+              </div>
+              <div id="galleryThumbs" class="d-flex flex-wrap gap-2 justify-content-center"></div>
+            </div>
+
+            <div id="productLongDescription">Chargement...</div>
             
             <h3><i class="bi bi-gear"></i> Spécifications</h3>
             <ul class="specs-list" id="productSpecs">
@@ -331,6 +342,11 @@
         </div>
       </div>
     </main>
+
+    <!-- Lightbox overlay -->
+    <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out" onclick="this.style.display='none'">
+      <img id="lightboxImg" src="" style="max-width:90vw;max-height:90vh;border-radius:12px;">
+    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
@@ -404,7 +420,33 @@
         document.getElementById('productTitle').textContent = product.nom;
         document.getElementById('productTag').textContent = product.tag || 'Standard';
         document.getElementById('productDescription').textContent = product.description_courte || '';
-        document.getElementById('productLongDescription').textContent = product.description_longue || product.description_courte || 'Aucune description disponible.';
+
+        // Description : HTML riche en priorité, sinon texte brut
+        const descEl = document.getElementById('productLongDescription');
+        const html = (product.description_html || '').trim();
+        const isEmpty = html === '' || html === '<p><br></p>' || html === '<p></p>';
+        if (!isEmpty) {
+          descEl.innerHTML = html;
+        } else {
+          descEl.textContent = product.description_longue || product.description_courte || 'Aucune description disponible.';
+        }
+
+        // Galerie d’images
+        let images = [];
+        try { images = JSON.parse(product.images || '[]'); } catch (_) {}
+        const gallery = document.getElementById('productGallery');
+        if (images.length > 0) {
+          document.getElementById('galleryMain').src = images[0];
+          const thumbs = document.getElementById('galleryThumbs');
+          thumbs.innerHTML = images.map((url, i) => `
+            <img src="${url}" alt="Vignette ${i+1}"
+                 style="width:72px;height:52px;object-fit:cover;border-radius:8px;
+                        border:2px solid ${i===0?'#5610C0':'#dee2e6'};cursor:pointer;"
+                 onclick="selectThumb(this,'${url}')">`).join('');
+          gallery.style.display = 'block';
+        } else {
+          gallery.style.display = 'none';
+        }
         
         // Price
         document.getElementById('productPrice').textContent = formatPrice(product.prix, product.devise);
@@ -452,12 +494,23 @@
       // Contact functions
       function requestQuote(productName) {
         alert(`Demande de devis pour "${productName}" - Redirection vers le formulaire de contact...`);
-        // Here you would redirect to contact form or open modal
       }
 
       function contactSupport(productName) {
         alert(`Contact support pour "${productName}" - Redirection vers le support...`);
-        // Here you would redirect to support page
+      }
+
+      // Gallery helpers
+      function openLightbox(src) {
+        document.getElementById('lightboxImg').src = src;
+        document.getElementById('lightbox').style.display = 'flex';
+      }
+
+      function selectThumb(el, url) {
+        document.getElementById('galleryMain').src = url;
+        document.querySelectorAll('#galleryThumbs img').forEach(img => {
+          img.style.borderColor = img === el ? '#5610C0' : '#dee2e6';
+        });
       }
 
       // Initialize
