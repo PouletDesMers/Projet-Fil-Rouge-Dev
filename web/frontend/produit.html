@@ -470,11 +470,13 @@
             </button>
           `;
         } else {
+          // Escape single quotes in the name to avoid breaking the inline onclick
+          const safeName = (product.nom || '').replace(/'/g, "\\'");
           orderButtons.innerHTML = `
-            <button class="btn btn-primary" onclick="addToCart(${product.id_produit}, '${product.nom}', ${product.prix})">
+            <button class="btn btn-primary" onclick="addToCart({id:${product.id_produit},name:'${safeName}',price:${product.prix || 0},qty:1,duration:'${product.duree || 'mois'}'})">
               <i class="bi bi-cart-plus"></i> Ajouter au panier
             </button>
-            <button class="btn btn-secondary" onclick="requestQuote('${product.nom}')">
+            <button class="btn btn-secondary" onclick="requestQuote('${safeName}')">
               <i class="bi bi-envelope"></i> Demander un devis
             </button>
           `;
