@@ -80,6 +80,16 @@ func GetClientIP(r *http.Request) string {
 	return splitFirst(r.RemoteAddr, ':')
 }
 
+// getSessionKey returns the session token if present, otherwise falls back to IP.
+// This ensures users sharing the same IP (e.g. same LAN/machine) are rate-limited
+// independently on authenticated routes.
+func getSessionKey(r *http.Request) string {
+	if token := extractToken(r); token != "" {
+		return "session:" + token
+	}
+	return "ip:" + GetClientIP(r)
+}
+
 func splitFirst(s string, sep byte) string {
 	for i := 0; i < len(s); i++ {
 		if s[i] == sep {
@@ -104,9 +114,27 @@ func RateLimit(limiter *rateLimiter) func(http.Handler) http.Handler {
 	}
 }
 
+// RateLimitBySession rate-limits by session token when available, falling back to IP.
+// Use this for authenticated routes so that multiple users on the same IP/machine
+// each get their own independent quota.
+func RateLimitBySession(limiter *rateLimiter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := getSessionKey(r)
+			if !limiter.isAllowed(key) {
+				log.Printf("SECURITY: Rate limit exceeded for key: %s on %s %s", key, r.Method, r.URL.Path)
+				w.Header().Set("Retry-After", "60")
+				http.Error(w, `{"error":"Too many requests. Please try again later."}`, http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 var (
 	RateLimitLogin    = RateLimit(LoginLimiter)
 	RateLimitRegister = RateLimit(RegisterLimiter)
-	RateLimitAPI      = RateLimit(APILimiter)
-	RateLimitAdmin    = RateLimit(AdminLimiter)
+	RateLimitAPI      = RateLimitBySession(APILimiter)
+	RateLimitAdmin    = RateLimitBySession(AdminLimiter)
 )
