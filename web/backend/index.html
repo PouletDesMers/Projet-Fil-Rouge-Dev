@@ -203,6 +203,11 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link" href="#" data-section="logs">
+                  <i class="bi bi-terminal-fill"></i> Logs API
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="#" data-section="analytics">
                   <i class="bi bi-bar-chart-fill"></i> Analytics
                 </a>
@@ -679,11 +684,158 @@
             </div>
           </section>
 
+          <!-- ═══════════════════════════ LOGS API ═══════════════════════════ -->
+          <section id="logs-section" class="section-content d-none">
+
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-terminal-fill text-primary me-2"></i>Logs API</h1>
+                <p class="text-muted mb-0">Surveillance en temps réel des requêtes et événements</p>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" id="refreshLogsBtn">
+                  <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="autoRefreshBtn">
+                  <i class="bi bi-play-circle me-1"></i>Auto refresh
+                </button>
+                <button class="btn btn-outline-primary btn-sm" id="exportLogsBtn">
+                  <i class="bi bi-download me-1"></i>Export CSV
+                </button>
+                <button class="btn btn-outline-danger btn-sm" id="clearLogsBtn">
+                  <i class="bi bi-trash me-1"></i>Vider
+                </button>
+              </div>
+            </div>
+
+            <!-- Stats cards -->
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-xl">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(99,102,241,.12);color:#6366f1"><i class="bi bi-list-ul"></i></div>
+                  <div>
+                    <div class="stat-val" id="log-stat-total">—</div>
+                    <div class="stat-lbl">Total logs</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(20,184,166,.12);color:#0d9488"><i class="bi bi-info-circle"></i></div>
+                  <div>
+                    <div class="stat-val" id="log-stat-info">—</div>
+                    <div class="stat-lbl">INFO</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(245,158,11,.12);color:#d97706"><i class="bi bi-exclamation-triangle"></i></div>
+                  <div>
+                    <div class="stat-val" id="log-stat-warn">—</div>
+                    <div class="stat-lbl">WARN</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(239,68,68,.12);color:#dc2626"><i class="bi bi-x-octagon"></i></div>
+                  <div>
+                    <div class="stat-val" id="log-stat-error">—</div>
+                    <div class="stat-lbl">ERROR</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(15,23,42,.12);color:#0f172a"><i class="bi bi-shield-exclamation"></i></div>
+                  <div>
+                    <div class="stat-val" id="log-stat-security">—</div>
+                    <div class="stat-lbl">SECURITY</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="card mb-3">
+              <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+                  <div class="col-auto">
+                    <label class="form-label mb-0 small fw-semibold">Niveau</label>
+                  </div>
+                  <div class="col-auto">
+                    <select class="form-select form-select-sm" id="logLevelFilter" style="width:140px">
+                      <option value="ALL">Tous</option>
+                      <option value="DEBUG">DEBUG</option>
+                      <option value="INFO">INFO</option>
+                      <option value="WARN">WARN</option>
+                      <option value="ERROR">ERROR</option>
+                      <option value="SECURITY">SECURITY</option>
+                    </select>
+                  </div>
+                  <div class="col-auto ms-2">
+                    <label class="form-label mb-0 small fw-semibold">Afficher</label>
+                  </div>
+                  <div class="col-auto">
+                    <select class="form-select form-select-sm" id="logLimitSelect" style="width:100px">
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="200" selected>200</option>
+                      <option value="500">500</option>
+                    </select>
+                  </div>
+                  <div class="col">
+                    <input type="text" class="form-control form-control-sm" id="logSearchInput"
+                      placeholder="🔍 Rechercher dans les messages, paths, IPs…" />
+                  </div>
+                  <div class="col-auto">
+                    <span class="badge bg-secondary" id="log-count">0 entrée(s)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="card">
+              <div class="card-body p-0">
+                <div id="logsTableContainer">
+                  <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.8rem">
+                      <thead class="table-dark">
+                        <tr>
+                          <th style="width:150px">Timestamp</th>
+                          <th style="width:100px">Niveau</th>
+                          <th style="width:200px">Méthode / Path</th>
+                          <th>Message</th>
+                          <th style="width:70px">Status</th>
+                          <th style="width:110px">IP</th>
+                          <th style="width:70px">Durée</th>
+                          <th style="width:60px">UserID</th>
+                        </tr>
+                      </thead>
+                      <tbody id="logsTableBody">
+                        <tr>
+                          <td colspan="8" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                            Chargement des logs…
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div id="logsEmptyState" class="d-none text-center py-5 text-muted">
+                  <i class="bi bi-inbox" style="font-size:2.5rem"></i>
+                  <p class="mt-2 mb-0">Aucun log correspondant aux filtres</p>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
           <!-- Settings Section -->
           <section id="settings-section" class="section-content d-none">
-            <div class="header-admin">
-              <h1>Paramètres</h1>
-            </div>
 
             <div class="card">
               <div class="card-body">
@@ -1399,5 +1551,6 @@
     <script src="js/modules/orders.js"></script>
     <script src="js/modules/quotes.js"></script>
     <script src="js/modules/discounts.js"></script>
+    <script src="js/modules/logs.js"></script>
   </body>
 </html>

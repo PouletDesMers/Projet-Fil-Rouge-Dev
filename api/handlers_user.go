@@ -17,7 +17,8 @@ import (
 func getusers(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error fetching users: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -29,7 +30,8 @@ func getusers(w http.ResponseWriter, r *http.Request) {
 		var idEntreprise sql.NullInt64
 		err := rows.Scan(&u.ID, &u.Email, &nom, &prenom, &telephone, &role, &statut, &u.TotpEnabled, &u.DateCreation, &derniereConnexion, &idEntreprise)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("Error scanning user row: %v", err)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		u.Nom = nom.String
@@ -99,14 +101,18 @@ func resetUser2FA(w http.ResponseWriter, r *http.Request) {
 
 func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	id, _ := strconv.Atoi(params["id"])
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		jsonError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 	var u Utilisateur
 	var telephone sql.NullString
 	var derniereConnexion sql.NullTime
 	var idEntreprise sql.NullInt64
-	err := db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &derniereConnexion, &idEntreprise)
+	err = db.QueryRow("SELECT id_utilisateur, email, nom, prenom, telephone, role, statut, totp_enabled, date_creation, derniere_connexion, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &telephone, &u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation, &derniereConnexion, &idEntreprise)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		jsonError(w, "User not found", http.StatusNotFound)
 		return
 	}
 	if telephone.Valid {
@@ -132,78 +138,100 @@ func getUtilisateur(w http.ResponseWriter, r *http.Request) {
 func createUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var u Utilisateur
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		jsonError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	// Normalisation de l'email (tout en minuscules et sans espaces)
 	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
-	if u.Email == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Email is required"})
+	if u.Email == "" || !isValidEmail(u.Email) {
+		jsonError(w, "Valid email is required", http.StatusBadRequest)
 		return
 	}
+
+	// Sanitiser les champs texte
+	u.Nom = sanitizeString(u.Nom)
+	u.Prenom = sanitizeString(u.Prenom)
+	u.Telephone = sanitizeString(u.Telephone)
 
 	// Vérification si l'utilisateur existe déjà
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM utilisateur WHERE email = $1)", u.Email).Scan(&exists)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Database error: " + err.Error()})
+		log.Printf("Database error during user creation check: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	if exists {
-		// On renvoie un code 409 Conflict pour indiquer que l'email est déjà pris
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]string{"error": "An account with this email already exists"})
+		jsonError(w, "An account with this email already exists", http.StatusConflict)
 		return
 	}
 
-	if u.Role == "" {
-		u.Role = "client"
-	}
+	// Forcer le rôle client à la création (sécurité: empêcher l'auto-promotion)
+	u.Role = "client"
 	if u.Statut == "" {
 		u.Statut = "actif"
 	}
 
 	if u.MotDePasse == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Password is required"})
+		jsonError(w, "Password is required", http.StatusBadRequest)
+		return
+	}
+
+	// Validation du mot de passe
+	if !isValidPassword(u.MotDePasse) {
+		jsonError(w, "Password must be at least 8 characters with uppercase, lowercase and digit", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.MotDePasse), bcrypt.DefaultCost)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Error hashing password: " + err.Error()})
+		log.Printf("Error hashing password: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	u.MotDePasse = string(hashedPassword)
 
 	err = db.QueryRow("INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur", u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		log.Printf("Error creating user: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	// Ne jamais renvoyer le mot de passe hashé
+	u.MotDePasse = ""
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(u)
 }
 
 func updateUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	id, _ := strconv.Atoi(params["id"])
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		jsonError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Vérifier que l'utilisateur connecté est admin (seuls les admins modifient via cette route)
+	requestingUserID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var requestingRole string
+	err = db.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole)
+	if err != nil || requestingRole != "admin" {
+		jsonError(w, "Forbidden: Admin access required", http.StatusForbidden)
+		return
+	}
 
 	// Get current user data
 	var currentUser Utilisateur
-	err := db.QueryRow("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&currentUser.ID, &currentUser.Email, &currentUser.MotDePasse, &currentUser.Nom, &currentUser.Prenom, &currentUser.Telephone, &currentUser.Role, &currentUser.Statut, &currentUser.IDEntreprise)
+	err = db.QueryRow("SELECT id_utilisateur, email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&currentUser.ID, &currentUser.Email, &currentUser.MotDePasse, &currentUser.Nom, &currentUser.Prenom, &currentUser.Telephone, &currentUser.Role, &currentUser.Statut, &currentUser.IDEntreprise)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		jsonError(w, "User not found", http.StatusNotFound)
 		return
 	}
 	// Set est_actif based on statut
@@ -254,9 +282,14 @@ func updateUtilisateur(w http.ResponseWriter, r *http.Request) {
 
 	// Handle password update if provided
 	if u.MotDePasse != "" {
+		if !isValidPassword(u.MotDePasse) {
+			jsonError(w, "Password must be at least 8 characters with uppercase, lowercase and digit", http.StatusBadRequest)
+			return
+		}
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.MotDePasse), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			log.Printf("Error hashing password for user %d: %v", id, err)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		currentUser.MotDePasse = string(hashedPassword)
@@ -266,7 +299,8 @@ func updateUtilisateur(w http.ResponseWriter, r *http.Request) {
 	_, err = db.Exec("UPDATE utilisateur SET email = $1, mot_de_passe = $2, nom = $3, prenom = $4, telephone = $5, role = $6, statut = $7, id_entreprise = $8 WHERE id_utilisateur = $9",
 		currentUser.Email, currentUser.MotDePasse, currentUser.Nom, currentUser.Prenom, currentUser.Telephone, currentUser.Role, currentUser.Statut, currentUser.IDEntreprise, id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error updating user %d: %v", id, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -277,10 +311,40 @@ func updateUtilisateur(w http.ResponseWriter, r *http.Request) {
 
 func deleteUtilisateur(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	id, _ := strconv.Atoi(params["id"])
-	_, err := db.Exec("DELETE FROM utilisateur WHERE id_utilisateur = $1", id)
+	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Vérifier que l'utilisateur connecté est admin
+	requestingUserID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var requestingRole string
+	err = db.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole)
+	if err != nil || requestingRole != "admin" {
+		jsonError(w, "Forbidden: Admin access required", http.StatusForbidden)
+		return
+	}
+
+	// Empêcher l'auto-suppression
+	if id == requestingUserID {
+		jsonError(w, "Cannot delete your own account", http.StatusBadRequest)
+		return
+	}
+
+	result, err := db.Exec("DELETE FROM utilisateur WHERE id_utilisateur = $1", id)
+	if err != nil {
+		log.Printf("Error deleting user %d: %v", id, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		jsonError(w, "User not found", http.StatusNotFound)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -295,7 +359,8 @@ func getUtilisateurExists(w http.ResponseWriter, r *http.Request) {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM utilisateur WHERE email = $1", email).Scan(&count)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error checking email existence: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]bool{"exists": count > 0})
@@ -308,14 +373,16 @@ func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 		TotpCode string `json:"totpCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		log.Printf("Login: Error decoding body: %v", err)
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		jsonError(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
 	creds.Email = strings.ToLower(strings.TrimSpace(creds.Email))
 
-	log.Printf("Login attempt for email: '%s'", creds.Email)
+	if creds.Email == "" || creds.Password == "" {
+		jsonError(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
 
 	var storedPassword string
 	var id int
@@ -323,52 +390,59 @@ func loginUtilisateur(w http.ResponseWriter, r *http.Request) {
 	var totpEnabled bool
 	err := db.QueryRow("SELECT id_utilisateur, mot_de_passe, totp_secret, totp_enabled FROM utilisateur WHERE email = $1", creds.Email).Scan(&id, &storedPassword, &totpSecret, &totpEnabled)
 	if err != nil {
-		log.Printf("Login: Error finding user '%s': %v", creds.Email, err)
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		// Message générique pour ne pas révéler si l'email existe
+		jsonError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	log.Printf("Login: User ID %d found. totpEnabled: %v, totpSecret.Valid: %v", id, totpEnabled, totpSecret.Valid)
 	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(creds.Password))
 	if err != nil {
-		log.Printf("Login: Password mismatch: %v", err)
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		log.Printf("SECURITY: Failed login attempt for user ID %d from %s", id, getClientIP(r))
+		jsonError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Check 2FA if enabled
 	if totpEnabled && totpSecret.Valid && totpSecret.String != "" {
 		if creds.TotpCode == "" {
-			log.Printf("Login: 2FA required for user %d (email: %s)", id, creds.Email)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{"requires_2fa": true})
 			return
 		}
-		log.Printf("Login: Verifying 2FA code for user %d", id)
 		if !totp.Validate(creds.TotpCode, totpSecret.String) {
-			log.Printf("Login: Invalid 2FA code for user %d", id)
-			http.Error(w, "Invalid 2FA code", http.StatusUnauthorized)
+			log.Printf("SECURITY: Failed 2FA attempt for user ID %d from %s", id, getClientIP(r))
+			jsonError(w, "Invalid 2FA code", http.StatusUnauthorized)
 			return
 		}
 	}
 
-	log.Printf("Login: Successful login for user %d", id)
+	// Vérifier que le compte est actif
+	var statut string
+	db.QueryRow("SELECT statut FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&statut)
+	if statut != "actif" {
+		jsonError(w, "Account is disabled", http.StatusForbidden)
+		return
+	}
 
 	// Create a session token
 	sessionToken := generateRandomToken()
 	if sessionToken == "" {
-		http.Error(w, "Internal Server Error (token gen)", http.StatusInternalServerError)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Insert into session_utilisateur (valid for 24 hours)
 	_, err = db.Exec("INSERT INTO session_utilisateur (token_session, id_utilisateur, date_expiration) VALUES ($1, $2, NOW() + INTERVAL '24 hours')", sessionToken, id)
 	if err != nil {
-		log.Printf("Login: Error creating session: %v", err)
-		http.Error(w, "Internal Server Error (session)", http.StatusInternalServerError)
+		log.Printf("Error creating session for user %d: %v", id, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
+	// Mettre à jour la dernière connexion
+	db.Exec("UPDATE utilisateur SET derniere_connexion = NOW() WHERE id_utilisateur = $1", id)
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"token": sessionToken, "user_id": id})
 }
 
@@ -404,9 +478,9 @@ func getUserProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Profile: Error fetching user %d: %v", userID, err)
 		if err == sql.ErrNoRows {
-			http.Error(w, "User not found", http.StatusNotFound)
+			jsonError(w, "User not found", http.StatusNotFound)
 		} else {
-			http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -465,35 +539,52 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Handle password change if requested
 	if data.Password != "" {
+		// Validation du nouveau mot de passe
+		if !isValidPassword(data.Password) {
+			jsonError(w, "Password must be at least 8 characters with uppercase, lowercase and digit", http.StatusBadRequest)
+			return
+		}
 		// Verify current password first
 		var currentHash string
 		err := db.QueryRow("SELECT mot_de_passe FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&currentHash)
 		if err != nil {
-			http.Error(w, "User not found", http.StatusNotFound)
+			jsonError(w, "User not found", http.StatusNotFound)
 			return
 		}
 		if data.OldPassword == "" {
-			http.Error(w, "Current password required", http.StatusBadRequest)
+			jsonError(w, "Current password required", http.StatusBadRequest)
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(data.OldPassword)); err != nil {
-			http.Error(w, "Current password is incorrect", http.StatusUnauthorized)
+			jsonError(w, "Current password is incorrect", http.StatusUnauthorized)
 			return
 		}
 		// Hash the new password
 		newHash, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			log.Printf("Error hashing password for user %d: %v", userID, err)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		_, err = db.Exec("UPDATE utilisateur SET mot_de_passe = $1 WHERE id_utilisateur = $2", string(newHash), userID)
 		if err != nil {
-			log.Printf("Profile Update password: Error for user %d: %v", userID, err)
-			http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("Profile update password error for user %d: %v", userID, err)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
+		return
+	}
+
+	// Sanitiser les champs texte
+	data.FirstName = sanitizeString(data.FirstName)
+	data.LastName = sanitizeString(data.LastName)
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	data.Phone = sanitizeString(data.Phone)
+
+	if data.Email != "" && !isValidEmail(data.Email) {
+		jsonError(w, "Invalid email format", http.StatusBadRequest)
 		return
 	}
 
@@ -502,8 +593,8 @@ func updateUserProfile(w http.ResponseWriter, r *http.Request) {
 		data.FirstName, data.LastName, data.Email, data.Phone, userID)
 
 	if err != nil {
-		log.Printf("Profile Update: Error for user %d: %v", userID, err)
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Profile update error for user %d: %v", userID, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

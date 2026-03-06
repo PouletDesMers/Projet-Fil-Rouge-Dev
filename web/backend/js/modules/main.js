@@ -40,7 +40,10 @@ function setupEventListeners() {
       document.querySelectorAll('.section-content').forEach(section => {
         section.classList.add('d-none');
       });
-      
+
+      // Stopper l'auto-refresh des logs si on quitte la section
+      if (typeof AdminLogs !== 'undefined') AdminLogs.destroy();
+
       // Remove active class from all links
       document.querySelectorAll('.nav-link').forEach(navLink => {
         navLink.classList.remove('active');
@@ -75,6 +78,8 @@ function setupEventListeners() {
         AdminQuotes.loadQuotes();
       } else if (sectionId === 'discounts-section') {
         AdminDiscounts.loadDiscounts();
+      } else if (sectionId === 'logs-section') {
+        AdminLogs.init();
       }
     });
   });

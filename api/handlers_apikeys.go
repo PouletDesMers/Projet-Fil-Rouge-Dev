@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -50,7 +51,8 @@ func getAPITokens(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query("SELECT id_token, cle_api, nom, permissions, date_creation, dernier_usage, est_actif, id_utilisateur FROM api_token ORDER BY date_creation DESC")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error fetching API tokens: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -60,7 +62,8 @@ func getAPITokens(w http.ResponseWriter, r *http.Request) {
 		var token APIToken
 		err := rows.Scan(&token.ID, &token.CleAPI, &token.Nom, &token.Permissions, &token.DateCreation, &token.DernierUsage, &token.EstActif, &token.IDUtilisateur)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("Error scanning API token: %v", err)
+			jsonError(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 		tokens = append(tokens, token)
@@ -98,9 +101,11 @@ func createAPIToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requestBody.Nom == "" {
-		http.Error(w, "Name is required", http.StatusBadRequest)
+		jsonError(w, "Name is required", http.StatusBadRequest)
 		return
 	}
+
+	requestBody.Nom = sanitizeString(requestBody.Nom)
 
 	// Use admin's ID if no user specified
 	if requestBody.IDUtilisateur == 0 {
@@ -122,7 +127,8 @@ func createAPIToken(w http.ResponseWriter, r *http.Request) {
 	).Scan(&tokenID)
 
 	if err != nil {
-		http.Error(w, "Error creating API token: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Error creating API token: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -164,7 +170,8 @@ func deleteAPIToken(w http.ResponseWriter, r *http.Request) {
 
 	result, err := db.Exec("DELETE FROM api_token WHERE id_token = $1", tokenID)
 	if err != nil {
-		http.Error(w, "Error deleting token: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Error deleting API token %d: %v", tokenID, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -212,7 +219,8 @@ func toggleAPITokenStatus(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Exec("UPDATE api_token SET est_actif = $1 WHERE id_token = $2", requestBody.EstActif, tokenID)
 	if err != nil {
-		http.Error(w, "Error updating token status: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("Error updating API token %d status: %v", tokenID, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

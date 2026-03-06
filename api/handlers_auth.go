@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"image/png"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/pquerna/otp/totp"
 )
@@ -29,7 +29,7 @@ func setup2FA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("setup2FA: Generating 2FA for user %d (%s)", userID, email)
+	log.Printf("setup2FA: Generating 2FA for user %d", userID)
 
 	// Generate a new TOTP key
 	key, err := totp.Generate(totp.GenerateOpts{
@@ -134,25 +134,30 @@ func remove2FA(w http.ResponseWriter, r *http.Request) {
 
 // WebAuthn handlers
 func getWebAuthnRegisterChallenge(w http.ResponseWriter, r *http.Request) {
-	// Security: Get user identity from the session token
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	// Utiliser le userID du contexte (déjà validé par le middleware)
+	userID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
 
-	var userID int
 	var email string
-	err := db.QueryRow("SELECT s.id_utilisateur, u.email FROM session_utilisateur s JOIN utilisateur u ON s.id_utilisateur = u.id_utilisateur WHERE s.token_session = $1 AND s.est_valide = TRUE AND s.date_expiration > NOW()", token).Scan(&userID, &email)
+	err := db.QueryRow("SELECT email FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&email)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		jsonError(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	// Simplified challenge
+	// Générer un challenge aléatoire sécurisé
+	challengeBytes := make([]byte, 32)
+	if _, err := rand.Read(challengeBytes); err != nil {
+		log.Printf("Error generating WebAuthn challenge: %v", err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	challenge := map[string]interface{}{
-		"challenge": []byte("random_challenge"),
+		"challenge": challengeBytes,
 		"rp": map[string]string{
 			"name": "CYNA",
 		},
@@ -170,18 +175,10 @@ func getWebAuthnRegisterChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerWebAuthn(w http.ResponseWriter, r *http.Request) {
-	// Security: Get user identity from the session token
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-
-	var userID int
-	err := db.QueryRow("SELECT id_utilisateur FROM session_utilisateur WHERE token_session = $1 AND est_valide = TRUE AND date_expiration > NOW()", token).Scan(&userID)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	// Utiliser le userID du contexte (déjà validé par le middleware)
+	userID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -194,37 +191,37 @@ func registerWebAuthn(w http.ResponseWriter, r *http.Request) {
 		} `json:"response"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		jsonError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	if data.ID == "" {
+		jsonError(w, "Credential ID is required", http.StatusBadRequest)
+		return
+	}
+
 	// Store in DB (simplified)
-	_, err = db.Exec("UPDATE utilisateur SET webauthn_credential_id = $1, webauthn_public_key = $2 WHERE id_utilisateur = $3", data.ID, "dummy_public_key", userID)
+	_, err := db.Exec("UPDATE utilisateur SET webauthn_credential_id = $1, webauthn_public_key = $2 WHERE id_utilisateur = $3", data.ID, "dummy_public_key", userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error registering WebAuthn for user %d: %v", userID, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
 func removeWebAuthn(w http.ResponseWriter, r *http.Request) {
-	// Security: Get user identity from the session token
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-
-	var userID int
-	err := db.QueryRow("SELECT id_utilisateur FROM session_utilisateur WHERE token_session = $1 AND est_valide = TRUE AND date_expiration > NOW()", token).Scan(&userID)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	// Utiliser le userID du contexte (déjà validé par le middleware)
+	userID, ok := r.Context().Value(UserIDKey).(int)
+	if !ok {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	_, err = db.Exec("UPDATE utilisateur SET webauthn_credential_id = NULL, webauthn_public_key = NULL WHERE id_utilisateur = $1", userID)
+	_, err := db.Exec("UPDATE utilisateur SET webauthn_credential_id = NULL, webauthn_public_key = NULL WHERE id_utilisateur = $1", userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error removing WebAuthn for user %d: %v", userID, err)
+		jsonError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
