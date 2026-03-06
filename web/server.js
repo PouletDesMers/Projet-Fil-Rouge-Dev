@@ -147,12 +147,14 @@ app.post('/auth/login', async (req, res) => {
     }
 
     if (data.token) {
-      // SÉCURISÉ: httpOnly cookie avec options strictes
+      // SÉCURISÉ: httpOnly cookie
+      // sameSite: 'lax' permet l'accès depuis des IPs locales (192.168.x.x, etc.)
+      // tout en protégeant contre le CSRF
       res.cookie('authToken', data.token, {
         httpOnly: true,  // Cannot be read by JavaScript (XSS protection)
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        sameSite: 'strict', // CSRF protection
-        maxAge: 8 * 60 * 60 * 1000, // 8 heures au lieu de 24h
+        secure: false,   // false pour HTTP local (mettre true en prod HTTPS)
+        sameSite: 'lax', // lax = compatible réseau local, protège contre CSRF
+        maxAge: 8 * 60 * 60 * 1000, // 8 heures
         path: '/' // Accessible sur tout le site
       });
       
@@ -723,6 +725,11 @@ app.get('/api/mes-devis', checkAuth, async (req, res) => {
 });
 
 app.get('/admin/api/user/profile', proxyToApiWithAuth('/user/profile'));
+
+// — Logs (admin seulement) —
+app.get('/admin/api/logs', proxyToApiWithAuth('/logs'));
+app.get('/admin/api/logs/stats', proxyToApiWithAuth('/logs/stats'));
+app.delete('/admin/api/logs', proxyToApiWithAuth('/logs'));
 
 // — Upload d'images pour les produits (admin seulement) —
 app.post('/admin/api/upload', checkAdminAuth, upload.single('file'), (req, res) => {

@@ -29,7 +29,7 @@ function deleteCookie(name) {
 async function initNavbarAuth() {
   // Check authentication using secure profile endpoint
   try {
-    const response = await fetch("/auth/profile");
+    const response = await fetch("/auth/profile", { credentials: "include" });
     const isAuthenticated = response.ok;
     
     const loginBtn = document.getElementById("loginBtn");
@@ -87,7 +87,7 @@ async function initNavbarAuth() {
 async function checkUserAdminStatus() {
   try {
     // Use new secure profile endpoint (uses httpOnly cookie)
-    const response = await fetch("/auth/profile");
+    const response = await fetch("/auth/profile", { credentials: "include" });
 
     if (!response.ok) {
       return;

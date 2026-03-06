@@ -471,13 +471,13 @@ func main() {
 	r.HandleFunc("/api/swagger.json", getSwaggerSpec).Methods("GET")
 
 	// Cache management (admin only)
-	r.Handle("/api/cache/stats", authMiddleware(http.HandlerFunc(getCacheStats))).Methods("GET")
-	r.Handle("/api/cache/flush", authMiddleware(http.HandlerFunc(flushCache))).Methods("POST")
+	r.Handle("/api/cache/stats", authMiddleware(adminMiddleware(http.HandlerFunc(getCacheStats)))).Methods("GET")
+	r.Handle("/api/cache/flush", authMiddleware(adminMiddleware(http.HandlerFunc(flushCache)))).Methods("POST")
 
 	// Logs (admin only)
-	r.Handle("/api/logs", authMiddleware(http.HandlerFunc(getLogs))).Methods("GET")
-	r.Handle("/api/logs/stats", authMiddleware(http.HandlerFunc(getLogStats))).Methods("GET")
-	r.Handle("/api/logs", authMiddleware(http.HandlerFunc(clearLogs))).Methods("DELETE")
+	r.Handle("/api/logs", authMiddleware(adminMiddleware(http.HandlerFunc(getLogs)))).Methods("GET")
+	r.Handle("/api/logs/stats", authMiddleware(adminMiddleware(http.HandlerFunc(getLogStats)))).Methods("GET")
+	r.Handle("/api/logs", authMiddleware(adminMiddleware(http.HandlerFunc(clearLogs)))).Methods("DELETE")
 
 	// Configuration du serveur avec timeouts de sécurité
 	port := os.Getenv("API_PORT")

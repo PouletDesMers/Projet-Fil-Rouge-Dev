@@ -9,9 +9,7 @@ const AdminLogs = (() => {
   const AUTO_REFRESH_INTERVAL = 5000; // 5 secondes
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function getToken() {
-    return localStorage.getItem('token');
-  }
+  // Token géré via cookie httpOnly — pas besoin de le lire depuis JS
 
   function levelBadge(level) {
     const map = {
@@ -60,7 +58,7 @@ const AdminLogs = (() => {
   async function loadStats() {
     try {
       const res = await fetch('/admin/api/logs/stats', {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        credentials: 'include'
       });
       if (!res.ok) return;
       const stats = await res.json();
@@ -92,7 +90,7 @@ const AdminLogs = (() => {
 
     try {
       const res = await fetch(`/admin/api/logs?${params}`, {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        credentials: 'include'
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -157,7 +155,7 @@ const AdminLogs = (() => {
     try {
       const res = await fetch('/admin/api/logs', {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        credentials: 'include'
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadLogs();
