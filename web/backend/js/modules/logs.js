@@ -1,16 +1,14 @@
 /**
  * AdminLogs Module
- * Affiche les logs de l'API en temps réel avec filtres
+ * Affiche les logs de l'API en temps réel avec filtres enrichis
  */
 const AdminLogs = (() => {
   // ── State ──────────────────────────────────────────────────────────────────
   let autoRefreshTimer = null;
   let autoRefreshEnabled = false;
-  const AUTO_REFRESH_INTERVAL = 5000; // 5 secondes
+  const AUTO_REFRESH_INTERVAL = 5000;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  // Token géré via cookie httpOnly — pas besoin de le lire depuis JS
-
   function levelBadge(level) {
     const map = {
       DEBUG:    ['bg-secondary', 'bi-bug'],
@@ -35,68 +33,69 @@ const AdminLogs = (() => {
   function formatTimestamp(ts) {
     if (!ts) return '—';
     try {
-      const d = new Date(ts);
-      return d.toLocaleString('fr-FR', {
+      return new Date(ts).toLocaleString('fr-FR', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit', second: '2-digit'
       });
-    } catch {
-      return ts;
-    }
+    } catch { return ts; }
   }
 
   function escapeHtml(str) {
     if (!str) return '';
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // ── Load stats ─────────────────────────────────────────────────────────────
   async function loadStats() {
     try {
-      const res = await fetch('/admin/api/logs/stats', {
-        credentials: 'include'
-      });
+      const res = await fetch('/admin/api/logs/stats', { credentials: 'include' });
       if (!res.ok) return;
-      const stats = await res.json();
-
-      document.getElementById('log-stat-total').textContent  = stats.total  ?? 0;
-      document.getElementById('log-stat-info').textContent   = stats.INFO   ?? 0;
-      document.getElementById('log-stat-warn').textContent   = stats.WARN   ?? 0;
-      document.getElementById('log-stat-error').textContent  = stats.ERROR  ?? 0;
-      document.getElementById('log-stat-security').textContent = stats.SECURITY ?? 0;
-    } catch (e) {
-      console.error('Erreur stats logs:', e);
-    }
+      const s = await res.json();
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
+      set('log-stat-total',    s.total);
+      set('log-stat-info',     s.INFO);
+      set('log-stat-warn',     s.WARN);
+      set('log-stat-error',    s.ERROR);
+      set('log-stat-security', s.SECURITY);
+    } catch (e) { console.error('Erreur stats logs:', e); }
   }
 
   // ── Load logs ──────────────────────────────────────────────────────────────
   async function loadLogs() {
-    const tbody = document.getElementById('logsTableBody');
-    const container = document.getElementById('logsTableContainer');
+    const tbody      = document.getElementById('logsTableBody');
+    const container  = document.getElementById('logsTableContainer');
     const emptyState = document.getElementById('logsEmptyState');
 
-    const level  = document.getElementById('logLevelFilter')?.value || 'ALL';
-    const search = document.getElementById('logSearchInput')?.value?.trim() || '';
-    const limit  = document.getElementById('logLimitSelect')?.value || '200';
+    const level    = document.getElementById('logLevelFilter')?.value  || 'ALL';
+    const method   = document.getElementById('logMethodFilter')?.value || '';
+    const statusF  = document.getElementById('logStatusFilter')?.value || '';
+    const search   = document.getElementById('logSearchInput')?.value?.trim() || '';
+    const limit    = document.getElementById('logLimitSelect')?.value  || '200';
+    const dateFrom = document.getElementById('logDateFrom')?.value     || '';
+    const dateTo   = document.getElementById('logDateTo')?.value       || '';
 
-    // Build query
     const params = new URLSearchParams({ limit });
     if (level && level !== 'ALL') params.set('level', level);
-    if (search) params.set('search', search);
+    if (search)   params.set('search', search);
+    if (method)   params.set('method', method);
+    if (dateFrom) params.set('date_from', new Date(dateFrom).toISOString());
+    if (dateTo)   params.set('date_to',   new Date(dateTo).toISOString());
 
     try {
-      const res = await fetch(`/admin/api/logs?${params}`, {
-        credentials: 'include'
-      });
-
+      const res = await fetch(`/admin/api/logs?${params}`, { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const logs = await res.json();
+      let logs = await res.json();
+      if (!Array.isArray(logs)) logs = [];
 
-      if (!logs || logs.length === 0) {
+      // Filtre statut HTTP côté client (plus simple que d'étendre l'API)
+      if (statusF) {
+        const min = parseInt(statusF);
+        logs = logs.filter(e => e.status >= min && e.status < min + 100);
+      }
+
+      if (logs.length === 0) {
         container.classList.add('d-none');
         emptyState.classList.remove('d-none');
         document.getElementById('log-count').textContent = '0 entrée(s)';
@@ -107,45 +106,36 @@ const AdminLogs = (() => {
       emptyState.classList.add('d-none');
       document.getElementById('log-count').textContent = `${logs.length} entrée(s)`;
 
-      tbody.innerHTML = logs.map(entry => {
-        const rowClass = entry.level === 'ERROR' ? 'table-danger'
-          : entry.level === 'SECURITY' ? 'table-dark text-white'
-          : entry.level === 'WARN' ? 'table-warning'
+      const methodColors = {
+        GET: 'bg-success', POST: 'bg-primary', PUT: 'bg-warning text-dark',
+        PATCH: 'bg-warning text-dark', DELETE: 'bg-danger', OPTIONS: 'bg-secondary'
+      };
+
+      tbody.innerHTML = logs.map(e => {
+        const rowClass = e.level === 'ERROR' ? 'table-danger'
+          : e.level === 'SECURITY' ? 'table-dark text-white'
+          : e.level === 'WARN' ? 'table-warning' : '';
+
+        const methodBadge = e.method
+          ? `<span class="badge ${methodColors[e.method] || 'bg-secondary'} me-1">${escapeHtml(e.method)}</span>`
           : '';
 
-        // Méthode HTTP colorée
-        const methodColors = {
-          GET: 'bg-success', POST: 'bg-primary', PUT: 'bg-warning text-dark',
-          PATCH: 'bg-warning text-dark', DELETE: 'bg-danger', OPTIONS: 'bg-secondary'
-        };
-        const methodBadge = entry.method
-          ? `<span class="badge ${methodColors[entry.method] || 'bg-secondary'} me-1">${escapeHtml(entry.method)}</span>`
-          : '';
-
-        // Route raccourcie si trop longue
-        const pathText = entry.path
-          ? `<code class="small text-break">${escapeHtml(entry.path)}</code>`
+        const pathText = e.path
+          ? `<code class="small text-break">${escapeHtml(e.path)}</code>`
           : '<span class="text-muted">—</span>';
 
-        // Message : affiché seulement s'il est non-vide
-        const msgText = entry.message
-          ? `<span class="small">${escapeHtml(entry.message)}</span>`
+        const userText = (e.user_id != null && e.user_id !== 0)
+          ? `<span class="badge bg-light text-dark border">👤 ${e.user_id}</span>`
           : '<span class="text-muted small">—</span>';
 
-        // User ID : badge si présent (0 = non authentifié)
-        const userText = (entry.user_id != null && entry.user_id !== 0)
-          ? `<span class="badge bg-light text-dark border">👤 ${entry.user_id}</span>`
-          : '<span class="text-muted small">—</span>';
-
-        return `
-        <tr class="${rowClass}">
-          <td class="text-nowrap small text-muted">${formatTimestamp(entry.timestamp)}</td>
-          <td>${levelBadge(entry.level)}</td>
+        return `<tr class="${rowClass}">
+          <td class="text-nowrap small text-muted">${formatTimestamp(e.timestamp)}</td>
+          <td>${levelBadge(e.level)}</td>
           <td class="text-nowrap">${methodBadge}${pathText}</td>
-          <td>${statusBadge(entry.status)}</td>
-          <td>${msgText}</td>
-          <td class="small text-muted text-nowrap">${escapeHtml(entry.ip) || '—'}</td>
-          <td class="small text-muted text-nowrap">${entry.duration || '—'}</td>
+          <td>${statusBadge(e.status)}</td>
+          <td><span class="small">${escapeHtml(e.message) || '—'}</span></td>
+          <td class="small text-muted text-nowrap">${escapeHtml(e.ip) || '—'}</td>
+          <td class="small text-muted text-nowrap">${e.duration || '—'}</td>
           <td>${userText}</td>
         </tr>`;
       }).join('');
@@ -157,11 +147,23 @@ const AdminLogs = (() => {
     }
   }
 
+  // ── Reset filtres ──────────────────────────────────────────────────────────
+  function resetFilters() {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('logLevelFilter',  'ALL');
+    set('logMethodFilter', '');
+    set('logStatusFilter', '');
+    set('logLimitSelect',  '200');
+    set('logSearchInput',  '');
+    set('logDateFrom',     '');
+    set('logDateTo',       '');
+    loadLogs();
+  }
+
   // ── Auto-refresh ───────────────────────────────────────────────────────────
   function toggleAutoRefresh() {
     autoRefreshEnabled = !autoRefreshEnabled;
     const btn = document.getElementById('autoRefreshBtn');
-
     if (autoRefreshEnabled) {
       autoRefreshTimer = setInterval(loadLogs, AUTO_REFRESH_INTERVAL);
       btn.classList.replace('btn-outline-secondary', 'btn-success');
@@ -177,31 +179,20 @@ const AdminLogs = (() => {
   // ── Clear logs ─────────────────────────────────────────────────────────────
   async function clearLogs() {
     if (!confirm('Vider tous les logs en mémoire ? Cette action est irréversible.')) return;
-
     try {
-      const res = await fetch('/admin/api/logs', {
-        method: 'DELETE',
-        credentials: 'include'
-      });
+      const res = await fetch('/admin/api/logs', { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadLogs();
       AdminUtils.showToast('Logs vidés avec succès', 'success');
-    } catch (e) {
-      AdminUtils.showToast('Erreur lors de la suppression des logs', 'danger');
-    }
+    } catch { AdminUtils.showToast('Erreur lors de la suppression des logs', 'danger'); }
   }
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
   function exportCSV() {
     const rows = document.querySelectorAll('#logsTableBody tr');
-    if (!rows.length) {
-      AdminUtils.showToast('Aucun log à exporter', 'warning');
-      return;
-    }
-
-    const headers = ['Timestamp', 'Level', 'Method', 'Path', 'Message', 'Status', 'IP', 'Duration', 'UserID'];
+    if (!rows.length) { AdminUtils.showToast('Aucun log à exporter', 'warning'); return; }
+    const headers = ['Timestamp', 'Level', 'Method', 'Path', 'Status', 'Message', 'IP', 'Duration', 'UserID'];
     const lines = [headers.join(',')];
-
     rows.forEach(row => {
       const cells = row.querySelectorAll('td');
       const values = [
@@ -217,45 +208,43 @@ const AdminLogs = (() => {
       ].map(v => `"${v.replace(/"/g, '""')}"`);
       lines.push(values.join(','));
     });
-
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `api-logs-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `api-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
   function init() {
-    // Filtres
-    document.getElementById('logLevelFilter')?.addEventListener('change', loadLogs);
-    document.getElementById('logLimitSelect')?.addEventListener('change', loadLogs);
+    // Debounce partagé pour tous les filtres (évite les rafales → 429)
+    let filterTimeout;
+    function debouncedLoad() {
+      clearTimeout(filterTimeout);
+      filterTimeout = setTimeout(loadLogs, 400);
+    }
 
-    // Recherche avec debounce
-    let searchTimeout;
-    document.getElementById('logSearchInput')?.addEventListener('input', () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(loadLogs, 300);
+    // Filtres selects + dates
+    ['logLevelFilter', 'logMethodFilter', 'logStatusFilter', 'logLimitSelect',
+     'logDateFrom', 'logDateTo'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', debouncedLoad);
     });
+
+    // Recherche texte
+    document.getElementById('logSearchInput')?.addEventListener('input', debouncedLoad);
 
     // Boutons
     document.getElementById('refreshLogsBtn')?.addEventListener('click', loadLogs);
     document.getElementById('autoRefreshBtn')?.addEventListener('click', toggleAutoRefresh);
     document.getElementById('clearLogsBtn')?.addEventListener('click', clearLogs);
     document.getElementById('exportLogsBtn')?.addEventListener('click', exportCSV);
+    document.getElementById('logResetFilters')?.addEventListener('click', resetFilters);
 
     loadLogs();
   }
 
-  // ── Nettoyage quand on quitte la section ───────────────────────────────────
   function destroy() {
-    if (autoRefreshTimer) {
-      clearInterval(autoRefreshTimer);
-      autoRefreshTimer = null;
-      autoRefreshEnabled = false;
-    }
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; autoRefreshEnabled = false; }
   }
 
   return { init, loadLogs, destroy };

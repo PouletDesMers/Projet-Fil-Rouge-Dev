@@ -396,6 +396,13 @@ app.get('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 app.put('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 app.delete('/admin/api/commandes/:id', proxyToApiWithAuth('/commandes/:id'));
 
+// Alias /orders → /commandes (dashboard.js + orders.js compatibility)
+app.get('/admin/api/orders', proxyToApiWithAuth('/commandes'));
+app.post('/admin/api/orders', proxyToApiWithAuth('/commandes'));
+app.get('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+app.put('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+app.delete('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+
 // GET /admin/api/quotes — Devis (commandes devis_* en DB + enrichissement Stripe)
 app.get('/admin/api/quotes', checkAdminAuth, async (req, res) => {
   const token = getAuthToken(req);

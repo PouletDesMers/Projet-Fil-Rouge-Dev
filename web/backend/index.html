@@ -35,18 +35,22 @@
         --cyna-accent:  #7602F9;
         --cyna-muted:   #9ca3af;
       }
-      body { background-color: #f1f5f9; }
+      body { background-color: #f1f5f9; overflow-x: hidden; }
 
       /* ── Sidebar ── */
       .admin-sidebar {
         background: linear-gradient(180deg, #1a0e3d 0%, #120a2e 100%);
         color: white;
-        min-height: 100vh;
+        width: 240px;
+        min-width: 240px;
+        flex-shrink: 0;
         padding: 0;
         display: flex;
         flex-direction: column;
         position: sticky;
         top: 0;
+        height: 100vh;
+        overflow-y: auto;
       }
       .sidebar-brand {
         padding: 24px 20px 16px;
@@ -84,6 +88,63 @@
       .sidebar-footer {
         padding: 16px 12px;
         border-top: 1px solid rgba(255,255,255,.08);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .btn-back-site {
+        background: rgba(118,2,249,.2);
+        border: 1px solid rgba(118,2,249,.4);
+        color: #c4b5fd;
+        font-size: .8rem;
+      }
+      .btn-back-site:hover { background: rgba(118,2,249,.35); color: #fff; }
+
+      /* ── Mobile topbar ── */
+      .mobile-topbar {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 1030;
+        background: linear-gradient(90deg, #1a0e3d, #120a2e);
+        padding: 10px 16px;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      }
+      @media (max-width: 767.98px) {
+        .mobile-topbar { display: flex; }
+        .admin-sidebar { display: none !important; }
+        .admin-content { padding: 16px 12px; }
+        .header-admin { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .header-admin h1 { font-size: 1.2rem; }
+        .stat-card { padding: 14px 16px; gap: 12px; }
+        .stat-val { font-size: 1.4rem !important; }
+        /* Offcanvas sidebar */
+        .offcanvas-sidebar {
+          width: 280px !important;
+          background: linear-gradient(180deg, #1a0e3d 0%, #120a2e 100%) !important;
+        }
+        .offcanvas-sidebar .offcanvas-header { border-bottom: 1px solid rgba(255,255,255,.08); }
+        .offcanvas-sidebar .nav-link {
+          color: rgba(255,255,255,.65);
+          padding: 10px 12px;
+          border-radius: 8px;
+          margin-bottom: 2px;
+          display: flex; align-items: center; gap: 10px;
+          font-size: .9rem;
+        }
+        .offcanvas-sidebar .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .offcanvas-sidebar .nav-link.active {
+          background: linear-gradient(90deg, rgba(118,2,249,.35), rgba(86,16,192,.2));
+          color: #fff;
+          border-left: 3px solid #7602F9;
+        }
+        .offcanvas-sidebar .sidebar-section-label {
+          font-size: .65rem; font-weight: 700; letter-spacing: 1.2px;
+          text-transform: uppercase; color: rgba(255,255,255,.35);
+          padding: 12px 8px 6px;
+        }
       }
 
       /* ── Content ── */
@@ -143,10 +204,61 @@
   </head>
 
   <body>
-    <div class="container-fluid">
-      <div class="row">
+    <!-- ── Mobile topbar (visible < 768px) ── -->
+    <div class="mobile-topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-light" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+        <span class="text-white fw-bold" style="font-size:.9rem">CYNA Admin</span>
+      </div>
+      <a href="/" class="btn btn-sm btn-back-site">
+        <i class="bi bi-arrow-left-circle me-1"></i>Site
+      </a>
+    </div>
+
+    <!-- ── Offcanvas sidebar mobile ── -->
+    <div class="offcanvas offcanvas-start offcanvas-sidebar" tabindex="-1" id="mobileSidebar">
+      <div class="offcanvas-header py-3 px-3">
+        <div class="d-flex align-items-center gap-2">
+          <img src="img/logo-admin.png" alt="CYNA" style="width:30px;height:30px;border-radius:6px;" onerror="this.style.display='none'" />
+          <div>
+            <div class="text-white fw-bold" style="font-size:.95rem">CYNA</div>
+            <div style="color:rgba(255,255,255,.4);font-size:.7rem">Back-Office</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body p-2">
+        <div class="sidebar-section-label">Principal</div>
+        <ul class="nav flex-column" id="mobile-nav-links">
+          <li class="nav-item"><a class="nav-link active" href="#" data-section="dashboard" data-bs-dismiss="offcanvas"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="users" data-bs-dismiss="offcanvas"><i class="bi bi-people-fill"></i> Utilisateurs</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="categories" data-bs-dismiss="offcanvas"><i class="bi bi-tags-fill"></i> Catégories</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="images" data-bs-dismiss="offcanvas"><i class="bi bi-images"></i> Images Carrousel</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="orders" data-bs-dismiss="offcanvas"><i class="bi bi-bag-check-fill"></i> Commandes</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="quotes" data-bs-dismiss="offcanvas"><i class="bi bi-file-earmark-text-fill"></i> Devis</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="discounts" data-bs-dismiss="offcanvas"><i class="bi bi-percent"></i> Remises</a></li>
+        </ul>
+        <div class="sidebar-section-label">Système</div>
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" href="#" data-section="api-keys" data-bs-dismiss="offcanvas"><i class="bi bi-key-fill"></i> API Tokens</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="logs" data-bs-dismiss="offcanvas"><i class="bi bi-terminal-fill"></i> Logs API</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="backup" data-bs-dismiss="offcanvas"><i class="bi bi-shield-lock-fill"></i> Sauvegardes</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="analytics" data-bs-dismiss="offcanvas"><i class="bi bi-bar-chart-fill"></i> Analytics</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="api-docs" data-bs-dismiss="offcanvas"><i class="bi bi-code-slash"></i> API Docs</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="settings" data-bs-dismiss="offcanvas"><i class="bi bi-gear-fill"></i> Paramètres</a></li>
+        </ul>
+        <div class="mt-3 d-flex flex-column gap-2 px-1">
+          <a href="/" class="btn btn-back-site btn-sm"><i class="bi bi-arrow-left-circle me-1"></i>Retour au site</a>
+          <button type="button" class="btn btn-outline-light btn-sm" id="logoutAdminBtnMobile"><i class="bi bi-box-arrow-right"></i> Déconnexion</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex">
         <!-- Sidebar -->
-        <nav class="col-md-3 col-lg-2 admin-sidebar">
+        <nav class="admin-sidebar d-none d-md-flex flex-column" style="width:240px; flex-shrink:0; min-width:240px;">
           <div class="sidebar-brand d-flex align-items-center gap-2">
             <img src="img/logo-admin.png" alt="CYNA" style="width:36px;height:36px;border-radius:8px;" onerror="this.style.display='none'" />
             <div>
@@ -231,6 +343,9 @@
           </div>
 
           <div class="sidebar-footer">
+            <a href="/" class="btn btn-back-site btn-sm w-100">
+              <i class="bi bi-arrow-left-circle me-1"></i> Retour au site
+            </a>
             <button type="button" class="btn btn-outline-light btn-sm w-100" id="logoutAdminBtn">
               <i class="bi bi-box-arrow-right"></i> Déconnexion
             </button>
@@ -238,7 +353,7 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="col-md-9 col-lg-10 admin-content">
+        <main class="admin-content flex-grow-1" style="min-width:0; overflow-x:hidden;">
 
           <!-- ═══════════════════════════ DASHBOARD ═══════════════════════════ -->
           <section id="dashboard-section" class="section-content">
@@ -253,45 +368,89 @@
               </button>
             </div>
 
-            <!-- Stat Cards -->
-            <div class="row g-3 mb-4">
-              <div class="col-sm-6 col-xl-3">
+            <!-- Stat Cards — Ligne 1 : Utilisateurs & Catégories -->
+            <div class="row g-3 mb-3">
+              <div class="col-6 col-xl-3">
                 <div class="stat-card">
                   <div class="stat-icon purple"><i class="bi bi-people-fill"></i></div>
                   <div>
                     <div class="stat-val" id="dash-total-users">—</div>
-                    <div class="stat-lbl">Total utilisateurs</div>
-                    <div class="stat-trend up"><i class="bi bi-arrow-up-short"></i>+12% ce mois</div>
+                    <div class="stat-lbl">Utilisateurs</div>
+                    <div class="stat-trend up"><i class="bi bi-arrow-up-short"></i><span id="dash-active-pct">—</span> actifs</div>
                   </div>
                 </div>
               </div>
-              <div class="col-sm-6 col-xl-3">
+              <div class="col-6 col-xl-3">
                 <div class="stat-card">
                   <div class="stat-icon violet"><i class="bi bi-person-check-fill"></i></div>
                   <div>
                     <div class="stat-val" id="dash-active-users">—</div>
-                    <div class="stat-lbl">Utilisateurs actifs</div>
-                    <div class="stat-trend up"><i class="bi bi-arrow-up-short"></i><span id="dash-active-pct">—</span> du total</div>
+                    <div class="stat-lbl">Actifs</div>
+                    <div class="stat-trend"><i class="bi bi-person-badge"></i> <span id="dash-total-admins">—</span> admins</div>
                   </div>
                 </div>
               </div>
-              <div class="col-sm-6 col-xl-3">
+              <div class="col-6 col-xl-3">
                 <div class="stat-card">
                   <div class="stat-icon teal"><i class="bi bi-tags-fill"></i></div>
                   <div>
                     <div class="stat-val" id="dash-total-categories">—</div>
-                    <div class="stat-lbl">Catégories actives</div>
-                    <div class="stat-trend"><i class="bi bi-dash"></i> Services disponibles</div>
+                    <div class="stat-lbl">Catégories</div>
+                    <div class="stat-trend"><i class="bi bi-box-seam"></i> Services dispo</div>
                   </div>
                 </div>
               </div>
-              <div class="col-sm-6 col-xl-3">
+              <div class="col-6 col-xl-3">
+                <div class="stat-card">
+                  <div class="stat-icon green"><i class="bi bi-cart-fill"></i></div>
+                  <div>
+                    <div class="stat-val" id="dash-total-orders">—</div>
+                    <div class="stat-lbl">Commandes</div>
+                    <div class="stat-trend"><i class="bi bi-hourglass-split"></i> <span id="dash-pending-orders">—</span> en attente</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stat Cards — Ligne 2 : Revenus & Système -->
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-xl-3">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(245,158,11,.12);color:#d97706;"><i class="bi bi-currency-euro"></i></div>
+                  <div>
+                    <div class="stat-val" id="dash-revenue">—</div>
+                    <div class="stat-lbl">Revenus (mois)</div>
+                    <div class="stat-trend up"><i class="bi bi-graph-up"></i> Abonnements actifs</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(239,68,68,.12);color:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                  <div>
+                    <div class="stat-val" id="dash-log-errors">—</div>
+                    <div class="stat-lbl">Erreurs logs</div>
+                    <div class="stat-trend"><i class="bi bi-journal-text"></i> <span id="dash-log-total">—</span> total</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(99,102,241,.12);color:#6366f1;"><i class="bi bi-archive-fill"></i></div>
+                  <div>
+                    <div class="stat-val" id="dash-backup-snaps">—</div>
+                    <div class="stat-lbl">Snapshots backup</div>
+                    <div class="stat-trend"><i class="bi bi-hdd"></i> <span id="dash-backup-size">—</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-xl-3">
                 <div class="stat-card">
                   <div class="stat-icon green"><i class="bi bi-shield-fill-check"></i></div>
                   <div>
                     <div class="stat-val">99,8%</div>
-                    <div class="stat-lbl">Uptime services</div>
-                    <div class="stat-trend up"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Tous systèmes opérationnels</div>
+                    <div class="stat-lbl">Uptime</div>
+                    <div class="stat-trend up"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Systèmes OK</div>
                   </div>
                 </div>
               </div>
@@ -301,19 +460,19 @@
             <div class="row g-3 mb-4">
               <div class="col-lg-8">
                 <div class="chart-card h-100">
-                  <div class="chart-title">📊 Chiffre d'affaires — 12 derniers mois</div>
-                  <div style="height: 260px;"><canvas id="revenueChart"></canvas></div>
+                  <div class="chart-title">� Activité — Commandes 12 derniers mois</div>
+                  <div style="height: 260px;"><canvas id="activityChart"></canvas></div>
                 </div>
               </div>
               <div class="col-lg-4">
                 <div class="chart-card h-100 d-flex flex-column">
                   <div class="chart-title">👥 Répartition utilisateurs</div>
                   <div class="flex-grow-1 d-flex align-items-center justify-content-center">
-                    <div style="height:220px; width:100%;"><canvas id="donutChart"></canvas></div>
+                    <div style="height:200px; width:100%;"><canvas id="donutChart"></canvas></div>
                   </div>
                   <div class="d-flex justify-content-around mt-2">
                     <div class="text-center">
-                      <div class="fw-bold" id="dash-total-admins">—</div>
+                      <div class="fw-bold" id="dash-total-admins2">—</div>
                       <div class="text-muted" style="font-size:.75rem">Admins</div>
                     </div>
                     <div class="text-center">
@@ -764,14 +923,13 @@
 
             <!-- Filtres -->
             <div class="card mb-3">
-              <div class="card-body py-2">
-                <div class="row g-2 align-items-center">
-                  <div class="col-auto">
+              <div class="card-body py-2 px-3">
+                <!-- Ligne 1 : Niveau, Méthode, Statut, Limite -->
+                <div class="row g-2 align-items-center mb-2">
+                  <div class="col-6 col-sm-auto">
                     <label class="form-label mb-0 small fw-semibold">Niveau</label>
-                  </div>
-                  <div class="col-auto">
-                    <select class="form-select form-select-sm" id="logLevelFilter" style="width:140px">
-                      <option value="ALL">Tous</option>
+                    <select class="form-select form-select-sm mt-1" id="logLevelFilter">
+                      <option value="ALL">Tous niveaux</option>
                       <option value="DEBUG">DEBUG</option>
                       <option value="INFO">INFO</option>
                       <option value="WARN">WARN</option>
@@ -779,22 +937,58 @@
                       <option value="SECURITY">SECURITY</option>
                     </select>
                   </div>
-                  <div class="col-auto ms-2">
-                    <label class="form-label mb-0 small fw-semibold">Afficher</label>
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label mb-0 small fw-semibold">Méthode HTTP</label>
+                    <select class="form-select form-select-sm mt-1" id="logMethodFilter">
+                      <option value="">Toutes</option>
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="PATCH">PATCH</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
                   </div>
-                  <div class="col-auto">
-                    <select class="form-select form-select-sm" id="logLimitSelect" style="width:100px">
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label mb-0 small fw-semibold">Statut HTTP</label>
+                    <select class="form-select form-select-sm mt-1" id="logStatusFilter">
+                      <option value="">Tous</option>
+                      <option value="2xx">2xx — Succès</option>
+                      <option value="3xx">3xx — Redirection</option>
+                      <option value="4xx">4xx — Client</option>
+                      <option value="5xx">5xx — Serveur</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label mb-0 small fw-semibold">Afficher</label>
+                    <select class="form-select form-select-sm mt-1" id="logLimitSelect">
                       <option value="50">50</option>
                       <option value="100">100</option>
                       <option value="200" selected>200</option>
                       <option value="500">500</option>
                     </select>
                   </div>
-                  <div class="col">
-                    <input type="text" class="form-control form-control-sm" id="logSearchInput"
-                      placeholder="🔍 Rechercher dans les messages, paths, IPs…" />
+                  <div class="col-sm-auto ms-sm-auto d-flex align-items-end">
+                    <button class="btn btn-outline-secondary btn-sm" id="logResetFilters" title="Réinitialiser les filtres">
+                      <i class="bi bi-x-circle me-1"></i>Reset
+                    </button>
                   </div>
-                  <div class="col-auto">
+                </div>
+                <!-- Ligne 2 : Dates + Recherche texte + Compteur -->
+                <div class="row g-2 align-items-center">
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label mb-0 small fw-semibold">Du</label>
+                    <input type="datetime-local" class="form-control form-control-sm mt-1" id="logDateFrom" style="min-width:170px">
+                  </div>
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label mb-0 small fw-semibold">Au</label>
+                    <input type="datetime-local" class="form-control form-control-sm mt-1" id="logDateTo" style="min-width:170px">
+                  </div>
+                  <div class="col">
+                    <label class="form-label mb-0 small fw-semibold">Recherche</label>
+                    <input type="text" class="form-control form-control-sm mt-1" id="logSearchInput"
+                      placeholder="🔍 Message, path, IP, user…" />
+                  </div>
+                  <div class="col-auto d-flex align-items-end">
                     <span class="badge bg-secondary" id="log-count">0 entrée(s)</span>
                   </div>
                 </div>
@@ -899,47 +1093,65 @@
               </div>
             </div>
 
-            <!-- Planification automatique -->
+            <!-- Planifications automatiques (multi-règles) -->
             <div class="card mb-4">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Planification automatique</h6>
-                <span id="schedule-enabled-badge" class="badge bg-secondary">⛔ Désactivé</span>
+              <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Planifications automatiques</h6>
+                <button class="btn btn-sm btn-outline-secondary" onclick="AdminBackup.refreshSchedule()">
+                  <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </button>
               </div>
               <div class="card-body">
-                <div class="row g-3 align-items-end">
-                  <div class="col-md-4">
-                    <label class="form-label small fw-semibold">Intervalle (heures)</label>
-                    <div class="input-group">
-                      <input type="number" class="form-control" id="schedule-interval"
-                        min="0" max="720" step="1" placeholder="ex: 24" />
+
+                <!-- Formulaire ajout d'une règle -->
+                <div class="row g-2 align-items-end mb-3">
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label small fw-semibold mb-1">Type de backup</label>
+                    <select class="form-select form-select-sm" id="new-rule-type">
+                      <option value="full">🗄️ Complète</option>
+                      <option value="data">💾 Données</option>
+                      <option value="logs">📋 Logs</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-sm-auto">
+                    <label class="form-label small fw-semibold mb-1">Intervalle</label>
+                    <div class="input-group input-group-sm" style="width:130px">
+                      <input type="number" class="form-control" id="new-rule-interval"
+                        min="1" max="720" step="1" placeholder="24" />
                       <span class="input-group-text">h</span>
                     </div>
-                    <div class="form-text">0 pour désactiver • max 720h • rétention : 10 derniers snapshots auto</div>
                   </div>
-                  <div class="col-md-auto">
-                    <button class="btn btn-success" onclick="AdminBackup.saveSchedule()">
-                      <i class="bi bi-check-lg me-1"></i>Enregistrer
-                    </button>
-                    <button class="btn btn-outline-danger ms-2" onclick="AdminBackup.disableSchedule()">
-                      <i class="bi bi-x-lg me-1"></i>Désactiver
+                  <div class="col-auto">
+                    <button class="btn btn-sm btn-success" onclick="AdminBackup.addScheduleRule()">
+                      <i class="bi bi-plus-circle me-1"></i>Ajouter
                     </button>
                   </div>
-                  <div class="col-md-5">
-                    <div class="row g-2">
-                      <div class="col-4">
-                        <div class="text-muted small">Dernier snapshot</div>
-                        <div id="schedule-last-run" class="fw-semibold small">—</div>
-                      </div>
-                      <div class="col-4">
-                        <div class="text-muted small">Prochain snapshot</div>
-                        <div id="schedule-next-run" class="fw-semibold small">—</div>
-                      </div>
-                      <div class="col-4">
-                        <div class="text-muted small">Dernier ID</div>
-                        <div id="schedule-last-snap" class="fw-semibold small"><code>—</code></div>
-                      </div>
-                    </div>
+                  <div class="col-12">
+                    <div class="form-text">Rétention automatique : 10 derniers snapshots auto conservés.</div>
                   </div>
+                </div>
+
+                <!-- Tableau des règles -->
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Type</th>
+                        <th>Intervalle</th>
+                        <th>Statut</th>
+                        <th>Dernier / Prochain</th>
+                        <th>Snapshot ID</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="schedule-rules-body">
+                      <tr>
+                        <td colspan="6" class="text-center text-muted py-3">
+                          <i class="bi bi-calendar-x me-2"></i>Aucune planification configurée
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -989,7 +1201,6 @@
             </div>
           </section>
         </main>
-      </div>
     </div>
 
     <!-- Edit User Modal -->

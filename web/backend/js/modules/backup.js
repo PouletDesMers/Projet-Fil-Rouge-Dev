@@ -204,68 +204,120 @@ const AdminBackup = (() => {
     }
   }
 
-  // ===== PLANIFICATION =====
+  // ===== PLANIFICATIONS MULTIPLES =====
   async function refreshSchedule() {
     try {
       const resp = await fetch('/admin/api/backup/schedule', { credentials: 'include' });
       if (!resp.ok) return;
-      renderSchedule(await resp.json());
-    } catch (e) {
-      console.error('refreshSchedule:', e);
-    }
+      const data = await resp.json();
+      renderScheduleRules(data.rules || []);
+    } catch (e) { console.error('refreshSchedule:', e); }
   }
 
-  function renderSchedule(data) {
-    const badge = document.getElementById('schedule-enabled-badge');
-    const input = document.getElementById('schedule-interval');
-    const lastRun = document.getElementById('schedule-last-run');
-    const nextRun = document.getElementById('schedule-next-run');
-    const lastSnap = document.getElementById('schedule-last-snap');
+  function renderScheduleRules(rules) {
+    const tbody = document.getElementById('schedule-rules-body');
+    if (!tbody) return;
 
-    if (badge) {
-      badge.textContent = data.enabled ? '✅ Activé' : '⛔ Désactivé';
-      badge.className = `badge ${data.enabled ? 'bg-success' : 'bg-secondary'}`;
+    if (!rules.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">
+        <i class="bi bi-calendar-x me-2"></i>Aucune planification configurée
+      </td></tr>`;
+      return;
     }
-    if (input && data.interval_hours > 0) input.value = data.interval_hours;
-    if (lastRun) lastRun.textContent = data.last_run ? new Date(data.last_run).toLocaleString('fr-FR') : '—';
-    if (nextRun) nextRun.textContent = data.next_run ? new Date(data.next_run).toLocaleString('fr-FR') : '—';
-    if (lastSnap && data.last_snapshot) lastSnap.textContent = data.last_snapshot.slice(0, 8);
+
+    const typeLabels = { data: '💾 Données', logs: '📋 Logs', full: '🗄️ Complète' };
+    const typeBadges = { data: 'bg-info text-dark', logs: 'bg-warning text-dark', full: 'bg-success' };
+
+    tbody.innerHTML = rules.map(rule => {
+      const badge = `<span class="badge ${typeBadges[rule.type] || 'bg-secondary'}">${typeLabels[rule.type] || rule.type}</span>`;
+      const statusBadge = rule.enabled
+        ? '<span class="badge bg-success">✅ Actif</span>'
+        : '<span class="badge bg-secondary">⛔ Inactif</span>';
+      const lastRun = rule.last_run ? new Date(rule.last_run).toLocaleString('fr-FR') : '—';
+      const nextRun = rule.next_run ? new Date(rule.next_run).toLocaleString('fr-FR') : '—';
+      const snap    = rule.last_snapshot ? rule.last_snapshot.slice(0,8) : '—';
+      const toggleLabel = rule.enabled ? 'Désactiver' : 'Activer';
+      const toggleClass = rule.enabled ? 'btn-outline-warning' : 'btn-outline-success';
+
+      return `<tr>
+        <td>${badge}</td>
+        <td><strong>Toutes les ${rule.interval_hours}h</strong></td>
+        <td>${statusBadge}</td>
+        <td class="small text-muted">${lastRun}<br><span class="text-primary">→ ${nextRun}</span></td>
+        <td class="small text-muted">${snap}</td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm ${toggleClass} me-1"
+            onclick="AdminBackup.toggleRule('${rule.id}', ${!rule.enabled})">${toggleLabel}</button>
+          <button class="btn btn-sm btn-outline-danger"
+            onclick="AdminBackup.deleteRule('${rule.id}')"><i class="bi bi-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('');
   }
 
-  async function saveSchedule() {
-    const input = document.getElementById('schedule-interval');
-    const hours = parseInt(input?.value ?? '0', 10);
-    if (isNaN(hours) || hours < 0 || hours > 720) {
-      setStatus('warning', '⚠️ Intervalle invalide (0–720 heures).');
+  async function addScheduleRule() {
+    const typeEl     = document.getElementById('new-rule-type');
+    const intervalEl = document.getElementById('new-rule-interval');
+    const type     = typeEl?.value || 'full';
+    const interval = parseInt(intervalEl?.value || '0', 10);
+
+    if (isNaN(interval) || interval < 1 || interval > 720) {
+      setStatus('warning', '⚠️ Intervalle invalide (1–720 heures).');
       return;
     }
     try {
       const resp = await fetch('/admin/api/backup/schedule', {
-        method: 'POST',
-        credentials: 'include',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interval_hours: hours }),
+        body: JSON.stringify({ action: 'add', type, interval_hours: interval }),
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         setStatus('danger', `❌ Erreur : ${err.error || resp.statusText}`);
         return;
       }
-      renderSchedule(await resp.json());
-      setStatus(hours === 0 ? 'warning' : 'success',
-        hours === 0
-          ? '⛔ Sauvegarde automatique désactivée.'
-          : `✅ Planification enregistrée : snapshot toutes les <strong>${hours}h</strong>.`
-      );
-    } catch (e) {
-      setStatus('danger', `❌ Erreur réseau : ${e.message}`);
-    }
+      const data = await resp.json();
+      renderScheduleRules(data.rules || []);
+      setStatus('success', `✅ Planification ajoutée : ${type} toutes les <strong>${interval}h</strong>.`);
+      if (intervalEl) intervalEl.value = '';
+    } catch (e) { setStatus('danger', `❌ Erreur réseau : ${e.message}`); }
   }
 
-  async function disableSchedule() {
-    const input = document.getElementById('schedule-interval');
-    if (input) input.value = '0';
-    await saveSchedule();
+  async function deleteRule(id) {
+    if (!confirm('Supprimer cette planification ?')) return;
+    try {
+      const resp = await fetch('/admin/api/backup/schedule', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setStatus('danger', `❌ Erreur : ${err.error || resp.statusText}`);
+        return;
+      }
+      const data = await resp.json();
+      renderScheduleRules(data.rules || []);
+      setStatus('success', '🗑️ Planification supprimée.');
+    } catch (e) { setStatus('danger', `❌ Erreur réseau : ${e.message}`); }
+  }
+
+  async function toggleRule(id, enabled) {
+    try {
+      const resp = await fetch('/admin/api/backup/schedule', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle', id, enabled }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setStatus('danger', `❌ Erreur : ${err.error || resp.statusText}`);
+        return;
+      }
+      const data = await resp.json();
+      renderScheduleRules(data.rules || []);
+      setStatus('success', enabled ? '✅ Planification activée.' : '⛔ Planification désactivée.');
+    } catch (e) { setStatus('danger', `❌ Erreur réseau : ${e.message}`); }
   }
 
   // ===== HELPERS =====
@@ -293,6 +345,6 @@ const AdminBackup = (() => {
   return {
     load, triggerManualBackup, refreshBackupList, refreshStats,
     downloadSnapshot, confirmRestore, confirmDelete,
-    refreshSchedule, saveSchedule, disableSchedule
+    refreshSchedule, addScheduleRule, deleteRule, toggleRule
   };
 })();
