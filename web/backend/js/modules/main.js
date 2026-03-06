@@ -80,6 +80,8 @@ function setupEventListeners() {
         AdminDiscounts.loadDiscounts();
       } else if (sectionId === 'logs-section') {
         AdminLogs.init();
+      } else if (sectionId === 'backup-section') {
+        AdminBackup.load();
       }
     });
   });

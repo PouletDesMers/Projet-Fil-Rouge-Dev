@@ -107,22 +107,48 @@ const AdminLogs = (() => {
       emptyState.classList.add('d-none');
       document.getElementById('log-count').textContent = `${logs.length} entrée(s)`;
 
-      tbody.innerHTML = logs.map(entry => `
-        <tr class="${entry.level === 'ERROR' ? 'table-danger' : entry.level === 'SECURITY' ? 'table-dark' : entry.level === 'WARN' ? 'table-warning' : ''}">
+      tbody.innerHTML = logs.map(entry => {
+        const rowClass = entry.level === 'ERROR' ? 'table-danger'
+          : entry.level === 'SECURITY' ? 'table-dark text-white'
+          : entry.level === 'WARN' ? 'table-warning'
+          : '';
+
+        // Méthode HTTP colorée
+        const methodColors = {
+          GET: 'bg-success', POST: 'bg-primary', PUT: 'bg-warning text-dark',
+          PATCH: 'bg-warning text-dark', DELETE: 'bg-danger', OPTIONS: 'bg-secondary'
+        };
+        const methodBadge = entry.method
+          ? `<span class="badge ${methodColors[entry.method] || 'bg-secondary'} me-1">${escapeHtml(entry.method)}</span>`
+          : '';
+
+        // Route raccourcie si trop longue
+        const pathText = entry.path
+          ? `<code class="small text-break">${escapeHtml(entry.path)}</code>`
+          : '<span class="text-muted">—</span>';
+
+        // Message : affiché seulement s'il est non-vide
+        const msgText = entry.message
+          ? `<span class="small">${escapeHtml(entry.message)}</span>`
+          : '<span class="text-muted small">—</span>';
+
+        // User ID : badge si présent (0 = non authentifié)
+        const userText = (entry.user_id != null && entry.user_id !== 0)
+          ? `<span class="badge bg-light text-dark border">👤 ${entry.user_id}</span>`
+          : '<span class="text-muted small">—</span>';
+
+        return `
+        <tr class="${rowClass}">
           <td class="text-nowrap small text-muted">${formatTimestamp(entry.timestamp)}</td>
           <td>${levelBadge(entry.level)}</td>
-          <td>
-            ${entry.method ? `<span class="badge bg-light text-dark border me-1 small">${escapeHtml(entry.method)}</span>` : ''}
-            ${entry.path ? `<code class="small">${escapeHtml(entry.path)}</code>` : ''}
-            ${!entry.method && !entry.path ? `<span class="text-muted small">—</span>` : ''}
-          </td>
-          <td class="small">${escapeHtml(entry.message)}</td>
+          <td class="text-nowrap">${methodBadge}${pathText}</td>
           <td>${statusBadge(entry.status)}</td>
-          <td class="small text-muted">${escapeHtml(entry.ip) || '—'}</td>
-          <td class="small text-muted">${entry.duration || '—'}</td>
-          <td class="small text-muted">${entry.user_id || '—'}</td>
-        </tr>
-      `).join('');
+          <td>${msgText}</td>
+          <td class="small text-muted text-nowrap">${escapeHtml(entry.ip) || '—'}</td>
+          <td class="small text-muted text-nowrap">${entry.duration || '—'}</td>
+          <td>${userText}</td>
+        </tr>`;
+      }).join('');
 
       await loadStats();
     } catch (e) {

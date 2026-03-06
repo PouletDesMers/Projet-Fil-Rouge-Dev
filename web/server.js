@@ -731,6 +731,16 @@ app.get('/admin/api/logs', proxyToApiWithAuth('/logs'));
 app.get('/admin/api/logs/stats', proxyToApiWithAuth('/logs/stats'));
 app.delete('/admin/api/logs', proxyToApiWithAuth('/logs'));
 
+// — Backups (admin seulement) —
+app.post('/admin/api/backup', proxyToApiWithAuth('/admin/backup'));
+app.get('/admin/api/backup/list', proxyToApiWithAuth('/admin/backup/list'));
+app.get('/admin/api/backup/stats', proxyToApiWithAuth('/admin/backup/stats'));
+app.get('/admin/api/backup/schedule', proxyToApiWithAuth('/admin/backup/schedule'));
+app.post('/admin/api/backup/schedule', proxyToApiWithAuth('/admin/backup/schedule'));
+app.get('/admin/api/backup/download', proxyToApiWithAuth('/admin/backup/download'));
+app.post('/admin/api/backup/restore', proxyToApiWithAuth('/admin/backup/restore'));
+app.delete('/admin/api/backup', proxyToApiWithAuth('/admin/backup'));
+
 // — Upload d'images pour les produits (admin seulement) —
 app.post('/admin/api/upload', checkAdminAuth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier envoyé' });

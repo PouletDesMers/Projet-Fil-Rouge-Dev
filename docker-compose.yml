@@ -30,6 +30,10 @@ services:
       DB_PASSWORD: password
       DB_NAME: mydb
       API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
+      RESTIC_PASSWORD: cyna-restic-AES256-secret
+      RESTIC_REPOSITORY: /backups/restic-repo
+    volumes:
+      - backups_data:/backups
 
   web:
     build: ./web
@@ -50,3 +54,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  backups_data:

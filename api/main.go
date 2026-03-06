@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -278,6 +279,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		if err == nil {
 			// Valid session found!
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			w.Header().Set("X-Auth-User-ID", strconv.Itoa(userID))
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -287,6 +289,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		if err == nil {
 			db.Exec("UPDATE api_token SET dernier_usage = NOW() WHERE cle_api = $1", token)
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			w.Header().Set("X-Auth-User-ID", strconv.Itoa(userID))
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -316,6 +319,7 @@ func authMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			w.Header().Set("X-Auth-User-ID", strconv.Itoa(userID))
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -329,6 +333,8 @@ func authMiddleware(next http.Handler) http.Handler {
 func main() {
 	initDB()
 	initCache()
+	initLogDB()
+	initBackupScheduler()
 
 	// Auto-generate a token if the table is empty (initial setup)
 	var count int
@@ -478,6 +484,16 @@ func main() {
 	r.Handle("/api/logs", authMiddleware(adminMiddleware(http.HandlerFunc(getLogs)))).Methods("GET")
 	r.Handle("/api/logs/stats", authMiddleware(adminMiddleware(http.HandlerFunc(getLogStats)))).Methods("GET")
 	r.Handle("/api/logs", authMiddleware(adminMiddleware(http.HandlerFunc(clearLogs)))).Methods("DELETE")
+
+	// Backups (admin only)
+	r.Handle("/api/admin/backup", authMiddleware(adminMiddleware(http.HandlerFunc(triggerBackup)))).Methods("POST")
+	r.Handle("/api/admin/backup/list", authMiddleware(adminMiddleware(http.HandlerFunc(listBackups)))).Methods("GET")
+	r.Handle("/api/admin/backup/stats", authMiddleware(adminMiddleware(http.HandlerFunc(getBackupStats)))).Methods("GET")
+	r.Handle("/api/admin/backup/schedule", authMiddleware(adminMiddleware(http.HandlerFunc(getBackupSchedule)))).Methods("GET")
+	r.Handle("/api/admin/backup/schedule", authMiddleware(adminMiddleware(http.HandlerFunc(setBackupSchedule)))).Methods("POST")
+	r.Handle("/api/admin/backup/download", authMiddleware(adminMiddleware(http.HandlerFunc(downloadBackup)))).Methods("GET")
+	r.Handle("/api/admin/backup/restore", authMiddleware(adminMiddleware(http.HandlerFunc(restoreBackup)))).Methods("POST")
+	r.Handle("/api/admin/backup", authMiddleware(adminMiddleware(http.HandlerFunc(deleteBackup)))).Methods("DELETE")
 
 	// Configuration du serveur avec timeouts de sécurité
 	port := os.Getenv("API_PORT")

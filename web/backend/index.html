@@ -208,6 +208,11 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link" href="#" data-section="backup">
+                  <i class="bi bi-shield-lock-fill"></i> Sauvegardes
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link" href="#" data-section="analytics">
                   <i class="bi bi-bar-chart-fill"></i> Analytics
                 </a>
@@ -804,14 +809,14 @@
                     <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.8rem">
                       <thead class="table-dark">
                         <tr>
-                          <th style="width:150px">Timestamp</th>
-                          <th style="width:100px">Niveau</th>
-                          <th style="width:200px">Méthode / Path</th>
-                          <th>Message</th>
+                          <th style="width:145px">Horodatage</th>
+                          <th style="width:95px">Niveau</th>
+                          <th>Méthode / Route</th>
                           <th style="width:70px">Status</th>
-                          <th style="width:110px">IP</th>
-                          <th style="width:70px">Durée</th>
-                          <th style="width:60px">UserID</th>
+                          <th>Message</th>
+                          <th style="width:110px">IP source</th>
+                          <th style="width:65px">Durée</th>
+                          <th style="width:80px">Utilisateur</th>
                         </tr>
                       </thead>
                       <tbody id="logsTableBody">
@@ -829,6 +834,146 @@
                   <i class="bi bi-inbox" style="font-size:2.5rem"></i>
                   <p class="mt-2 mb-0">Aucun log correspondant aux filtres</p>
                 </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ═══════════════════════ SAUVEGARDES ═══════════════════════ -->
+          <section id="backup-section" class="section-content d-none">
+
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-shield-lock-fill text-primary me-2"></i>Sauvegardes Restic</h1>
+                <p class="text-muted mb-0">Snapshots dédupliqués · Chiffrement AES-256 · Restauration instantanée</p>
+              </div>
+              <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button class="btn btn-outline-secondary btn-sm" onclick="AdminBackup.load()">
+                  <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </button>
+                <div class="input-group" style="width:auto">
+                  <label class="input-group-text small" for="backup-type-select"><i class="bi bi-database me-1"></i>Type</label>
+                  <select class="form-select form-select-sm" id="backup-type-select" style="min-width:130px">
+                    <option value="full" selected>Complet (full)</option>
+                    <option value="data">Données (sans logs)</option>
+                    <option value="logs">Logs uniquement</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary" id="btn-manual-backup" onclick="AdminBackup.triggerManualBackup()">
+                  <i class="bi bi-shield-check me-2"></i>Créer un snapshot
+                </button>
+              </div>
+            </div>
+
+            <!-- Alerte statut -->
+            <div id="backup-status" class="alert alert-info py-2 d-none mb-3"></div>
+
+            <!-- Stats du repository -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(99,102,241,.12);color:#6366f1"><i class="bi bi-camera-fill"></i></div>
+                  <div>
+                    <div class="stat-val" id="backup-snap-count">—</div>
+                    <div class="stat-lbl">Snapshots</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(20,184,166,.12);color:#0d9488"><i class="bi bi-hdd-fill"></i></div>
+                  <div>
+                    <div class="stat-val" id="backup-repo-size">—</div>
+                    <div class="stat-lbl">Taille repo (dédupliqué)</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="stat-card">
+                  <div class="stat-icon" style="background:rgba(245,158,11,.12);color:#d97706"><i class="bi bi-file-text"></i></div>
+                  <div>
+                    <div class="stat-val" id="backup-file-count">—</div>
+                    <div class="stat-lbl">Fichiers uniques</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Planification automatique -->
+            <div class="card mb-4">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Planification automatique</h6>
+                <span id="schedule-enabled-badge" class="badge bg-secondary">⛔ Désactivé</span>
+              </div>
+              <div class="card-body">
+                <div class="row g-3 align-items-end">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Intervalle (heures)</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" id="schedule-interval"
+                        min="0" max="720" step="1" placeholder="ex: 24" />
+                      <span class="input-group-text">h</span>
+                    </div>
+                    <div class="form-text">0 pour désactiver • max 720h • rétention : 10 derniers snapshots auto</div>
+                  </div>
+                  <div class="col-md-auto">
+                    <button class="btn btn-success" onclick="AdminBackup.saveSchedule()">
+                      <i class="bi bi-check-lg me-1"></i>Enregistrer
+                    </button>
+                    <button class="btn btn-outline-danger ms-2" onclick="AdminBackup.disableSchedule()">
+                      <i class="bi bi-x-lg me-1"></i>Désactiver
+                    </button>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="row g-2">
+                      <div class="col-4">
+                        <div class="text-muted small">Dernier snapshot</div>
+                        <div id="schedule-last-run" class="fw-semibold small">—</div>
+                      </div>
+                      <div class="col-4">
+                        <div class="text-muted small">Prochain snapshot</div>
+                        <div id="schedule-next-run" class="fw-semibold small">—</div>
+                      </div>
+                      <div class="col-4">
+                        <div class="text-muted small">Dernier ID</div>
+                        <div id="schedule-last-snap" class="fw-semibold small"><code>—</code></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Liste des snapshots -->
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-archive me-2"></i>Snapshots disponibles</h6>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Hôte</th>
+                        <th class="text-end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="backup-files-tbody">
+                      <tr>
+                        <td colspan="5" class="text-center text-muted fst-italic py-4">Aucun snapshot — créez votre premier backup</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card-footer text-muted small">
+                <i class="bi bi-shield-lock me-1 text-success"></i>
+                Chiffrement AES-256 · Déduplication automatique ·
+                <strong>Restaurer :</strong> cliquez <i class="bi bi-arrow-counterclockwise"></i> sur le snapshot voulu ·
+                <strong>Export SQL :</strong> <i class="bi bi-download"></i> pour télécharger le dump brut
               </div>
             </div>
 
@@ -1552,5 +1697,6 @@
     <script src="js/modules/quotes.js"></script>
     <script src="js/modules/discounts.js"></script>
     <script src="js/modules/logs.js"></script>
+    <script src="js/modules/backup.js"></script>
   </body>
 </html>

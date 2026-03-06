@@ -11,7 +11,7 @@ RUN go build -o api .
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates postgresql-client restic
 
 WORKDIR /root/
 
