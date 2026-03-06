@@ -186,6 +186,19 @@ body {
   flex-wrap: wrap;
 }
 
+.footer {
+  background: #111;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.footer a {
+  color: white;
+  margin: 0 10px;
+  text-decoration: none;
+}
+
 /* Solutions Section */
 .solutions {
   padding: 80px 40px;
