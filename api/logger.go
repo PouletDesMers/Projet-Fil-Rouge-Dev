@@ -16,10 +16,10 @@ import (
 type LogLevel string
 
 const (
-	LogLevelDEBUG   LogLevel = "DEBUG"
-	LogLevelINFO    LogLevel = "INFO"
-	LogLevelWARN    LogLevel = "WARN"
-	LogLevelERROR   LogLevel = "ERROR"
+	LogLevelDEBUG    LogLevel = "DEBUG"
+	LogLevelINFO     LogLevel = "INFO"
+	LogLevelWARN     LogLevel = "WARN"
+	LogLevelERROR    LogLevel = "ERROR"
 	LogLevelSECURITY LogLevel = "SECURITY"
 
 	// Taille maximale du buffer de logs en mémoire
