@@ -59,25 +59,37 @@ Routes → Handlers → Services → Repositories → PostgreSQL
 ## Prérequis
 
 - [Docker](https://docs.docker.com/get-docker/) et [Docker Compose](https://docs.docker.com/compose/)
-- Go 1.21+ (développement local API uniquement)
-- Node.js 20+ (développement local web uniquement)
+
+> Tout le projet se lance via Docker. Go et Node.js **n'ont pas besoin d'être installés** sur la machine hôte.
 
 ---
 
-## Lancement avec Docker
+## Lancement
+
+### 1. Cloner le projet
 
 ```bash
-# Cloner le projet
 git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
 cd Projet-Fil-Rouge-Dev
+```
 
-# Créer le fichier d'environnement
-cp .env.example .env
-# Renseigner STRIPE_SECRET_KEY et STRIPE_PUBLISHABLE_KEY dans .env
+### 2. Configurer les variables d'environnement
 
-# Démarrer tous les services
+Créez un fichier `.env` à la racine :
+
+```env
+# Stripe (requis pour les paiements)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+### 3. Démarrer tous les services
+
+```bash
 docker-compose up --build
 ```
+
+Les trois conteneurs démarrent dans l'ordre : **db** → **api** → **web**. La base de données est prête avant l'API grâce au healthcheck PostgreSQL.
 
 | Service | URL |
 |---|---|
@@ -86,40 +98,26 @@ docker-compose up --build
 | Swagger / API Docs | http://localhost:8080/swagger |
 | PostgreSQL | localhost:5432 |
 
----
-
-## Variables d'environnement
-
-Créez un fichier `.env` à la racine avec les variables suivantes :
-
-```env
-# Stripe (requis pour les paiements)
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-
-# Optionnel — générés automatiquement par docker-compose si absents
-API_SECRET=
-RESTIC_PASSWORD=
-```
-
----
-
-## Développement local
-
-### API Go
+### Commandes utiles
 
 ```bash
-cd api
-go mod download
-go run main.go
-```
+# Démarrer en arrière-plan
+docker-compose up -d --build
 
-### Serveur web Node.js
+# Voir les logs en temps réel
+docker-compose logs -f
 
-```bash
-cd web
-npm install
-npm start
+# Logs d'un seul service
+docker-compose logs -f api
+
+# Arrêter et supprimer les conteneurs
+docker-compose down
+
+# Arrêter et supprimer les volumes (repart de zéro)
+docker-compose down -v
+
+# Rebuild un seul service
+docker-compose up -d --build api
 ```
 
 ---
