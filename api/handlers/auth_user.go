@@ -18,6 +18,7 @@ import (
 	"api/config"
 	"api/models"
 	mw "api/middleware"
+	"api/cache"
 )
 
 // ===== HELPERS INTERNES =====
@@ -316,6 +317,14 @@ func RemoveWebAuthn(w http.ResponseWriter, r *http.Request) {
 // ===== UTILISATEURS =====
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Cache hit
+	if cached := cache.AdminCache.Get(cache.KeyAdminUsers); cached != nil {
+		w.Write(cached)
+		return
+	}
+
 	rows, err := config.DB.Query(
 		`SELECT id_utilisateur, email,
 		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
@@ -345,6 +354,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
+	// Mise en cache + réponse
+	cache.SetJSON(cache.AdminCache, cache.KeyAdminUsers, users)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
@@ -431,6 +442,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	u.MotDePasse = ""
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	cache.InvalidateAdminUsers()
 	json.NewEncoder(w).Encode(u)
 }
 
@@ -503,6 +515,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cur.MotDePasse = ""
+	cache.InvalidateAdminUsers()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cur)
 }
@@ -536,6 +549,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
 	}
+	cache.InvalidateAdminUsers()
 	w.WriteHeader(http.StatusNoContent)
 }
 

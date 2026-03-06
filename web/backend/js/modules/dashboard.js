@@ -12,24 +12,30 @@ const AdminDashboard = {
     const el = document.getElementById('dash-date');
     if (el) el.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+    // Fetch users une seule fois, partagé entre loadStats et loadRecentUsers
+    let usersData = null;
+    try {
+      const res = await fetch('/admin/api/users', { credentials: 'include' });
+      if (res.ok) usersData = await res.json();
+    } catch (e) { /* on continue sans users */ }
+
     await Promise.all([
-      this.loadStats(),
-      this.loadRecentUsers(),
+      this.loadStats(usersData),
+      this.loadRecentUsers(usersData),
       this.loadRecentProducts(),
       this.loadSystemStats(),
     ]);
     this.renderRevenueChart();
   },
 
-  async loadStats() {
+  async loadStats(usersData) {
     try {
-      const [usersRes, categoriesRes, ordersRes] = await Promise.all([
-        fetch('/admin/api/users', { credentials: 'include' }),
+      const [categoriesRes, ordersRes] = await Promise.all([
         fetch('/admin/api/categories', { credentials: 'include' }),
         fetch('/admin/api/orders', { credentials: 'include' }).catch(() => null),
       ]);
 
-      const users      = usersRes.ok ? await usersRes.json() : [];
+      const users      = Array.isArray(usersData) ? usersData : [];
       const categories = categoriesRes.ok ? await categoriesRes.json() : [];
       const orders     = (ordersRes && ordersRes.ok) ? await ordersRes.json() : [];
 
@@ -92,12 +98,10 @@ const AdminDashboard = {
     }
   },
 
-  async loadRecentUsers() {
+  async loadRecentUsers(usersData) {
     try {
-      const res = await fetch('/admin/api/users', { credentials: 'include' });
-      if (!res.ok) return;
-      const users = await res.json();
-      const recent = Array.isArray(users)
+      const users = Array.isArray(usersData) ? usersData : [];
+      const recent = users.length > 0
         ? [...users].sort((a, b) => new Date(b.date_creation || b.createdAt || 0) - new Date(a.date_creation || a.createdAt || 0)).slice(0, 6)
         : [];
       const tbody = document.getElementById('dash-recent-users');
