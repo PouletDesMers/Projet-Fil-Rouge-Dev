@@ -3,14 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 
 	"api/config"
-	"api/models"
 	"api/rbac"
 )
 

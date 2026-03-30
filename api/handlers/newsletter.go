@@ -107,10 +107,10 @@ func GetNewsletterSubscribers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		subscribers = append(subscribers, map[string]interface{}{
-			"id":              id,
-			"email":           email,
-			"isSubscribed":    isSubscribed,
-			"subscribedAt":    subscribedAt.Time,
+			"id":           id,
+			"email":        email,
+			"isSubscribed": isSubscribed,
+			"subscribedAt": subscribedAt.Time,
 		})
 	}
 
