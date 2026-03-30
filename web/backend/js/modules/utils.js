@@ -3,6 +3,23 @@
  * Common utility functions used across the admin panel
  */
 
+// Force all fetch calls to envoyer les cookies (session httpOnly) et éviter "Bearer null"
+(function patchFetchForAuth() {
+  const originalFetch = window.fetch;
+  window.fetch = (url, options = {}) => {
+    const opts = { credentials: 'include', ...options };
+    opts.headers = { ...(options.headers || {}) };
+    const token = AdminAuth?.getAuthToken?.();
+    if (token && !opts.headers['Authorization']) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (opts.headers['Authorization'] === 'Bearer null') {
+      delete opts.headers['Authorization'];
+    }
+    return originalFetch(url, opts);
+  };
+})();
+
 // Show toast notification
 function showToast(message, type = 'info') {
   // Create toast container if it doesn't exist
