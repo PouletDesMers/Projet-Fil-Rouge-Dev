@@ -48,16 +48,12 @@ export const api = {
   delete: <T>(path: string)                  => request<T>('DELETE', path),
 };
 
-// ── Types réponses API ──────────────────────────────────────────────────────
+// ── Types frontend (ce qu'utilisent les composants) ───────────────────────────
 
 export interface LoginResponse {
   token: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  };
+  user_id: number;
+  requires_2fa?: boolean;
 }
 
 export interface CarouselImage {
@@ -96,12 +92,13 @@ export interface SearchResult {
 }
 
 export interface UserProfile {
-  id: string;
+  id_utilisateur: number;
   email: string;
   firstName: string;
   lastName: string;
   phone?: string;
-  address?: string;
+  role?: string;
+  totp_enabled?: boolean;
 }
 
 export interface Order {
@@ -126,4 +123,54 @@ export interface Invoice {
   total: number;
   orderId: string;
   pdfUrl?: string;
+}
+
+// ── Normalizers backend → frontend ───────────────────────────────────────────
+// Le backend renvoie du snake_case; les composants utilisent du camelCase.
+
+export function normalizeCarouselImage(raw: Record<string, unknown>): CarouselImage {
+  return {
+    id:       String(raw.id_image ?? raw.id ?? ''),
+    url:      (raw.url_image ?? raw.url ?? '') as string,
+    title:    (raw.titre ?? raw.title) as string | undefined,
+    subtitle: (raw.description ?? raw.subtitle) as string | undefined,
+    ordre:    (raw.ordre_affichage ?? raw.ordre ?? 0) as number,
+    // link non présent dans le modèle backend
+  };
+}
+
+export function normalizeCategory(raw: Record<string, unknown>): Category {
+  return {
+    id:          String(raw.id_categorie ?? raw.id ?? ''),
+    nom:         (raw.nom ?? '') as string,
+    slug:        (raw.slug ?? '') as string,
+    description: (raw.description ?? '') as string | undefined,
+    image:       (raw.icone ?? raw.image) as string | undefined,
+  };
+}
+
+export function normalizeProduct(raw: Record<string, unknown>): Product {
+  let images: string[] = [];
+  try { images = JSON.parse((raw.images as string) || '[]'); } catch {}
+  if (!Array.isArray(images)) images = [];
+
+  const prix = raw.prix as number | null;
+
+  return {
+    id:          String(raw.id_produit ?? raw.id ?? ''),
+    nom:         (raw.nom ?? '') as string,
+    slug:        (raw.slug ?? '') as string,
+    description: ((raw.description_courte || raw.description_longue || raw.description) ?? '') as string,
+    prix:        prix ?? 0,
+    image:       images[0],
+    images:      images,
+    disponible:  raw.actif === true && (raw.statut === 'actif' || raw.statut == null),
+    priorite:    (raw.ordre_affichage ?? 0) as number,
+    categorie:   (raw.categorie_slug || raw.id_categorie) ? {
+      id:          String(raw.id_categorie ?? ''),
+      nom:         (raw.categorie_nom ?? '') as string,
+      slug:        (raw.categorie_slug ?? '') as string,
+      description: '',
+    } : undefined,
+  };
 }

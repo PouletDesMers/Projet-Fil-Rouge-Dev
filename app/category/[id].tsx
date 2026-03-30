@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { api, Category, Product } from '@/services/api';
+import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,15 +28,16 @@ export default function CategoryScreen() {
 
   const loadCategory = async () => {
     try {
-      // Chargement catégories pour avoir le nom
-      const cats = await api.get<Category[]>('/api/public/categories');
-      const cat = (cats || []).find((c) => c.id === id);
+      const catsRaw = await api.get<Record<string, unknown>[]>('/api/public/categories');
+      const cats = (catsRaw || []).map(normalizeCategory);
+      const cat = cats.find((c) => c.id === id);
       setCategory(cat ?? null);
 
       if (cat?.slug) {
-        const data = await api.get<Product[]>(`/api/public/products/${cat.slug}`);
-        // Tri par priorité décroissante
-        const sorted = (data || []).sort((a, b) => (b.priorite ?? 0) - (a.priorite ?? 0));
+        const data = await api.get<Record<string, unknown>[]>(`/api/public/products/${cat.slug}`);
+        const sorted = (data || [])
+          .map(normalizeProduct)
+          .sort((a, b) => (b.priorite ?? 0) - (a.priorite ?? 0));
         setProducts(sorted);
       }
     } catch {

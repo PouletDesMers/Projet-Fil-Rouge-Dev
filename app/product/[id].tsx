@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Duration, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
-import { api, Product } from '@/services/api';
+import { api, normalizeProduct, Product } from '@/services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -37,10 +37,14 @@ export default function ProductScreen() {
 
   const loadProduct = async () => {
     try {
-      const data = await api.get<Product>(`/api/produits/${id}`);
-      setProduct(data);
-      if (data.categorie?.slug) {
-        loadSimilar(data.categorie.slug, data.id);
+      // Pas de GET /api/produits/{id} → on charge la liste complète et on filtre
+      const all = await api.get<Record<string, unknown>[]>('/api/produits');
+      const found = (all || []).find(p => String(p.id_produit) === id);
+      if (!found) throw new Error('not_found');
+      const normalized = normalizeProduct(found);
+      setProduct(normalized);
+      if (normalized.categorie?.slug) {
+        loadSimilar(normalized.categorie.slug, normalized.id);
       }
     } catch {
       Alert.alert('Erreur', 'Impossible de charger ce produit');
@@ -51,8 +55,12 @@ export default function ProductScreen() {
 
   const loadSimilar = async (categorySlug: string, currentId: string) => {
     try {
-      const data = await api.get<Product[]>(`/api/public/products/${categorySlug}`);
-      setSimilarProducts((data || []).filter(p => p.id !== currentId).slice(0, 6));
+      const data = await api.get<Record<string, unknown>[]>(`/api/public/products/${categorySlug}`);
+      const similar = (data || [])
+        .map(normalizeProduct)
+        .filter(p => p.id !== currentId)
+        .slice(0, 6);
+      setSimilarProducts(similar);
     } catch {
       // similaires non bloquants
     }

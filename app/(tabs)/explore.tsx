@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { api, Category, Product } from '@/services/api';
+import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 interface SearchParams {
   q?: string;
@@ -46,8 +46,8 @@ export default function CatalogueScreen() {
 
   const loadCategories = async () => {
     try {
-      const data = await api.get<Category[]>('/api/public/categories');
-      setCategories(data || []);
+      const data = await api.get<Record<string, unknown>[]>('/api/public/categories');
+      setCategories((data || []).map(normalizeCategory));
     } catch {
       // ignore
     } finally {
@@ -58,18 +58,33 @@ export default function CatalogueScreen() {
   const doSearch = useCallback(async () => {
     setLoading(true);
     try {
-      const qp = new URLSearchParams();
-      if (search.trim())  qp.append('q', search.trim());
-      if (selectedCat)    qp.append('category', selectedCat);
-      if (minPrice)       qp.append('minPrice', minPrice);
-      if (maxPrice)       qp.append('maxPrice', maxPrice);
-      if (onlyAvailable)  qp.append('available', 'true');
+      let raw: Record<string, unknown>[] = [];
 
-      const query = qp.toString();
-      const data = await api.get<{ produits: Product[]; total: number }>(
-        `/api/public/search${query ? '?' + query : ''}`
-      );
-      setProducts(data?.produits || []);
+      if (search.trim()) {
+        // Recherche textuelle via endpoint public
+        const qp = new URLSearchParams({ q: search.trim() });
+        if (minPrice)      qp.append('minPrice', minPrice);
+        if (maxPrice)      qp.append('maxPrice', maxPrice);
+        raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
+      } else {
+        // Pas de terme de recherche : utiliser l'endpoint auth (liste complète)
+        const url = selectedCat
+          ? `/api/produits?category=${encodeURIComponent(selectedCat)}`
+          : '/api/produits';
+        raw = await api.get<Record<string, unknown>[]>(url);
+      }
+
+      let products = (raw || []).map(normalizeProduct);
+
+      if (onlyAvailable) products = products.filter(p => p.disponible);
+      if (minPrice)      products = products.filter(p => p.prix >= Number(minPrice));
+      if (maxPrice)      products = products.filter(p => p.prix <= Number(maxPrice));
+      // Pour la recherche textuelle, filtrer par catégorie côté client
+      if (search.trim() && selectedCat) {
+        products = products.filter(p => p.categorie?.slug === selectedCat);
+      }
+
+      setProducts(products);
     } catch {
       setProducts([]);
     } finally {
@@ -168,17 +183,17 @@ export default function CatalogueScreen() {
       {/* Filtres catégories */}
       <View style={styles.catsWrapper}>
         <FlatList
-          data={[{ id: '', nom: 'Tous' } as Category, ...categories]}
-          keyExtractor={(c) => c.id}
+          data={[{ id: '', nom: 'Tous', slug: '' } as Category, ...categories]}
+          keyExtractor={(c) => c.id || 'all'}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.catsList}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[styles.catChip, selectedCat === (item.id || null) && styles.catChipActive]}
-              onPress={() => setSelectedCat(item.id || null)}
+              style={[styles.catChip, selectedCat === (item.slug || null) && styles.catChipActive]}
+              onPress={() => setSelectedCat(item.slug || null)}
             >
-              <ThemedText style={[styles.catChipText, selectedCat === (item.id || null) && styles.catChipTextActive]}>
+              <ThemedText style={[styles.catChipText, selectedCat === (item.slug || null) && styles.catChipTextActive]}>
                 {item.nom}
               </ThemedText>
             </TouchableOpacity>

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { api, CarouselImage, Category, Product, SearchResult } from '@/services/api';
+import { api, CarouselImage, Category, normalizeCarouselImage, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -35,14 +35,16 @@ export default function HomeScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [carouselData, categoriesData, searchData] = await Promise.all([
-        api.get<CarouselImage[]>('/api/public/carousel-images'),
-        api.get<Category[]>('/api/public/categories'),
-        api.get<SearchResult>('/api/public/search?available=true'),
+      const [carouselRaw, categoriesRaw, produitsRaw] = await Promise.all([
+        api.get<Record<string, unknown>[]>('/api/public/carousel-images'),
+        api.get<Record<string, unknown>[]>('/api/public/categories'),
+        api.get<Record<string, unknown>[]>('/api/produits'),
       ]);
-      setCarousel(carouselData || []);
-      setCategories(categoriesData || []);
-      const sorted = (searchData?.produits || [])
+      setCarousel((carouselRaw || []).map(normalizeCarouselImage));
+      setCategories((categoriesRaw || []).map(normalizeCategory));
+      const sorted = (produitsRaw || [])
+        .map(normalizeProduct)
+        .filter(p => p.disponible)
         .sort((a, b) => (b.priorite ?? 0) - (a.priorite ?? 0))
         .slice(0, 8);
       setTopProducts(sorted);

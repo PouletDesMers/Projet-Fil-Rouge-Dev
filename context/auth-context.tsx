@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
 
-import { api, LoginResponse, setAuthToken } from '@/services/api';
+import { api, LoginResponse, setAuthToken, UserProfile } from '@/services/api';
 
 export interface User {
   id: string;
@@ -36,10 +36,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const data = await api.post<LoginResponse>('/api/login', { email, password });
+
+      if (data.requires_2fa) {
+        throw new Error('2FA_REQUIRED');
+      }
+
+      // Stocker le token avant de fetch le profil (qui nécessite l'auth)
       setAuthToken(data.token);
       setToken(data.token);
-      setUser(data.user);
+
+      // Récupérer le profil complet
+      const profile = await api.get<UserProfile>('/api/user/profile');
+      setUser({
+        id:        String(profile.id_utilisateur),
+        email:     profile.email,
+        firstName: profile.firstName,
+        lastName:  profile.lastName,
+      });
       setIsAuthenticated(true);
+    } catch (err) {
+      // En cas d'erreur, on nettoie le token
+      setAuthToken(null);
+      setToken(null);
+      throw err;
     } finally {
       setIsLoading(false);
     }

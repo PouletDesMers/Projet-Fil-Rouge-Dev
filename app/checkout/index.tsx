@@ -76,26 +76,22 @@ export default function CheckoutScreen() {
     if (!validatePayment()) return;
     setSubmitting(true);
     try {
+      // Payload aligné sur le modèle backend Commande
+      // { totalAmount, status, promoCode? }
       const orderPayload = {
-        total,
-        address: { fullName, street, city, zip, country },
-        items: availableItems.map((i) => ({
-          productId:   i.productId,
-          productName: i.name,
-          quantity:    i.quantity,
-          price:       i.price * DURATION_DISCOUNT[i.duration],
-          duration:    i.duration,
-        })),
+        totalAmount: Math.round(total * 1.2 * 100) / 100, // TTC
+        status:      'pending',
       };
-      const created = await api.post<{ id: string }>('/api/commandes', orderPayload);
+      const created = await api.post<{ id: number }>('/api/commandes', orderPayload);
       if (created?.id) {
+        // Payload aligné sur le modèle backend Paiement
+        // { orderId, method, status, externalReference? }
         await api.post('/api/paiements', {
-          commandeId: created.id,
-          amount:     total,
-          method:     'card',
-          status:     'paid',
+          orderId: created.id,
+          method:  'card',
+          status:  'paid',
         });
-        setOrderId(created.id);
+        setOrderId(String(created.id));
       }
       clearCart();
       setStep('confirm');
