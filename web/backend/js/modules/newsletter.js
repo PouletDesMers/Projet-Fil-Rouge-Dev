@@ -1,8 +1,12 @@
 // Newsletter Management
 
+function buildAuthHeaders() {
+  const token = AdminAuth?.getAuthToken?.();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function loadNewsletterSubscribers() {
   try {
-    const token = localStorage.getItem('token');
     const container = document.getElementById('newsletterContainer');
 
     if (!container) return;
@@ -10,9 +14,8 @@ async function loadNewsletterSubscribers() {
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
     const response = await fetch('/admin/api/newsletter/subscribers', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildAuthHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -62,7 +65,6 @@ async function loadNewsletterSubscribers() {
 
 async function loadNewsletterCampaigns() {
   try {
-    const token = localStorage.getItem('token');
     const container = document.getElementById('campaignsContainer');
 
     if (!container) return;
@@ -70,9 +72,8 @@ async function loadNewsletterCampaigns() {
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
     const response = await fetch('/admin/api/newsletter/campaigns', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildAuthHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -157,13 +158,13 @@ async function createNewsletter() {
   if (!contentText) return;
 
   try {
-    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/newsletter/campaigns', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        ...buildAuthHeaders()
       },
+      credentials: 'include',
       body: JSON.stringify({
         title,
         content: contentText
@@ -173,7 +174,7 @@ async function createNewsletter() {
     if (!response.ok) throw new Error('Erreur');
 
     showToast('Campagne créée', 'success');
-    loadNewslettterCampaigns();
+    loadNewsletterCampaigns();
   } catch (error) {
     showToast(`Erreur: ${error.message}`, 'danger');
   }
@@ -183,19 +184,17 @@ async function sendNewsletter(campaignId) {
   if (!confirm('Envoyer cette campagne à tous les abonnés?')) return;
 
   try {
-    const token = localStorage.getItem('token');
     const response = await fetch(`/admin/api/newsletter/campaigns/${campaignId}/send`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildAuthHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Erreur');
 
     const data = await response.json();
     showToast(`Campagne envoyée à ${data.sentCount} abonnés`, 'success');
-    loadNewslettterCampaigns();
+    loadNewsletterCampaigns();
   } catch (error) {
     showToast(`Erreur: ${error.message}`, 'danger');
   }
@@ -203,8 +202,14 @@ async function sendNewsletter(campaignId) {
 
 const AdminNewsletter = {
   loadSubscribers: loadNewsletterSubscribers,
-  loadCampaigns: loadNewslettterCampaigns,
+  loadCampaigns: loadNewsletterCampaigns,
+  // Alias pour compatibilité avec un ancien appel mal orthographié
+  loadNewslettterCampaigns: loadNewsletterCampaigns,
   unsubscribeUser,
   createCampaign: createNewsletter,
   sendCampaign: sendNewsletter
 };
+
+window.AdminNewsletter = AdminNewsletter;
+// Alias global supplémentaire pour les appels éventuels externes
+window.loadNewslettterCampaigns = loadNewsletterCampaigns;

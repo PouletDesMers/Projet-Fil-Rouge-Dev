@@ -6,6 +6,7 @@
 // Global variables
 let currentCategoryId = null;
 let currentCategoryName = '';
+const SECTION_STORAGE_KEY = 'admin-active-section';
 
 // Initialize admin panel
 async function initializeAdmin() {
@@ -16,11 +17,12 @@ async function initializeAdmin() {
   const el = document.getElementById('dash-date');
   if (el) el.textContent = 'Mis à jour le ' + new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-  // Load dashboard by default
-  AdminDashboard.load();
-
   // Setup event listeners
   setupEventListeners();
+
+  // Restore last visited section or default to dashboard
+  const savedSection = localStorage.getItem(SECTION_STORAGE_KEY) || 'dashboard';
+  navigateToSection(savedSection);
 }
 
 // Setup all event listeners
@@ -34,61 +36,8 @@ function setupEventListeners() {
   document.querySelectorAll('[data-section]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      const sectionId = link.getAttribute('data-section') + '-section';
-      
-      // Hide all sections
-      document.querySelectorAll('.section-content').forEach(section => {
-        section.classList.add('d-none');
-      });
-
-      // Stopper l'auto-refresh des logs si on quitte la section
-      if (typeof AdminLogs !== 'undefined') AdminLogs.destroy();
-
-      // Remove active class from all links
-      document.querySelectorAll('.nav-link').forEach(navLink => {
-        navLink.classList.remove('active');
-      });
-      
-      // Show selected section
-      const targetSection = document.getElementById(sectionId);
-      if (targetSection) {
-        targetSection.classList.remove('d-none');
-      }
-      
-      // Add active class to clicked link
-      link.classList.add('active');
-      
-      // Load section-specific data
-      if (sectionId === 'dashboard-section') {
-        AdminDashboard.load();
-      } else if (sectionId === 'users-section') {
-        AdminUsers.loadUsers();
-      } else if (sectionId === 'images-section') {
-        AdminImages.loadImages();
-      } else if (sectionId === 'categories-section') {
-        AdminCategories.loadCategories();
-        AdminCategories.loadCategoriesForProducts();
-      } else if (sectionId === 'api-docs-section') {
-        initSwaggerUI();
-      } else if (sectionId === 'api-keys-section') {
-        AdminAPIKeys.loadAPIKeys();
-      } else if (sectionId === 'orders-section') {
-        AdminOrders.loadOrders();
-      } else if (sectionId === 'quotes-section') {
-        AdminQuotes.loadQuotes();
-      } else if (sectionId === 'discounts-section') {
-        AdminDiscounts.loadDiscounts();
-      } else if (sectionId === 'logs-section') {
-        AdminLogs.init();
-      } else if (sectionId === 'backup-section') {
-        AdminBackup.load();
-      } else if (sectionId === 'newsletter-section') {
-        AdminNewsletter.loadSubscribers();
-        AdminNewsletter.loadCampaigns();
-      } else if (sectionId === 'roles-section') {
-        AdminRoles.loadRoles();
-        AdminRoles.loadPermissions();
-      }
+      const target = link.getAttribute('data-section');
+      navigateToSection(target);
     });
   });
 
@@ -130,18 +79,96 @@ function setupEventListeners() {
 
   // Newsletter section handlers
   document.getElementById('createNewsletterBtn')?.addEventListener('click', () => {
-    AdminNewsletter.createCampaign();
+    window.AdminNewsletter?.createCampaign();
   });
 
   // Roles section handlers
   document.getElementById('createRoleBtn')?.addEventListener('click', () => {
-    AdminRoles.createRole();
+    window.AdminRoles?.createRole();
   });
 
   // Handle logout
   document.getElementById('logoutAdminBtn')?.addEventListener('click', () => {
     AdminAuth.handleLogout();
   });
+}
+
+function navigateToSection(sectionBase) {
+  const sectionId = `${sectionBase}-section`;
+  const targetSection = document.getElementById(sectionId);
+  const fallbackSection = document.getElementById('dashboard-section');
+
+  // Hide all sections
+  document.querySelectorAll('.section-content').forEach(section => {
+    section.classList.add('d-none');
+  });
+
+  // Stopper l'auto-refresh des logs si on quitte la section
+  if (typeof AdminLogs !== 'undefined') AdminLogs.destroy();
+
+  // Remove active class from all links
+  document.querySelectorAll('.nav-link').forEach(navLink => {
+    navLink.classList.remove('active');
+  });
+
+  // Show selected section or fallback
+  if (targetSection) {
+    targetSection.classList.remove('d-none');
+  } else if (fallbackSection) {
+    fallbackSection.classList.remove('d-none');
+  }
+
+  // Add active class to matching links
+  document.querySelectorAll(`[data-section="${sectionBase}"]`).forEach(navLink => {
+    navLink.classList.add('active');
+  });
+
+  // Load section-specific data
+  if (sectionId === 'dashboard-section') {
+    AdminDashboard.load();
+  } else if (sectionId === 'users-section') {
+    AdminUsers.loadUsers();
+  } else if (sectionId === 'images-section') {
+    AdminImages.loadImages();
+  } else if (sectionId === 'categories-section') {
+    AdminCategories.loadCategories();
+    AdminCategories.loadCategoriesForProducts();
+  } else if (sectionId === 'api-docs-section') {
+    initSwaggerUI();
+  } else if (sectionId === 'api-keys-section') {
+    AdminAPIKeys.loadAPIKeys();
+  } else if (sectionId === 'orders-section') {
+    AdminOrders.loadOrders();
+  } else if (sectionId === 'quotes-section') {
+    AdminQuotes.loadQuotes();
+  } else if (sectionId === 'discounts-section') {
+    AdminDiscounts.loadDiscounts();
+  } else if (sectionId === 'logs-section') {
+    AdminLogs.init();
+  } else if (sectionId === 'backup-section') {
+    AdminBackup.load();
+  } else if (sectionId === 'newsletter-section') {
+    const newsletter = window.AdminNewsletter;
+    if (newsletter) {
+      newsletter.loadSubscribers();
+      newsletter.loadCampaigns();
+    } else {
+      console.error('Module newsletter indisponible');
+    }
+  } else if (sectionId === 'roles-section') {
+    const roles = window.AdminRoles;
+    if (roles) {
+      roles.loadRoles();
+      roles.loadPermissions();
+    } else {
+      console.error('Module rôles indisponible');
+    }
+  }
+
+  // Persist selection
+  if (sectionBase) {
+    localStorage.setItem(SECTION_STORAGE_KEY, sectionBase);
+  }
 }
 
 // Navigation functions

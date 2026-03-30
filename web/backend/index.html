@@ -1319,107 +1319,6 @@
         </main>
     </div>
 
-    <!-- Edit User Modal -->
-    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="editUserModalLabel">Éditer l'utilisateur</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form id="editUserForm">
-              <input type="hidden" id="editUserId">
-              
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="editUserEmail" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="editUserEmail" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="editUserRole" class="form-label">Rôle</label>
-                  <select class="form-select" id="editUserRole" required>
-                    <option value="client">Client</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="editUserFirstName" class="form-label">Prénom</label>
-                  <input type="text" class="form-control" id="editUserFirstName">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="editUserLastName" class="form-label">Nom</label>
-                  <input type="text" class="form-control" id="editUserLastName">
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="editUserPhone" class="form-label">Téléphone</label>
-                  <input type="tel" class="form-control" id="editUserPhone">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="editUserStatus" class="form-label">Statut</label>
-                  <select class="form-select" id="editUserStatus">
-                    <option value="actif">Actif</option>
-                    <option value="inactif">Inactif</option>
-                    <option value="suspendu">Suspendu</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="editUserActive">
-                  <label class="form-check-label" for="editUserActive">
-                    Compte actif
-                  </label>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Authentification 2FA</label>
-                <div class="d-flex gap-2 align-items-center">
-                  <span id="edit2FAStatus" class="badge bg-secondary">Désactivé</span>
-                  <button type="button" class="btn btn-sm btn-outline-danger" id="remove2FABtn" style="display: none;">
-                    <i class="bi bi-trash"></i> Réinitialiser 2FA
-                  </button>
-                </div>
-              </div>
-
-              <hr>
-
-              <div class="mb-3">
-                <label class="form-label">Actions rapides</label>
-                <div class="d-flex gap-2 flex-wrap">
-                  <button type="button" class="btn btn-outline-warning btn-sm" id="resetPasswordBtn">
-                    <i class="bi bi-key"></i> Réinitialiser mot de passe
-                  </button>
-                  <button type="button" class="btn btn-outline-info btn-sm" id="sendWelcomeEmailBtn">
-                    <i class="bi bi-envelope"></i> Envoyer email de bienvenue
-                  </button>
-                  <button type="button" class="btn btn-outline-danger btn-sm" id="deleteUserBtn">
-                    <i class="bi bi-trash"></i> Supprimer l'utilisateur
-                  </button>
-                </div>
-              </div>
-
-              <div id="editUserAlert" class="alert d-none" role="alert"></div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-            <button type="button" class="btn btn-primary" id="saveUserBtn">
-              <i class="bi bi-check-lg"></i> Enregistrer
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- View User Details Modal -->
     <div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg">
@@ -1438,6 +1337,45 @@
             <button type="button" class="btn btn-primary" id="editFromViewBtn">
               <i class="bi bi-pencil"></i> Éditer
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Roles & Permissions Modal -->
+    <div class="modal fade" id="userAccessModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-people-fill"></i> Rôles & Permissions — <span id="userAccessTitle" class="fw-semibold"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <h6 class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-shield-lock"></i> Rôles</h6>
+                <div class="input-group mb-2">
+                  <select class="form-select" id="userAccessRoleSelect">
+                    <option value="">Sélectionner un rôle</option>
+                  </select>
+                  <button class="btn btn-outline-primary" id="userAccessAddRoleBtn">
+                    <i class="bi bi-plus-circle"></i> Ajouter
+                  </button>
+                </div>
+                <div id="userAccessRolesBadges" class="d-flex flex-wrap gap-2">
+                  <span class="text-muted small">Chargement...</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6 class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-key"></i> Permissions (dérivées des rôles)</h6>
+                <div id="userAccessPermissions" class="small text-muted">Chargement...</div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
           </div>
         </div>
       </div>
@@ -1798,48 +1736,77 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <form id="editUserForm" onsubmit="event.preventDefault(); console.log('Form submit prevented'); return false;">
+            <form id="editUserForm" onsubmit="event.preventDefault(); return false;">
               <input type="hidden" id="editUserId">
               
               <div class="row">
                 <div class="col-md-6">
                   <div class="mb-3">
-                    <label for="editUserFirstName" class="form-label">Prénom</label>
-                    <input type="text" class="form-control" id="editUserFirstName" placeholder="Prénom (optionnel)">
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
                     <label for="editUserLastName" class="form-label">Nom <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="editUserLastName" placeholder="Nom de famille" required>
                   </div>
-                </div>
-              </div>
-              
-              <div class="mb-3">
-                <label for="editUserEmail" class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" id="editUserEmail" placeholder="adresse@email.com" required>
-              </div>
-              
-              <div class="row">
-                <div class="col-md-6">
                   <div class="mb-3">
-                    <label for="editUserRole" class="form-label">Rôle</label>
-                    <select class="form-control" id="editUserRole">
-                      <option value="utilisateur">Utilisateur</option>
-                      <option value="admin">Administrateur</option>
-                    </select>
+                    <label for="editUserFirstName" class="form-label">Prénom</label>
+                    <input type="text" class="form-control" id="editUserFirstName" placeholder="Prénom (optionnel)">
+                  </div>
+                  <div class="mb-3">
+                    <label for="editUserEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" id="editUserEmail" placeholder="adresse@email.com" required>
+                  </div>
+                  <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="editUserStatus">
+                    <label class="form-check-label" for="editUserStatus">
+                      Utilisateur actif
+                    </label>
                   </div>
                 </div>
                 <div class="col-md-6">
-                  <div class="mb-3">
-                    <div class="form-check mt-4">
-                      <input type="checkbox" class="form-check-input" id="editUserStatus">
-                      <label class="form-check-label" for="editUserStatus">
-                        Utilisateur actif
-                      </label>
+                  <div class="border rounded p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock"></i>
+                        <span class="fw-semibold">Rôles & Permissions</span>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="AdminUsers.openUserAccessModal(document.getElementById('editUserId').value)">
+                        Gérer tout
+                      </button>
+                    </div>
+                    <div id="userRolesList" class="d-flex flex-wrap gap-2 mb-2 small text-muted">
+                      <span>Chargement des rôles...</span>
+                    </div>
+                    <div class="input-group mb-2">
+                      <select class="form-select" id="availableRolesSelect">
+                        <option value="">Sélectionner un rôle</option>
+                      </select>
+                      <button type="button" class="btn btn-outline-primary" id="addUserRoleBtn">
+                        <i class="bi bi-plus-circle"></i> Ajouter
+                      </button>
+                    </div>
+                    <div class="form-text">
+                      Ajoutez un rôle ou retirez-le avec la croix. (Système RBAC uniquement)
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div class="border-top pt-3 mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check"></i>
+                    <span class="fw-semibold">Sécurité & actions rapides</span>
+                  </div>
+                  <span id="edit2FAStatus" class="badge bg-secondary">2FA</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" class="btn btn-outline-danger btn-sm" id="remove2FABtn" style="display: none;">
+                    <i class="bi bi-shield-x"></i> Réinitialiser 2FA
+                  </button>
+                  <button type="button" class="btn btn-outline-warning btn-sm" id="resetPasswordBtn">
+                    <i class="bi bi-key"></i> Réinitialiser mot de passe
+                  </button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" id="deleteUserBtn">
+                    <i class="bi bi-trash"></i> Supprimer l'utilisateur
+                  </button>
                 </div>
               </div>
             </form>
@@ -1849,6 +1816,28 @@
             <button type="button" class="btn btn-primary" id="saveUserBtn">
               <i class="bi bi-check-circle"></i> Sauvegarder
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal permissions par rôle -->
+    <div class="modal fade" id="rolePermissionsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-shield-check"></i> Permissions du rôle <span id="rolePermissionsTitle" class="fw-semibold"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="rolePermissionsBody" class="row g-3">
+              <div class="text-muted small">Chargement des permissions...</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
           </div>
         </div>
       </div>

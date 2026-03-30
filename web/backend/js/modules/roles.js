@@ -3,9 +3,16 @@
 let currentRoleId = null;
 let currentPermissions = new Set();
 
+function buildRoleHeaders(includeJson = false) {
+  const headers = {};
+  if (includeJson) headers['Content-Type'] = 'application/json';
+  const token = AdminAuth?.getAuthToken?.();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
 async function loadRoles() {
   try {
-    const token = localStorage.getItem('token');
     const container = document.getElementById('rolesContainer');
 
     if (!container) return;
@@ -13,9 +20,8 @@ async function loadRoles() {
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
     const response = await fetch('/admin/api/roles', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildRoleHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -43,21 +49,24 @@ async function loadRoles() {
           <tbody>
             ${roles.map(role => `
               <tr>
-                <td><strong>${role.nom}</strong></td>
-                <td>${role.description || '-'}</td>
-                <td><span class="badge bg-info">${role.permission_count || 0} permissions</span></td>
-                <td>
+                 <td><strong>${role.nom}</strong></td>
+                 <td>${role.description || '-'}</td>
+                 <td><span class="badge bg-info">${role.permission_count || 0} permissions</span></td>
+                 <td>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="AdminRoles.openPermissions(${role.id_role}, '${role.nom.replace(/'/g, "\\'")}')">
+                    <i class="bi bi-shield-check"></i> Permissions
+                  </button>
                   <button class="btn btn-sm btn-outline-primary" onclick="AdminRoles.editRole(${role.id_role})">
                     <i class="bi bi-pencil"></i> Éditer
                   </button>
                   <button class="btn btn-sm btn-outline-danger" onclick="AdminRoles.deleteRole(${role.id_role})">
                     <i class="bi bi-trash"></i> Supprimer
                   </button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+                 </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
       </div>
     `;
 
@@ -70,7 +79,6 @@ async function loadRoles() {
 
 async function loadPermissions() {
   try {
-    const token = localStorage.getItem('token');
     const container = document.getElementById('permissionsContainer');
 
     if (!container) return;
@@ -78,9 +86,8 @@ async function loadPermissions() {
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
     const response = await fetch('/admin/api/permissions', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildRoleHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -147,16 +154,15 @@ function createRole() {
 
 async function saveRole(id, nom, description) {
   try {
-    const token = localStorage.getItem('token');
     const method = id ? 'PUT' : 'POST';
     const url = id ? `/admin/api/roles/${id}` : '/admin/api/roles';
 
     const response = await fetch(url, {
       method,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        ...buildRoleHeaders(true)
       },
+      credentials: 'include',
       body: JSON.stringify({ nom, description })
     });
 
@@ -182,12 +188,10 @@ async function deleteRole(roleId) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce rôle?')) return;
 
   try {
-    const token = localStorage.getItem('token');
     const response = await fetch(`/admin/api/roles/${roleId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildRoleHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Erreur');
@@ -201,13 +205,12 @@ async function deleteRole(roleId) {
 
 async function assignPermissionToRole(roleId, permissionCode) {
   try {
-    const token = localStorage.getItem('token');
     const response = await fetch(`/admin/api/roles/${roleId}/permissions`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        ...buildRoleHeaders(true)
       },
+      credentials: 'include',
       body: JSON.stringify({ code: permissionCode })
     });
 
@@ -221,12 +224,10 @@ async function assignPermissionToRole(roleId, permissionCode) {
 
 async function removePermissionFromRole(roleId, permissionCode) {
   try {
-    const token = localStorage.getItem('token');
     const response = await fetch(`/admin/api/roles/${roleId}/permissions/${permissionCode}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildRoleHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Erreur');
@@ -237,6 +238,76 @@ async function removePermissionFromRole(roleId, permissionCode) {
   }
 }
 
+async function openPermissions(roleId, roleName) {
+  currentRoleId = roleId;
+  const titleEl = document.getElementById('rolePermissionsTitle');
+  const bodyEl = document.getElementById('rolePermissionsBody');
+  if (titleEl) titleEl.textContent = roleName || '';
+  if (bodyEl) bodyEl.innerHTML = '<div class="text-muted small">Chargement des permissions...</div>';
+
+  const modalEl = document.getElementById('rolePermissionsModal');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  try {
+    const [allPermsRes, rolePermsRes] = await Promise.all([
+      fetch('/admin/api/permissions', { headers: buildRoleHeaders(), credentials: 'include' }),
+      fetch(`/admin/api/roles/${roleId}/permissions`, { headers: buildRoleHeaders(), credentials: 'include' })
+    ]);
+
+    if (!allPermsRes.ok || !rolePermsRes.ok) throw new Error('Chargement des permissions impossible');
+
+    const allPerms = await allPermsRes.json();
+    const rolePermsJson = await rolePermsRes.json();
+    const rolePerms = Array.isArray(rolePermsJson) ? rolePermsJson : [];
+    currentPermissions = new Set(rolePerms.map(p => p.code));
+
+    const grouped = {};
+    allPerms.forEach(perm => {
+      const category = perm.categorie || 'Autre';
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(perm);
+    });
+
+    const html = Object.entries(grouped).map(([cat, perms]) => `
+      <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+          <h6 class="fw-semibold mb-2">${cat}</h6>
+          ${perms.map(perm => `
+            <div class="form-check form-switch">
+              <input class="form-check-input role-perm-toggle" type="checkbox" data-code="${perm.code}" ${currentPermissions.has(perm.code) ? 'checked' : ''}>
+              <label class="form-check-label">
+                <code>${perm.code}</code> — ${perm.description || ''}
+              </label>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    if (bodyEl) bodyEl.innerHTML = html || '<div class="text-muted">Aucune permission</div>';
+    modal.show();
+  } catch (error) {
+    console.error('Erreur openPermissions:', error);
+    if (bodyEl) bodyEl.innerHTML = `<div class="text-danger">Erreur: ${error.message}</div>`;
+    modal.show();
+  }
+}
+
+function handlePermissionToggle(event) {
+  const target = event.target;
+  if (!target.classList.contains('role-perm-toggle')) return;
+  const code = target.getAttribute('data-code');
+  if (!code || !currentRoleId) return;
+
+  const toggle = target.checked ? assignPermissionToRole : removePermissionFromRole;
+  toggle(currentRoleId, code).catch(err => {
+    console.error(err);
+    target.checked = !target.checked;
+  });
+}
+
+document.addEventListener('change', handlePermissionToggle);
+
 const AdminRoles = {
   loadRoles,
   loadPermissions,
@@ -244,5 +315,8 @@ const AdminRoles = {
   editRole,
   deleteRole,
   assignPermissionToRole,
-  removePermissionFromRole
+  removePermissionFromRole,
+  openPermissions
 };
+
+window.AdminRoles = AdminRoles;

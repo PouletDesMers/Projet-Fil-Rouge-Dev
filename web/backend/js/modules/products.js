@@ -7,6 +7,14 @@
 let quillEditor = null;
 let productImagesList = [];
 
+function buildProductHeaders(includeJson = false) {
+  const headers = {};
+  if (includeJson) headers['Content-Type'] = 'application/json';
+  const token = AdminAuth?.getAuthToken?.();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
 /**
  * Initialize Quill editor once (called when modal is first shown).
  * Quill v2 requires the container to be visible in the DOM.
@@ -162,11 +170,9 @@ async function loadCategoryProducts() {
 
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/products', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: buildProductHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -386,12 +392,11 @@ function autoGenerateSlug() {
 async function setNextOrderForCategory() {
   const currentCategoryId = AdminMain.currentCategoryId();
   if (!currentCategoryId) return;
-  
+
   try {
-    
     const response = await fetch('/admin/api/products', {
-      headers: {
-      }
+      headers: buildProductHeaders(),
+      credentials: 'include'
     });
     
     if (response.ok) {
@@ -464,8 +469,9 @@ async function saveProduct() {
     const response = await fetch(url, {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...buildProductHeaders(true)
       },
+      credentials: 'include',
       body: JSON.stringify(productData)
     });
 
@@ -510,12 +516,10 @@ async function deleteProduct(productId) {
   }
 
   try {
-    
-
     const response = await fetch(`/admin/api/products/${productId}`, {
       method: 'DELETE',
-      headers: {
-      }
+      headers: buildProductHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -576,8 +580,8 @@ async function moveItemClientSide(type, itemId, direction) {
     
     // Get all items
     const response = await fetch(apiEndpoint, {
-      headers: {
-      }
+      headers: buildProductHeaders(),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -688,8 +692,8 @@ async function updateItemOrder(type, itemId, newOrder) {
     
     // Get all items to find the one we want to update
     const listResponse = await fetch(listEndpoint, {
-      headers: {
-      }
+      headers: buildProductHeaders(),
+      credentials: 'include'
     });
     
     if (!listResponse.ok) {
@@ -713,8 +717,9 @@ async function updateItemOrder(type, itemId, newOrder) {
     const updateResponse = await fetch(updateEndpoint, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        ...buildProductHeaders(true)
       },
+      credentials: 'include',
       body: JSON.stringify(updateData)
     });
     

@@ -54,6 +54,33 @@ func encodeHex(dst, src []byte) {
 	}
 }
 
+func userHasRole(userID int, roleName string) bool {
+	var exists bool
+	err := config.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1 AND LOWER(r.nom) = LOWER($2)
+		)`, userID, roleName).Scan(&exists)
+	return err == nil && exists
+}
+
+func primaryRole(userID int) string {
+	var role string
+	err := config.DB.QueryRow(`
+		SELECT LOWER(r.nom)
+		FROM user_roles ur
+		JOIN roles r ON ur.id_role = r.id_role
+		WHERE ur.id_utilisateur = $1
+		ORDER BY r.id_role
+		LIMIT 1`, userID).Scan(&role)
+	if err != nil {
+		return ""
+	}
+	return role
+}
+
 // ===== LOGIN =====
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -226,8 +253,7 @@ func Remove2FA(w http.ResponseWriter, r *http.Request) {
 	}
 	targetUserID := adminUserID
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err == nil && requestBody.UserID > 0 {
-		var adminRole string
-		if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole); err != nil || adminRole != "admin" {
+		if !userHasRole(adminUserID, "admin") {
 			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
 			return
 		}
@@ -338,10 +364,17 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := config.DB.Query(
-		`SELECT id_utilisateur, email,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        COALESCE(totp_enabled,false), COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise
-		 FROM utilisateur`)
+		`SELECT u.id_utilisateur, u.email,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur`)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -353,8 +386,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var u models.Utilisateur
 		err := rows.Scan(
-			&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut,
-			&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise,
+			&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
+			&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role,
 		)
 		if err != nil {
 			log.Printf("Error scanning user: %v", err)
@@ -380,12 +413,20 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var u models.Utilisateur
 	err = config.DB.QueryRow(
-		`SELECT id_utilisateur, email,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        COALESCE(totp_enabled,false), COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise
-		 FROM utilisateur WHERE id_utilisateur = $1`,
-		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut,
-		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+		`SELECT u.id_utilisateur, u.email,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 WHERE u.id_utilisateur = $1`,
+		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
+		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role)
 	if err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
@@ -423,7 +464,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u.Role = "client"
 	if u.Statut == "" {
 		u.Statut = "actif"
 	}
@@ -444,13 +484,21 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	u.MotDePasse = string(hashed)
 
 	err = config.DB.QueryRow(
-		"INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur",
-		u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
+		"INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_utilisateur",
+		u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Statut, u.IDEntreprise).Scan(&u.ID)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	// Assign default Client role if it exists
+	_, _ = config.DB.Exec(`
+		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
+		SELECT $1, r.id_role, NOW()
+		FROM roles r
+		WHERE LOWER(r.nom) = 'client'
+		ON CONFLICT DO NOTHING`, u.ID)
+	u.Role = primaryRole(u.ID)
 	u.MotDePasse = ""
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -470,19 +518,26 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var requestingRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole); err != nil || requestingRole != "admin" {
+	if !userHasRole(requestingUserID, "admin") {
 		jsonErr(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
 
 	var cur models.Utilisateur
 	if err := config.DB.QueryRow(
-		`SELECT id_utilisateur, email, mot_de_passe,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        id_entreprise
-		 FROM utilisateur WHERE id_utilisateur = $1`,
-		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Role, &cur.Statut, &cur.IDEntreprise); err != nil {
+		`SELECT u.id_utilisateur, u.email, u.mot_de_passe,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 WHERE u.id_utilisateur = $1`,
+		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Statut, &cur.IDEntreprise, &cur.Role); err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
 	}
@@ -505,9 +560,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if u.Telephone != "" {
 		cur.Telephone = u.Telephone
-	}
-	if u.Role != "" {
-		cur.Role = u.Role
 	}
 	if u.Statut != "" {
 		cur.Statut = u.Statut
@@ -536,8 +588,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := config.DB.Exec(
-		"UPDATE utilisateur SET email=$1, mot_de_passe=$2, nom=$3, prenom=$4, telephone=$5, role=$6, statut=$7, id_entreprise=$8 WHERE id_utilisateur=$9",
-		cur.Email, cur.MotDePasse, cur.Nom, cur.Prenom, cur.Telephone, cur.Role, cur.Statut, cur.IDEntreprise, id); err != nil {
+		"UPDATE utilisateur SET email=$1, mot_de_passe=$2, nom=$3, prenom=$4, telephone=$5, statut=$6, id_entreprise=$7 WHERE id_utilisateur=$8",
+		cur.Email, cur.MotDePasse, cur.Nom, cur.Prenom, cur.Telephone, cur.Statut, cur.IDEntreprise, id); err != nil {
 		log.Printf("Error updating user %d: %v", id, err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -559,8 +611,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var requestingRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole); err != nil || requestingRole != "admin" {
+	if !userHasRole(requestingUserID, "admin") {
 		jsonErr(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
@@ -607,8 +658,7 @@ func ResetUser2FA(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var adminRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole); err != nil || adminRole != "admin" {
+	if !userHasRole(adminUserID, "admin") {
 		http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
@@ -639,14 +689,22 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	var webauthnCounter *int64
 
 	err := config.DB.QueryRow(`
-		SELECT id_utilisateur, email,
-		       COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		       COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise,
-		       totp_secret, COALESCE(totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter
-		FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(
-		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation,
+		SELECT u.id_utilisateur, u.email,
+		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		       COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		       totp_secret, COALESCE(u.totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter,
+		       COALESCE(r.primary_role, '')
+		FROM utilisateur u
+		LEFT JOIN (
+		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		    FROM user_roles ur
+		    JOIN roles r ON ur.id_role = r.id_role
+		    GROUP BY ur.id_utilisateur
+		) r ON r.id_utilisateur = u.id_utilisateur
+		WHERE u.id_utilisateur = $1`, userID).Scan(
+		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise, &totpSecretPtr, &u.TotpEnabled,
-		&webauthnCredID, &webauthnPubKey, &webauthnCounter)
+		&webauthnCredID, &webauthnPubKey, &webauthnCounter, &u.Role)
 
 	if err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)

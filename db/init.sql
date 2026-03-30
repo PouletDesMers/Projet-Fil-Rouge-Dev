@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS utilisateur (
     nom                   VARCHAR(100),
     prenom                VARCHAR(100),
     telephone             VARCHAR(30),
-    role                  VARCHAR(30)  DEFAULT 'client',  -- client | admin | support
     statut                VARCHAR(30)  DEFAULT 'actif',   -- actif | inactif | suspendu
     date_creation         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     derniere_connexion    TIMESTAMP,
@@ -53,7 +52,10 @@ CREATE TABLE IF NOT EXISTS utilisateur (
 );
 
 CREATE INDEX IF NOT EXISTS idx_utilisateur_email  ON utilisateur(email);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_role   ON utilisateur(role);
+
+-- Supprimer l'ancienne colonne role si elle existe encore
+ALTER TABLE IF EXISTS utilisateur DROP COLUMN IF EXISTS role;
+DROP INDEX IF EXISTS idx_utilisateur_role;
 
 
 -- ============================================================
@@ -124,6 +126,8 @@ CREATE TABLE IF NOT EXISTS produits (
     slug                    VARCHAR(150) NOT NULL,
     description_courte      TEXT,
     description_longue      TEXT,
+    description_html        TEXT,
+    images                  TEXT DEFAULT '[]',
     prix                    DECIMAL(10,2),
     devise                  VARCHAR(3)   DEFAULT 'EUR',
     duree                   VARCHAR(50)  DEFAULT 'mois',
@@ -424,8 +428,8 @@ CREATE INDEX IF NOT EXISTS idx_user_role_role ON user_roles(id_role);
 
 -- Admin par défaut (mot de passe : Admin1234! — À CHANGER en production)
 -- Hash bcrypt généré pour "Admin1234!"
-INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, role, statut, email_verified, email_verified_at)
-SELECT 'admin@cyna.fr', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHuy', 'Admin', 'CYNA', 'admin', 'actif', TRUE, CURRENT_TIMESTAMP
+INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, statut, email_verified, email_verified_at)
+SELECT 'admin@cyna.fr', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHuy', 'Admin', 'CYNA', 'actif', TRUE, CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM utilisateur WHERE email = 'admin@cyna.fr');
 
 -- Token API système (généré automatiquement par l'API Go au démarrage

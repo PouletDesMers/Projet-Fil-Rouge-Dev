@@ -552,6 +552,10 @@ app.get('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.put('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.delete('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.post('/admin/api/users/:id/reset-2fa', proxyToApiWithAuth('/users/:id/reset-2fa'));
+app.get('/admin/api/users/:id/roles', proxyToApiWithAuth('/admin/users/:id/roles'));
+app.post('/admin/api/users/:id/roles', proxyToApiWithAuth('/admin/users/:id/roles'));
+app.delete('/admin/api/users/:id/roles/:roleId', proxyToApiWithAuth('/admin/users/:id/roles/:roleId'));
+app.get('/admin/api/users/:id/permissions', proxyToApiWithAuth('/admin/users/:id/permissions'));
 
 app.get('/admin/api/categories', proxyToApiWithAuth('/web-categories'));
 app.post('/admin/api/categories', proxyToApiWithAuth('/web-categories'));
@@ -587,6 +591,22 @@ app.post('/admin/api/orders', proxyToApiWithAuth('/commandes'));
 app.get('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.put('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.delete('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+
+// Roles & Permissions (admin)
+app.get('/admin/api/roles', proxyToApiWithAuth('/admin/roles'));
+app.post('/admin/api/roles', proxyToApiWithAuth('/admin/roles'));
+app.put('/admin/api/roles/:id', proxyToApiWithAuth('/admin/roles/:id'));
+app.delete('/admin/api/roles/:id', proxyToApiWithAuth('/admin/roles/:id'));
+app.get('/admin/api/permissions', proxyToApiWithAuth('/admin/permissions'));
+app.get('/admin/api/roles/:id/permissions', proxyToApiWithAuth('/admin/roles/:id/permissions'));
+app.post('/admin/api/roles/:id/permissions', proxyToApiWithAuth('/admin/roles/:id/permissions'));
+app.delete('/admin/api/roles/:id/permissions/:code', proxyToApiWithAuth('/admin/roles/:id/permissions/:code'));
+
+// Newsletter (admin)
+app.get('/admin/api/newsletter/subscribers', proxyToApiWithAuth('/admin/newsletter/subscribers'));
+app.get('/admin/api/newsletter/campaigns', proxyToApiWithAuth('/admin/newsletter/campaigns'));
+app.post('/admin/api/newsletter/campaigns', proxyToApiWithAuth('/admin/newsletter/campaigns'));
+app.post('/admin/api/newsletter/campaigns/:id/send', proxyToApiWithAuth('/admin/newsletter/campaigns/:id/send'));
 
 // GET /admin/api/quotes — Devis (commandes devis_* en DB + enrichissement Stripe)
 app.get('/admin/api/quotes', checkAdminAuth, async (req, res) => {
