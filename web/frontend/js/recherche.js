@@ -115,6 +115,18 @@
     header.textContent = '';
   }
 
+  // Afficher l'état erreur
+  function showError(message) {
+    grid.innerHTML = `
+      <div class="state-box">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+        <p class="text-danger">${escapeHtml(message)}</p>
+        <p class="hint">Vérifiez votre connexion et réessayez.</p>
+      </div>
+    `;
+    header.textContent = '';
+  }
+
   // Lancer la recherche
   async function doSearch(q) {
     if (!q.trim()) {
@@ -127,7 +139,7 @@
     try {
       const res = await fetch(`/api/public/search?q=${encodeURIComponent(q)}`);
       if (!res.ok) {
-        throw new Error(`Erreur ${res.status}`);
+        throw new Error(`Erreur serveur ${res.status}`);
       }
       const products = await res.json();
 
@@ -143,13 +155,7 @@
 
     } catch (err) {
       console.error('Erreur de recherche:', err);
-      grid.innerHTML = `
-        <div class="state-box">
-          <i class="bi bi-exclamation-circle text-danger"></i>
-          <p class="text-danger">Une erreur est survenue. Veuillez réessayer.</p>
-        </div>
-      `;
-      header.textContent = '';
+      showError('Une erreur est survenue lors de la recherche. Veuillez réessayer.');
     }
   }
 

@@ -65,41 +65,73 @@
         </div>
       </div>
 
-      <!-- CONTENU ACCUEIL (exemple) -->
-      <div class="container my-4">
-        <div class="row g-3">
-          <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-              <div class="card-body">
-                <h2 class="h5 mb-2">Bienvenue sur CYNA</h2>
-                <p class="mb-0 text-muted">
-                  Navigation: Accueil / Catégories / Produit, recherche via la
-                  barre, panier via icône.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4">
-            <div class="card shadow-sm border-0">
-              <div class="card-body">
-                <h3 class="h6">Accès rapide</h3>
-                <div class="d-grid gap-2">
-                  <a class="btn btn-outline-secondary" href="/categories.html"
-                    >Voir nos catégories</a
-                  >
-                  <a class="btn btn-outline-secondary" href="#" id="homeCartBtn"
-                    >Voir mon panier</a
-                  >
-                  <a class="btn btn-cyna" href="/auth.html"
-                    >Connexion / Inscription</a
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
+      <!-- TEXTE FIXE -->
+      <div id="fixedTextCard" class="container my-5">
+        <div class="fixed-text-wrapper">
+          <h3 id="fixedTextTitle">Message Important</h3>
+          <p id="fixedTextContent">Texte à charger depuis le back-office...</p>
         </div>
       </div>
+
+      <!-- GRILLE CATÉGORIES -->
+      <div class="container my-5">
+        <h2 class="section-title text-center mb-4">Nos Catégories</h2>
+        <div id="categoriesGrid" class="categories-grid"></div>
+      </div>
+
+      <!-- TOP PRODUITS -->
+      <div class="container my-5">
+        <h2 class="section-title text-center mb-4">Les Top Produits du Moment</h2>
+        <div id="topProductsGrid" class="products-grid"></div>
+      </div>
+
+      <!-- PIED DE PAGE -->
+      <footer class="footer mt-5 pt-5 pb-3">
+        <div class="container">
+          <div class="footer-content">
+            <div class="footer-section">
+              <h5>À Propos</h5>
+              <ul>
+                <li><a href="#">Qui sommes-nous</a></li>
+                <li><a href="#">Notre mission</a></li>
+                <li><a href="#">Nos valeurs</a></li>
+                <li><a href="#">Équipe</a></li>
+              </ul>
+            </div>
+            <div class="footer-section">
+              <h5>Produits</h5>
+              <ul>
+                <li><a href="#">SOC</a></li>
+                <li><a href="#">EDR</a></li>
+                <li><a href="#">XDR</a></li>
+                <li><a href="#">Tarification</a></li>
+              </ul>
+            </div>
+            <div class="footer-section">
+              <h5>Support</h5>
+              <ul>
+                <li><a href="#">Centre d'aide</a></li>
+                <li><a href="#">Contacter le support</a></li>
+                <li><a href="#">Documentation</a></li>
+                <li><a href="#">FAQ</a></li>
+              </ul>
+            </div>
+            <div class="footer-section">
+              <h5>Légal</h5>
+              <ul>
+                <li><a href="#">Conditions générales</a></li>
+                <li><a href="#">Confidentialité</a></li>
+                <li><a href="#">Cookies</a></li>
+                <li><a href="#">Mentions légales</a></li>
+              </ul>
+            </div>
+          </div>
+          <hr class="my-4" />
+          <div class="footer-bottom text-center text-muted">
+            <small>&copy; 2026 CYNA Security. Tous droits réservés.</small>
+          </div>
+        </div>
+      </footer>
     </div>
 
     <!-- Bootstrap JS (dropdown + carousel) -->
@@ -107,5 +139,7 @@
     <script src="js/navbar.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/carousel.js"></script>
+    <script src="js/home.js"></script>
+    <script src="js/search-suggestions.js"></script>
   </body>
 </html>
