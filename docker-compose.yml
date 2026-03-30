@@ -29,7 +29,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: mydb
-      API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
+      API_SECRET: 0253fe33955b37ccdeae6e70f230d74a0161b0860f9a1bb17dadd733eea42066
       RESTIC_PASSWORD: cyna-restic-AES256-secret
       RESTIC_REPOSITORY: /backups/restic-repo
     volumes:
@@ -42,10 +42,12 @@ services:
     depends_on:
       - api
     environment:
-      API_SECRET: f51c47d6625d43163d103a0524141171ca526cce5f30d575dcf1e32dfca43e88
+      API_SECRET: 0253fe33955b37ccdeae6e70f230d74a0161b0860f9a1bb17dadd733eea42066
+      RESEND_API_KEY: ${RESEND_API_KEY}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       UPLOADS_DIR: /app/uploads
+      FRONTEND_URL: http://localhost:3000
     volumes:
       - uploads_data:/app/uploads
     # No bind mounts for production: use the files baked into the image (includes node_modules).
