@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import type { ComponentProps } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 interface MenuLinkProps {
   icon: IoniconsName;

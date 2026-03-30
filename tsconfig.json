@@ -2,7 +2,20 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "bundler",
     "paths": {
+      "expo-router": [
+        "./node_modules/expo-router/build/index.d.ts"
+      ],
+      "expo-status-bar": [
+        "./node_modules/expo-status-bar/build/StatusBar.d.ts"
+      ],
+      "@expo/vector-icons": [
+        "./node_modules/@expo/vector-icons/build/Icons.d.ts"
+      ],
       "@/*": [
         "./*"
       ]

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Fragment, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -71,7 +71,7 @@ export default function CheckoutScreen() {
       {/* Stepper */}
       <View style={styles.stepper}>
         {STEPS.map((s, i) => (
-          <React.Fragment key={s.key}>
+          <Fragment key={s.key}>
             <View style={styles.stepItem}>
               <View style={[styles.stepCircle, i <= currentIndex && styles.stepCircleActive]}>
                 {i < currentIndex ? (
@@ -89,7 +89,7 @@ export default function CheckoutScreen() {
             {i < STEPS.length - 1 && (
               <View style={[styles.stepLine, i < currentIndex && styles.stepLineActive]} />
             )}
-          </React.Fragment>
+          </Fragment>
         ))}
       </View>
 

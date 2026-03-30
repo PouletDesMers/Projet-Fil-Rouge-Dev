@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
-import React from 'react';
+import type { ComponentProps } from 'react';
 import { TouchableOpacity } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ name, color, size = 24 }: { name: IoniconsName; color: string; size?: number }) {
   return <Ionicons name={name} size={size} color={color} />;
