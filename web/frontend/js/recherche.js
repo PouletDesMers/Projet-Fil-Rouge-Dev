@@ -38,16 +38,21 @@
 
   // Construire une card produit
   function buildCard(p) {
+    const isCategory = p.type === 'category' || p.type === 'service';
     const card = document.createElement('article');
     card.className = 'card';
 
-    const tag = p.tag || p.categorie_nom || '';
-    const catLabel = p.categorie_nom || '';
-    const prix = formatPrice(p.prix, p.devise, p.duree, p.type_achat);
-    const statut = formatStatut(p.statut);
+    const tag = isCategory ? (p.type === 'service' ? 'Service' : 'Catégorie') : (p.tag || p.categorie_nom || '');
+    const catLabel = isCategory ? (p.nom || '') : (p.categorie_nom || '');
+    const prix = isCategory ? 'Voir les offres' : formatPrice(p.prix, p.devise, p.duree, p.type_achat);
+    const statut = isCategory ? 'Parcourir' : formatStatut(p.statut);
     const desc = p.description_courte || '';
     const slug = p.slug || '';
-    const catSlug = p.categorie_slug || '';
+    const catSlug = p.categorie_slug || slug || '';
+    const link = isCategory
+      ? `/catalogue.html?category=${encodeURIComponent(catSlug)}`
+      : `/produit.html?category=${encodeURIComponent(catSlug)}&product=${encodeURIComponent(slug)}`;
+    const actionLabel = isCategory ? 'Voir la catégorie' : 'Voir le produit';
 
     card.innerHTML = `
       <div class="cover">
@@ -61,8 +66,8 @@
           <span class="price">${escapeHtml(prix)}</span>
           <span class="status"><i class="bi bi-circle-fill me-1" style="font-size:8px;color:#16a34a;"></i>${escapeHtml(statut)}</span>
         </div>
-        <a href="/produit.html?slug=${encodeURIComponent(slug)}" class="btn btn-cyna btn-action w-100">
-          Voir le produit
+        <a href="${link}" class="btn btn-cyna btn-action w-100">
+          ${escapeHtml(actionLabel)}
         </a>
       </div>
     `;

@@ -134,13 +134,18 @@ func (r *CatalogRepo) FindActiveProduitsByCategory(slug string) ([]models.Produi
 			&p.TypeAchat, &p.OrdreAffichage); err != nil {
 			return nil, err
 		}
-		if descHTML.Valid { p.DescriptionHTML = descHTML.String }
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
+		}
 		produits = append(produits, p)
 	}
 	return produits, nil
 }
 
 func (r *CatalogRepo) SearchProduits(pattern string) ([]SearchResult, error) {
+	results := []SearchResult{}
+
+	// Produits correspondants
 	rows, err := r.DB.Query(`
 		SELECT p.id_produit, p.nom, p.slug,
 		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
@@ -153,24 +158,56 @@ func (r *CatalogRepo) SearchProduits(pattern string) ([]SearchResult, error) {
 		WHERE p.actif=TRUE AND c.actif=TRUE
 		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
 		ORDER BY p.ordre_affichage ASC LIMIT 50`, pattern)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	results := []SearchResult{}
-	for rows.Next() {
-		var p SearchResult
-		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
-			&p.DescriptionHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.Tag,
-			&p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.CategorieNom, &p.CategorieSlug); err != nil {
-			continue
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var p SearchResult
+			if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+				&p.DescriptionHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.Tag,
+				&p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.CategorieNom, &p.CategorieSlug); err != nil {
+				continue
+			}
+			p.Type = "product"
+			results = append(results, p)
 		}
-		results = append(results, p)
 	}
+
+	// Catégories correspondantes
+	catRows, errCat := r.DB.Query(`
+		SELECT id_categorie, nom, slug, COALESCE(description,''), COALESCE(couleur,'')
+		FROM categories
+		WHERE actif = TRUE AND (nom ILIKE $1 OR slug ILIKE $1)
+		ORDER BY ordre_affichage ASC LIMIT 10`, pattern)
+	if errCat == nil {
+		defer catRows.Close()
+		for catRows.Next() {
+			var c SearchResult
+			var couleur string
+			if err := catRows.Scan(&c.ID, &c.Nom, &c.Slug, &c.DescriptionCourte, &couleur); err != nil {
+				continue
+			}
+			c.Type = "service"
+			c.CategorieNom = c.Nom
+			c.CategorieSlug = c.Slug
+			c.DescriptionLongue = ""
+			c.DescriptionHTML = ""
+			c.Images = "[]"
+			c.Prix = 0
+			c.Devise = "EUR"
+			c.Duree = ""
+			c.Tag = ""
+			c.Statut = "actif"
+			c.TypeAchat = ""
+			c.OrdreAffichage = 0
+			results = append(results, c)
+		}
+	}
+
 	return results, nil
 }
 
 type SearchResult struct {
+	Type              string  `json:"type"`
 	ID                int     `json:"id_produit"`
 	Nom               string  `json:"nom"`
 	Slug              string  `json:"slug"`
@@ -191,7 +228,9 @@ type SearchResult struct {
 
 func (r *CatalogRepo) CreateProduit(p *models.ProduitWeb, creatorID int) error {
 	images := p.Images
-	if images == "" { images = "[]" }
+	if images == "" {
+		images = "[]"
+	}
 	return r.DB.QueryRow(`
 		INSERT INTO produits (nom, slug, description_courte, description_longue, description_html,
 		    images, prix, devise, duree, id_categorie, tag, statut, type_achat,
@@ -205,7 +244,9 @@ func (r *CatalogRepo) CreateProduit(p *models.ProduitWeb, creatorID int) error {
 
 func (r *CatalogRepo) UpdateProduit(p *models.ProduitWeb) error {
 	images := p.Images
-	if images == "" { images = "[]" }
+	if images == "" {
+		images = "[]"
+	}
 	_, err := r.DB.Exec(`
 		UPDATE produits SET nom=$1, slug=$2, description_courte=$3, description_longue=$4,
 		    description_html=$5, images=$6::jsonb, prix=$7, devise=$8, duree=$9,
@@ -322,7 +363,9 @@ func scanProduits(rows *sql.Rows) ([]models.ProduitWeb, error) {
 			&p.DateCreation, &p.DateModification, &catNom); err != nil {
 			return nil, err
 		}
-		if descHTML.Valid { p.DescriptionHTML = descHTML.String }
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
+		}
 		produits = append(produits, p)
 	}
 	return produits, nil

@@ -75,15 +75,25 @@ function renderSuggestions(suggestions, query) {
   let html = '<div class="suggestions-list">';
   
   suggestions.forEach(product => {
-    const categoryName = product.nom_categorie || 'Autres';
-    const price = product.prix ? `${parseFloat(product.prix).toFixed(2)}€` : 'Sur devis';
+    const isCategory = product.type === 'category' || product.type === 'service';
+    const categoryName = isCategory ? (product.nom || (product.type === 'service' ? 'Service' : 'Catégorie')) : (product.categorie_nom || 'Autres');
+    const price = isCategory
+      ? 'Voir les offres'
+      : (product.prix ? `${parseFloat(product.prix).toFixed(2)}€` : 'Sur devis');
+    const slug = product.slug || '';
+    const catSlug = product.categorie_slug || slug || '';
+    const productUrl = isCategory
+      ? `/catalogue.html?category=${encodeURIComponent(slug)}`
+      : (slug
+         ? `/produit.html?category=${encodeURIComponent(catSlug)}&product=${encodeURIComponent(slug)}`
+         : `/produit.html?id=${product.id_produit || product.id}`);
     
     html += `
-      <a href="/produit.html?id=${product.id_produit}" class="suggestion-item">
+      <a href="${productUrl}" class="suggestion-item">
         <div class="suggestion-product">${escapeHtml(product.nom)}</div>
         <div class="suggestion-meta">
           <span class="suggestion-category">${escapeHtml(categoryName)}</span>
-          <span class="suggestion-price">${price}</span>
+          <span class="suggestion-price">${escapeHtml(price)}</span>
         </div>
       </a>
     `;
