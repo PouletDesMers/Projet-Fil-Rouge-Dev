@@ -28,22 +28,12 @@ export default function LoginScreen() {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
-
     setIsLoading(true);
     try {
-      // TODO Sprint 2 : remplacer par l'appel API réel
-      // const response = await api.post('/auth/login', { email, password });
-      // login(response.data.token, response.data.user);
-
-      // Simulation temporaire
-      login({
-        id: '1',
-        email,
-        firstName: 'Utilisateur',
-        lastName: 'Cyna',
-      });
-    } catch {
-      Alert.alert('Erreur', 'Email ou mot de passe incorrect');
+      await login(email, password);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Email ou mot de passe incorrect';
+      Alert.alert('Erreur de connexion', msg);
     } finally {
       setIsLoading(false);
     }
@@ -102,17 +92,11 @@ export default function LoginScreen() {
               </ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/forgot-password')}
-              style={styles.link}
-            >
+            <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.link}>
               <ThemedText style={styles.linkText}>Mot de passe oublié ?</ThemedText>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/register')}
-              style={styles.link}
-            >
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={styles.link}>
               <ThemedText style={styles.linkSubText}>
                 Pas encore de compte ?{' '}
                 <ThemedText style={styles.linkText}>S'inscrire</ThemedText>
@@ -126,74 +110,30 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  flex: { flex: 1 },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 40,
-  },
+  safe:      { flex: 1, backgroundColor: '#fff' },
+  flex:      { flex: 1 },
+  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 30, paddingVertical: 40 },
   logo: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#3b12a3',
-    textAlign: 'center',
-    letterSpacing: 4,
-    marginBottom: 30,
+    fontSize: 36, fontWeight: '900', color: '#3b12a3',
+    textAlign: 'center', letterSpacing: 4, marginBottom: 30,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 36,
-  },
-  form: { gap: 14 },
+  title:    { fontSize: 28, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 8 },
+  subtitle: { fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 36 },
+  form:     { gap: 14 },
   input: {
-    backgroundColor: '#f8f8f8',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1a1a1a',
+    backgroundColor: '#f8f8f8', borderWidth: 1, borderColor: '#e0e0e0',
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 16, color: '#1a1a1a',
   },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginVertical: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: '#3b12a3',
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  rememberRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  checkbox:        { width: 20, height: 20, borderWidth: 2, borderColor: '#3b12a3', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: '#3b12a3' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  rememberText: { fontSize: 14, color: '#555' },
-  button: {
-    backgroundColor: '#3b12a3',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  link: { alignItems: 'center', marginTop: 6 },
-  linkText: { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
-  linkSubText: { color: '#555', fontSize: 14 },
+  checkmark:       { color: '#fff', fontSize: 12, fontWeight: '700' },
+  rememberText:    { fontSize: 14, color: '#555' },
+  button:          { backgroundColor: '#3b12a3', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  buttonDisabled:  { opacity: 0.6 },
+  buttonText:      { color: '#fff', fontSize: 16, fontWeight: '700' },
+  link:            { alignItems: 'center', marginTop: 6 },
+  linkText:        { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
+  linkSubText:     { color: '#555', fontSize: 14 },
 });
