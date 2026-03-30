@@ -32,7 +32,7 @@ function renderCategories(categories) {
   categories.forEach(category => {
     const img = getCategoryImage(category);
     const card = document.createElement('a');
-    card.href = `/categories.html?category=${encodeURIComponent(category.slug)}`;
+    card.href = `/catalogue.html?category=${encodeURIComponent(category.slug)}`;
     card.className = 'category-card text-decoration-none';
     card.style.borderLeftColor = category.couleur || '#7602F9';
     const bg = category.couleur || '#f3f3f3';
