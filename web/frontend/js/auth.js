@@ -117,7 +117,19 @@ function showStep(step) {
   loginForm.classList.toggle("d-none", step !== "login");
   twoFAForm.classList.toggle("d-none", step !== "twofa");
   registerForm.classList.toggle("d-none", step !== "register");
-  
+
+  // Reset form fields when switching steps to prevent data leakage
+  if (step !== "login") {
+    loginPassword.value = "";
+  }
+  if (step !== "register") {
+    regPassword.value = "";
+    regPassword2.value = "";
+  }
+  if (step !== "twofa") {
+    totpCodeInput.value = "";
+  }
+
   // Amazon specific: Title changes or disappears
   if (step === "email" || step === "login") {
     authTitle.textContent = "Sign in";

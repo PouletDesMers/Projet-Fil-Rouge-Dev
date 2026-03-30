@@ -136,19 +136,19 @@ async function loadUsers() {
                   </button>
                   ${
                     user.role !== 'admin'
-                      ? `<button class="btn btn-sm btn-outline-success" onclick="promoteUser(${user.id_utilisateur})" title="Promouvoir admin">
+                      ? `<button class="btn btn-sm btn-outline-success" onclick="AdminUsers.promoteUser(${user.id_utilisateur})" title="Promouvoir admin">
                            <i class="bi bi-arrow-up-circle"></i>
                          </button>`
-                      : `<button class="btn btn-sm btn-outline-secondary" onclick="demoteUser(${user.id_utilisateur})" title="Rétrograder">
+                      : `<button class="btn btn-sm btn-outline-secondary" onclick="AdminUsers.demoteUser(${user.id_utilisateur})" title="Rétrograder">
                            <i class="bi bi-arrow-down-circle"></i>
                          </button>`
                   }
                   ${
                     user.est_actif
-                      ? `<button class="btn btn-sm btn-outline-danger" onclick="toggleUserStatus(${user.id_utilisateur}, false)" title="Désactiver">
+                      ? `<button class="btn btn-sm btn-outline-danger" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, false)" title="Désactiver">
                            <i class="bi bi-x-circle"></i>
                          </button>`
-                      : `<button class="btn btn-sm btn-outline-success" onclick="toggleUserStatus(${user.id_utilisateur}, true)" title="Activer">
+                      : `<button class="btn btn-sm btn-outline-success" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, true)" title="Activer">
                            <i class="bi bi-check-circle"></i>
                          </button>`
                   }
@@ -444,93 +444,6 @@ document.getElementById('saveUserBtn')?.addEventListener('click', async () => {
   }
 });
 
-// Promote user to admin
-async function promoteUser(userId) {
-  if (!confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en tant qu\'admin ?')) {
-    return;
-  }
-  
-  try {
-    const token = getAuthToken();
-    const response = await fetch(`/admin/api/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ role: 'admin' })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Erreur lors de la promotion');
-    }
-    
-    showToast('Utilisateur promu admin avec succès !', 'success');
-    loadUsers();
-  } catch (error) {
-    console.error('Error:', error);
-    showToast('Erreur: ' + error.message, 'error');
-  }
-}
-
-// Demote user from admin
-async function demoteUser(userId) {
-  if (!confirm('Êtes-vous sûr de vouloir rétrograder cet admin en client ?')) {
-    return;
-  }
-  
-  try {
-    const token = getAuthToken();
-    const response = await fetch(`/admin/api/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ role: 'client' })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Erreur lors de la rétrogradation');
-    }
-    
-    showToast('Utilisateur rétrogradé en client avec succès !', 'success');
-    loadUsers();
-  } catch (error) {
-    console.error('Error:', error);
-    showToast('Erreur: ' + error.message, 'error');
-  }
-}
-
-// Toggle user active status
-async function toggleUserStatus(userId, activate) {
-  const action = activate ? 'activer' : 'désactiver';
-  if (!confirm(`Êtes-vous sûr de vouloir ${action} cet utilisateur ?`)) {
-    return;
-  }
-  
-  try {
-    const token = getAuthToken();
-    const response = await fetch(`/admin/api/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ est_actif: activate })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Erreur lors de ${action}`);
-    }
-    
-    showToast(`Utilisateur ${activate ? 'activé' : 'désactivé'} avec succès !`, 'success');
-    loadUsers();
-  } catch (error) {
-    console.error('Error:', error);
-    showToast('Erreur: ' + error.message, 'error');
-  }
-}
 
 // Reset password
 document.getElementById('resetPasswordBtn')?.addEventListener('click', async () => {
