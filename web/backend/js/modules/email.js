@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 async function sendWelcomeEmail(email, firstName) {
   try {
     const result = await resend.emails.send({
-      from: 'noreply@cyna.fr',
+      from: 'onboarding@resend.dev',
       to: email,
       subject: 'Bienvenue sur CYNA!',
       html: `
@@ -26,7 +26,7 @@ async function sendPasswordResetEmail(email, resetToken) {
   try {
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
     const result = await resend.emails.send({
-      from: 'noreply@cyna.fr',
+      from: 'onboarding@resend.dev',
       to: email,
       subject: 'Réinitialiser votre mot de passe CYNA',
       html: `
@@ -47,7 +47,7 @@ async function sendPasswordResetEmail(email, resetToken) {
 async function sendAdminNotification(email, subject, message) {
   try {
     const result = await resend.emails.send({
-      from: 'noreply@cyna.fr',
+      from: 'onboarding@resend.dev',
       to: email,
       subject: subject,
       html: `

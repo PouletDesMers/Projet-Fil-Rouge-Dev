@@ -15,10 +15,10 @@ import (
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 
-	"api/config"
-	"api/models"
-	mw "api/middleware"
 	"api/cache"
+	"api/config"
+	mw "api/middleware"
+	"api/models"
 )
 
 // ===== HELPERS INTERNES =====
@@ -74,7 +74,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	var storedPassword string
 	var id int
-	var totpSecretNull struct{ Valid bool; String string }
+	var totpSecretNull struct {
+		Valid  bool
+		String string
+	}
 	var totpEnabled bool
 
 	row := config.DB.QueryRow(
@@ -482,15 +485,31 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if u.Email != "" { cur.Email = u.Email }
-	if u.Nom != "" { cur.Nom = u.Nom }
-	if u.Prenom != "" { cur.Prenom = u.Prenom }
-	if u.Telephone != "" { cur.Telephone = u.Telephone }
-	if u.Role != "" { cur.Role = u.Role }
-	if u.Statut != "" { cur.Statut = u.Statut }
+	if u.Email != "" {
+		cur.Email = u.Email
+	}
+	if u.Nom != "" {
+		cur.Nom = u.Nom
+	}
+	if u.Prenom != "" {
+		cur.Prenom = u.Prenom
+	}
+	if u.Telephone != "" {
+		cur.Telephone = u.Telephone
+	}
+	if u.Role != "" {
+		cur.Role = u.Role
+	}
+	if u.Statut != "" {
+		cur.Statut = u.Statut
+	}
 
 	if u.EstActif != cur.EstActif {
-		if u.EstActif { cur.Statut = "actif" } else { cur.Statut = "inactif" }
+		if u.EstActif {
+			cur.Statut = "actif"
+		} else {
+			cur.Statut = "inactif"
+		}
 		cur.EstActif = u.EstActif
 	}
 
@@ -704,4 +723,56 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
+}
+
+// ===== PASSWORD RESET =====
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" || data.Password == "" {
+		jsonErr(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Vérifier que l'email existe
+	var userID int
+	row := config.DB.QueryRow(
+		"SELECT id_utilisateur FROM utilisateur WHERE email = $1",
+		data.Email)
+
+	if err := row.Scan(&userID); err != nil {
+		jsonErr(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Hash le nouveau mot de passe
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if err != nil {
+		jsonErr(w, "Failed to process password", http.StatusInternalServerError)
+		return
+	}
+
+	// Mettre à jour le mot de passe
+	if _, err := config.DB.Exec(
+		"UPDATE utilisateur SET mot_de_passe=$1 WHERE id_utilisateur=$2",
+		string(hashedPassword), userID); err != nil {
+		jsonErr(w, "Failed to update password", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password reset successfully",
+		"success": "true",
+	})
 }

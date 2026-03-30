@@ -13,7 +13,7 @@ import (
 
 func Register(r *mux.Router) {
 	// ── Aliases pratiques ──────────────────────────────────────────────────────
-	auth     := mw.Auth
+	auth := mw.Auth
 	adminRaw := func(h http.Handler) http.Handler { return mw.Auth(mw.Admin(h)) }
 	adminLim := func(h http.Handler) http.Handler {
 		return mw.RateLimitAdmin(mw.Auth(mw.Admin(h)))
@@ -21,6 +21,7 @@ func Register(r *mux.Router) {
 
 	// ── Public ─────────────────────────────────────────────────────────────────
 	r.Handle("/api/login", mw.RateLimitLogin(http.HandlerFunc(handlers.Login))).Methods("POST")
+	r.Handle("/api/password-reset", mw.RateLimitRegister(http.HandlerFunc(handlers.ResetPassword))).Methods("POST")
 	r.Handle("/api/users", mw.RateLimitRegister(http.HandlerFunc(handlers.CreateUser))).Methods("POST")
 	r.HandleFunc("/api/users/exists", handlers.GetUserExists).Methods("GET")
 	r.HandleFunc("/api/swagger.json", handlers.GetSwaggerSpec).Methods("GET")
