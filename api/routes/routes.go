@@ -32,6 +32,7 @@ func Register(r *mux.Router) {
 	r.HandleFunc("/api/public/categories", handlers.GetActiveCategories).Methods("GET")
 	r.HandleFunc("/api/public/products/{slug}", handlers.GetActiveProduitsByCategory).Methods("GET")
 	r.HandleFunc("/api/public/search", handlers.SearchProduits).Methods("GET")
+	r.HandleFunc("/api/public/top-products", handlers.GetTopProductsLast3Months).Methods("GET")
 
 	// ── Categories ─────────────────────────────────────────────────────────────
 	r.Handle("/api/categories", auth(http.HandlerFunc(handlers.GetCategories))).Methods("GET")
@@ -166,6 +167,9 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
 	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
 	r.Handle("/api/admin/newsletter/campaigns/{id}/send", auth(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+
+	// ── Stats & Analytics ────────────────────────────────────────────
+	r.Handle("/api/admin/stats/top-products", adminRaw(http.HandlerFunc(handlers.GetTopProductsLast3Months))).Methods("GET")
 
 	// ── Roles & Permissions ──────────────────────────────────────────
 	r.Handle("/api/admin/roles", adminRaw(http.HandlerFunc(handlers.GetRoles))).Methods("GET")

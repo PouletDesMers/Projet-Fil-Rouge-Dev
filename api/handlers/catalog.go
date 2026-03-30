@@ -12,8 +12,8 @@ import (
 
 	"api/cache"
 	"api/config"
-	"api/models"
 	mw "api/middleware"
+	"api/models"
 )
 
 // ===== CATEGORIES =====
@@ -29,7 +29,7 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := config.DB.Query(`
 		SELECT id_categorie, nom, slug,
-		       COALESCE(description,''), COALESCE(icone,''), COALESCE(couleur,''),
+		       COALESCE(description,''), COALESCE(image,''), COALESCE(icone,''), COALESCE(couleur,''),
 		       COALESCE(ordre_affichage,0), COALESCE(actif,false),
 		       COALESCE(date_creation,NOW()), COALESCE(date_modification,NOW())
 		FROM categories ORDER BY ordre_affichage ASC`)
@@ -42,7 +42,7 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 	categories := []models.CategorieWeb{}
 	for rows.Next() {
 		var c models.CategorieWeb
-		if err := rows.Scan(&c.ID, &c.Nom, &c.Slug, &c.Description, &c.Icone, &c.Couleur,
+		if err := rows.Scan(&c.ID, &c.Nom, &c.Slug, &c.Description, &c.Image, &c.Icone, &c.Couleur,
 			&c.OrdreAffichage, &c.Actif, &c.DateCreation, &c.DateModification); err != nil {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
@@ -61,7 +61,7 @@ func GetActiveCategories(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := config.DB.Query(`
 		SELECT id_categorie, nom, slug,
-		       COALESCE(description,''), COALESCE(icone,''), COALESCE(couleur,''),
+		       COALESCE(description,''), COALESCE(image,''), COALESCE(icone,''), COALESCE(couleur,''),
 		       COALESCE(ordre_affichage,0)
 		FROM categories WHERE actif = TRUE ORDER BY ordre_affichage ASC`)
 	if err != nil {
@@ -72,7 +72,7 @@ func GetActiveCategories(w http.ResponseWriter, r *http.Request) {
 	categories := []models.CategorieWeb{}
 	for rows.Next() {
 		var c models.CategorieWeb
-		if err := rows.Scan(&c.ID, &c.Nom, &c.Slug, &c.Description, &c.Icone, &c.Couleur, &c.OrdreAffichage); err != nil {
+		if err := rows.Scan(&c.ID, &c.Nom, &c.Slug, &c.Description, &c.Image, &c.Icone, &c.Couleur, &c.OrdreAffichage); err != nil {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -92,16 +92,17 @@ func CreateCategorie(w http.ResponseWriter, r *http.Request) {
 	}
 	c.Nom = mw.SanitizeString(c.Nom)
 	c.Description = mw.SanitizeString(c.Description)
+	c.Image = strings.TrimSpace(c.Image)
 	if c.Nom == "" || c.Slug == "" {
 		jsonErr(w, "Name and slug are required", http.StatusBadRequest)
 		return
 	}
 	userID, _ := getUserID(r)
 	if err := config.DB.QueryRow(`
-		INSERT INTO categories (nom, slug, description, icone, couleur, ordre_affichage, actif, id_utilisateur_creation)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO categories (nom, slug, description, image, icone, couleur, ordre_affichage, actif, id_utilisateur_creation)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id_categorie, date_creation, date_modification`,
-		c.Nom, c.Slug, c.Description, c.Icone, c.Couleur, c.OrdreAffichage, c.Actif, userID).Scan(
+		c.Nom, c.Slug, c.Description, c.Image, c.Icone, c.Couleur, c.OrdreAffichage, c.Actif, userID).Scan(
 		&c.ID, &c.DateCreation, &c.DateModification); err != nil {
 		log.Printf("Error creating categorie: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -127,10 +128,11 @@ func UpdateCategorie(w http.ResponseWriter, r *http.Request) {
 	}
 	c.Nom = mw.SanitizeString(c.Nom)
 	c.Description = mw.SanitizeString(c.Description)
+	c.Image = strings.TrimSpace(c.Image)
 	if _, err := config.DB.Exec(`
-		UPDATE categories SET nom=$1, slug=$2, description=$3, icone=$4, couleur=$5,
-		    ordre_affichage=$6, actif=$7, date_modification=CURRENT_TIMESTAMP WHERE id_categorie=$8`,
-		c.Nom, c.Slug, c.Description, c.Icone, c.Couleur, c.OrdreAffichage, c.Actif, id); err != nil {
+		UPDATE categories SET nom=$1, slug=$2, description=$3, image=$4, icone=$5, couleur=$6,
+		    ordre_affichage=$7, actif=$8, date_modification=CURRENT_TIMESTAMP WHERE id_categorie=$9`,
+		c.Nom, c.Slug, c.Description, c.Image, c.Icone, c.Couleur, c.OrdreAffichage, c.Actif, id); err != nil {
 		log.Printf("Error updating categorie %d: %v", id, err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -206,7 +208,9 @@ func GetProduits(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		if descHTML.Valid { p.DescriptionHTML = descHTML.String }
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
+		}
 		produits = append(produits, p)
 	}
 	json.NewEncoder(w).Encode(produits)
@@ -223,6 +227,7 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.DB.Query(`
 		SELECT p.id_produit, p.nom, p.slug,
 		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
+		       COALESCE(p.description_html,''), COALESCE(p.images::text,'[]'),
 		       p.prix, COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
 		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
 		       COALESCE(p.ordre_affichage,0)
@@ -236,11 +241,15 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	produits := []models.ProduitWeb{}
 	for rows.Next() {
 		var p models.ProduitWeb
+		var descHTML sql.NullString
 		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
-			&p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut,
+			&descHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut,
 			&p.TypeAchat, &p.OrdreAffichage); err != nil {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
+		}
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
 		}
 		produits = append(produits, p)
 	}
@@ -263,7 +272,9 @@ func CreateProduit(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := getUserID(r)
 	images := p.Images
-	if images == "" { images = "[]" }
+	if images == "" {
+		images = "[]"
+	}
 	if err := config.DB.QueryRow(`
 		INSERT INTO produits (nom, slug, description_courte, description_longue, description_html,
 		    images, prix, devise, duree, id_categorie, tag, statut, type_achat,
@@ -297,7 +308,9 @@ func UpdateProduit(w http.ResponseWriter, r *http.Request) {
 	p.Nom = mw.SanitizeString(p.Nom)
 	p.DescriptionCourte = mw.SanitizeString(p.DescriptionCourte)
 	images := p.Images
-	if images == "" { images = "[]" }
+	if images == "" {
+		images = "[]"
+	}
 	if _, err := config.DB.Exec(`
 		UPDATE produits SET nom=$1, slug=$2, description_courte=$3, description_longue=$4,
 		    description_html=$5, images=$6::jsonb, prix=$7, devise=$8, duree=$9,

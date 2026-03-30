@@ -591,6 +591,7 @@ app.post('/admin/api/orders', proxyToApiWithAuth('/commandes'));
 app.get('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.put('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.delete('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+app.get('/admin/api/stats/top-products', proxyToApiWithAuth('/admin/stats/top-products'));
 
 // Roles & Permissions (admin)
 app.get('/admin/api/roles', proxyToApiWithAuth('/admin/roles'));
@@ -1133,6 +1134,17 @@ app.get('/api/stripe-config', (req, res) => {
   res.json({ publishableKey: STRIPE_PUBLISHABLE_KEY || null });
 });
 
+// GET /api/public/top-products — exposé au frontend (pas d'auth)
+app.get('/api/public/top-products', async (_req, res) => {
+  try {
+    const response = await axios.get('http://api:8080/api/public/top-products');
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching public top products:', error.message);
+    res.status(error.response?.status || 500).json({ error: 'Failed to load top products' });
+  }
+});
+
 // POST /api/validate-promo — Valide un code promo Stripe
 app.post('/api/validate-promo', async (req, res) => {
   const { code } = req.body || {};
@@ -1300,7 +1312,7 @@ app.post('/api/create-checkout-session', checkAuth, async (req, res) => {
 
 // POST /api/confirm-order — Appelé depuis mes-commandes.html après paiement confirmé
 app.post('/api/confirm-order', checkAuth, async (req, res) => {
-  const { sessionId, totalAmount, demo, promoCode } = req.body || {};
+  const { sessionId, totalAmount, demo, promoCode, items } = req.body || {};
   const token  = getAuthToken(req);
   const userId = req.user && req.user.id_utilisateur;
   if (!userId) return res.status(401).json({ error: 'Non connecté' });
@@ -1318,8 +1330,22 @@ app.post('/api/confirm-order', checkAuth, async (req, res) => {
   }
 
   try {
+    const normalized = Array.isArray(items) ? items.map(it => ({
+      product_slug: it.product_slug || it.slug || it.id || it.productName || it.product_name || '',
+      product_name: it.product_name || it.productName || it.name || 'Produit',
+      price: Number(it.price) || 0,
+      quantity: Number(it.quantity || it.qty || 1) || 1,
+      duration: it.duration || ''
+    })) : [];
+
     const r = await axios.post('http://api:8080/api/commandes',
-      { totalAmount: amount, status: 'confirmee', userId, promoCode: promoCode || '' },
+      {
+        totalAmount: amount,
+        status: 'confirmee',
+        userId,
+        promoCode: promoCode || '',
+        items: normalized,
+      },
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
     res.status(201).json(r.data);

@@ -41,22 +41,23 @@ function updateCartBadge() {
   }
 }
 
-// (Optional) helper for later: add a product from the product page
-function addToCart(item) {
-  const items = getCartItems();
-  const idx = items.findIndex(
-    (x) => x.id === item.id && x.duration === item.duration
-  );
-  if (idx >= 0) {
-    items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
-  } else {
-    items.push({
-      id: item.id,
-      name: item.name,
-      price: Number(item.price) || 0,
-      qty: Number(item.qty) || 1,
-      duration: item.duration || "Monthly",
-    });
+  // (Optional) helper for later: add a product from the product page
+  function addToCart(item) {
+    const items = getCartItems();
+    const idx = items.findIndex(
+      (x) => x.id === item.id && x.duration === item.duration
+    );
+    if (idx >= 0) {
+      items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
+    } else {
+      items.push({
+        id: item.id,
+        slug: item.slug || item.id,
+        name: item.name,
+        price: Number(item.price) || 0,
+        qty: Number(item.qty) || 1,
+        duration: item.duration || "Monthly",
+      });
   }
   saveCartItems(items);
 }
@@ -419,10 +420,18 @@ function renderCart() {
       if (!res.ok) throw new Error(data.error || "Erreur Stripe");
       if (data.url) {
         // Sauvegarder le montant + code promo dans sessionStorage pour confirm-order
+        const normalized = items.map(it => ({
+          product_slug: it.slug || it.id || it.name,
+          product_name: it.name,
+          price: Number(it.price) || 0,
+          quantity: Number(it.qty) || 1,
+          duration: it.duration || ''
+        }));
         sessionStorage.setItem('pendingOrder', JSON.stringify({
           totalAmount: total,
           demo: !!data.demo,
           promoCode: appliedPromo?.code || null,
+          items: normalized,
         }));
         window.location.href = data.url;
       } else {
@@ -493,6 +502,9 @@ function initCartBindings() {
           e.preventDefault();
           renderHome();
           window.history.pushState({}, "", "/index.html");
+          // Reload dynamic home data (categories, top ventes)
+          try { loadCategories(); } catch (_) {}
+          try { loadTopProducts(); } catch (_) {}
         }
       });
     });

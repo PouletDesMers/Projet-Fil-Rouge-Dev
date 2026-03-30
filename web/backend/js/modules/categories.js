@@ -196,6 +196,8 @@ function openCategoryModal(category = null) {
     document.getElementById('categoryCouleur').value = category.couleur || '#7602F9';
     document.getElementById('categoryOrder').value = category.ordre_affichage || 1;
     document.getElementById('categoryActive').checked = category.actif;
+    document.getElementById('categoryImage').value = category.image || '';
+    document.getElementById('categoryPlaceholder').value = category.placeholder || '';
   } else {
     titleText.textContent = 'Ajouter Catégorie';
     saveBtn.textContent = 'Ajouter';
@@ -205,6 +207,8 @@ function openCategoryModal(category = null) {
     document.getElementById('categoryCouleur').value = '#7602F9';
     document.getElementById('categoryOrder').value = '1';
     document.getElementById('categoryActive').checked = true;
+    document.getElementById('categoryImage').value = '';
+    document.getElementById('categoryPlaceholder').value = '';
   }
 
   modal.show();
@@ -224,7 +228,9 @@ async function saveCategory() {
       icone: document.getElementById('categoryIcone').value || 'bi bi-tag',
       couleur: document.getElementById('categoryCouleur').value,
       ordre_affichage: parseInt(document.getElementById('categoryOrder').value) || 1,
-      actif: document.getElementById('categoryActive').checked
+      actif: document.getElementById('categoryActive').checked,
+      image: document.getElementById('categoryImage').value.trim(),
+      placeholder: document.getElementById('categoryPlaceholder').value.trim()
     };
 
     const url = isEdit ? `/admin/api/categories/${categoryId}` : '/admin/api/categories';

@@ -42,6 +42,7 @@
     const card = document.createElement('article');
     card.className = 'card';
 
+    const img = getFirstImage(p.images);
     const tag = isCategory ? (p.type === 'service' ? 'Service' : 'Catégorie') : (p.tag || p.categorie_nom || '');
     const catLabel = isCategory ? (p.nom || '') : (p.categorie_nom || '');
     const prix = isCategory ? 'Voir les offres' : formatPrice(p.prix, p.devise, p.duree, p.type_achat);
@@ -55,7 +56,7 @@
     const actionLabel = isCategory ? 'Voir la catégorie' : 'Voir le produit';
 
     card.innerHTML = `
-      <div class="cover">
+      <div class="cover" style="background-image:url('${img}');background-size:cover;background-position:center;background-color:#f5f5f5;">
         ${tag ? `<span class="tag-badge"><i class="bi bi-shield-check me-1"></i>${escapeHtml(tag)}</span>` : ''}
         ${catLabel ? `<span class="cat-badge">${escapeHtml(catLabel)}</span>` : ''}
       </div>
@@ -82,6 +83,28 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function getFirstImage(raw) {
+    let images = [];
+    try {
+      if (Array.isArray(raw)) {
+        images = raw;
+      } else if (typeof raw === 'string' && raw.trim() !== '') {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) images = parsed;
+        else if (typeof parsed === 'string') images = [parsed];
+      }
+    } catch (_) { images = []; }
+    const origin = window.location.origin;
+    for (const img of images) {
+      let url = '';
+      if (typeof img === 'string') url = img;
+      else if (img && typeof img === 'object') url = img.url || img.url_image || img.src || '';
+      if (url && url.startsWith('/')) url = `${origin}${url}`;
+      if (url) return url;
+    }
+    return 'https://via.placeholder.com/640x360?text=Produit';
   }
 
   // Afficher l'état vide

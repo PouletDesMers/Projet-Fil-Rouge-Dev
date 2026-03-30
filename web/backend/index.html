@@ -472,7 +472,7 @@
             <div class="row g-3 mb-4">
               <div class="col-lg-8">
                 <div class="chart-card h-100">
-                  <div class="chart-title">� Activité — Commandes 12 derniers mois</div>
+                  <div class="chart-title">📈 Activité — Commandes 12 derniers mois</div>
                   <div style="height: 260px;"><canvas id="activityChart"></canvas></div>
                 </div>
               </div>
@@ -495,6 +495,21 @@
                       <div class="fw-bold" id="dash-total-users2">—</div>
                       <div class="text-muted" style="font-size:.75rem">Total</div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top produits -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="card h-100">
+                  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <span class="fw-semibold">🔥 Top ventes (3 derniers mois)</span>
+                    <small class="text-muted">Basé sur les abonnements enregistrés</small>
+                  </div>
+                  <div class="card-body p-0" id="dash-top-products">
+                    <div class="text-center py-4 text-muted">Chargement…</div>
                   </div>
                 </div>
               </div>
@@ -1482,6 +1497,19 @@
               <div class="mb-3">
                 <label for="categoryDescription" class="form-label">Description</label>
                 <textarea class="form-control" id="categoryDescription" rows="3" placeholder="Description de la catégorie"></textarea>
+              </div>
+
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label for="categoryImage" class="form-label">Image (URL ou /uploads/...)</label>
+                  <input type="text" class="form-control" id="categoryImage" placeholder="https://... ou /uploads/xxx.jpg">
+                  <div class="form-text">Utilisez le module d'upload (onglet Images) puis copiez l'URL générée.</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="categoryPlaceholder" class="form-label">Placeholder (optionnel)</label>
+                  <input type="text" class="form-control" id="categoryPlaceholder" placeholder="URL de secours">
+                  <div class="form-text">Image utilisée si aucune image n'est fournie.</div>
+                </div>
               </div>
               
               <div class="row">

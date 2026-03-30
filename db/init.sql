@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS categories (
     nom                    VARCHAR(100) NOT NULL UNIQUE,
     slug                   VARCHAR(100) NOT NULL UNIQUE,
     description            TEXT,
+    image                  TEXT,
     icone                  VARCHAR(50)  DEFAULT 'bi bi-shield',
     couleur                VARCHAR(7)   DEFAULT '#7602F9',
     ordre_affichage        INT          DEFAULT 0,
@@ -115,6 +116,9 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE INDEX IF NOT EXISTS idx_categories_slug         ON categories(slug);
 CREATE INDEX IF NOT EXISTS idx_categories_actif_ordre  ON categories(actif, ordre_affichage);
+
+-- Ajouter la colonne image si elle n'existe pas (migration idempotente)
+ALTER TABLE IF EXISTS categories ADD COLUMN IF NOT EXISTS image TEXT;
 
 
 -- ============================================================
@@ -206,8 +210,12 @@ CREATE TABLE IF NOT EXISTS commande (
     montant_total  NUMERIC(10,2),
     statut         VARCHAR(30),               -- paye | echec | attente
     promo_code     TEXT,
+    items          JSONB        DEFAULT '[]',
     id_utilisateur INT          NOT NULL REFERENCES utilisateur(id_utilisateur)
 );
+
+-- Rétro-compatibilité : ajouter la colonne items si elle n'existe pas encore
+ALTER TABLE IF EXISTS commande ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS facture (
     id_facture   SERIAL PRIMARY KEY,
