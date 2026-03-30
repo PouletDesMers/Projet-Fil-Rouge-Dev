@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"image/png"
@@ -79,16 +80,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		String string
 	}
 	var totpEnabled bool
+	var emailVerified bool
 
 	row := config.DB.QueryRow(
-		"SELECT id_utilisateur, mot_de_passe, totp_secret, totp_enabled FROM utilisateur WHERE email = $1",
+		"SELECT id_utilisateur, mot_de_passe, totp_secret, totp_enabled, email_verified FROM utilisateur WHERE email = $1",
 		creds.Email)
 	var totpSecretPtr *string
-	err := row.Scan(&id, &storedPassword, &totpSecretPtr, &totpEnabled)
+	err := row.Scan(&id, &storedPassword, &totpSecretPtr, &totpEnabled, &emailVerified)
 	if err != nil {
 		jsonErr(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
+	// Check if email is verified
+	if !emailVerified {
+		jsonErr(w, "Email not verified. Please check your inbox and verify your email.", http.StatusUnauthorized)
+		return
+	}
+
 	if totpSecretPtr != nil {
 		totpSecretNull.Valid = true
 		totpSecretNull.String = *totpSecretPtr
@@ -773,6 +782,174 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Password reset successfully",
+		"success": "true",
+	})
+}
+
+// ===== EMAIL VERIFICATION =====
+
+func VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Token string `json:"token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if data.Token == "" {
+		jsonErr(w, "Token is required", http.StatusBadRequest)
+		return
+	}
+
+	// Récupérer le token et vérifier qu'il n'a pas expiré
+	var userID int
+	var email string
+	var usedAT sql.NullTime
+
+	row := config.DB.QueryRow(`
+		SELECT id_utilisateur, email, used_at
+		FROM email_verification_tokens
+		WHERE token = $1 AND expires_at > NOW()
+	`, data.Token)
+
+	if err := row.Scan(&userID, &email, &usedAT); err != nil {
+		if err == sql.ErrNoRows {
+			jsonErr(w, "Invalid or expired token", http.StatusBadRequest)
+		} else {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Vérifier que le token n'a pas déjà été utilisé
+	if usedAT.Valid {
+		jsonErr(w, "Token already used", http.StatusBadRequest)
+		return
+	}
+
+	// Marquer l'email comme vérifié
+	if _, err := config.DB.Exec(`
+		UPDATE utilisateur
+		SET email_verified = TRUE, email_verified_at = NOW()
+		WHERE id_utilisateur = $1
+	`, userID); err != nil {
+		jsonErr(w, "Failed to verify email", http.StatusInternalServerError)
+		return
+	}
+
+	// Marquer le token comme utilisé
+	if _, err := config.DB.Exec(`
+		UPDATE email_verification_tokens
+		SET used = TRUE, used_at = NOW()
+		WHERE token = $1
+	`, data.Token); err != nil {
+		log.Printf("Warning: failed to mark token as used: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Email verified successfully",
+		"success": "true",
+	})
+}
+
+func ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" {
+		jsonErr(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Récupérer l'utilisateur
+	var userID int
+	var firstName string
+	var emailVerified bool
+
+	row := config.DB.QueryRow(`
+		SELECT id_utilisateur, prenom, email_verified
+		FROM utilisateur
+		WHERE email = $1
+	`, data.Email)
+
+	if err := row.Scan(&userID, &firstName, &emailVerified); err != nil {
+		if err == sql.ErrNoRows {
+			// Pour la sécu, on fait semblant que ça a marché
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "If the email exists, a verification link has been sent",
+				"success": "true",
+			})
+			return
+		}
+		jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Si déjà vérifié, pas besoin de renvoyer
+	if emailVerified {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Email already verified",
+			"success": "true",
+		})
+		return
+	}
+
+	// TODO: Generate token and send email
+	// This would integrate with the Node.js email service
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification email sent",
+		"success": "true",
+	})
+}
+
+// SaveVerificationToken saves an email verification token
+func SaveVerificationToken(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email     string `json:"email"`
+		Token     string `json:"token"`
+		UserID    int    `json:"user_id"`
+		ExpiresAt string `json:"expires_at"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if data.Email == "" || data.Token == "" {
+		jsonErr(w, "Email and token are required", http.StatusBadRequest)
+		return
+	}
+
+	// Save token to database
+	_, err := config.DB.Exec(`
+		INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+		VALUES ($1, $2, $3, $4)
+	`, data.Email, data.Token, data.UserID, data.ExpiresAt)
+
+	if err != nil {
+		log.Printf("Error saving verification token: %v", err)
+		jsonErr(w, "Failed to save verification token", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification token saved",
 		"success": "true",
 	})
 }

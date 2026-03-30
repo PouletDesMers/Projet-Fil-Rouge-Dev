@@ -154,15 +154,18 @@ async function fixDuplicateOrders(products) {
 async function loadCategoryProducts() {
   const currentCategoryId = AdminMain.currentCategoryId();
   if (!currentCategoryId) return;
-  
+
   try {
-    
+
     const container = document.getElementById('categoryProductsContainer');
+    if (!container) return; // Guard clause
 
     container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
+    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/products', {
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 

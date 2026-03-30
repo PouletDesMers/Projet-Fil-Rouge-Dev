@@ -5,7 +5,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
-const { sendWelcomeEmail, sendPasswordResetEmail, sendAdminNotification } = require('./backend/js/modules/email');
+const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminNotification, sendNewsletterEmail } = require('./backend/js/modules/email');
 const { generateResetToken, saveResetToken, validateResetToken, markTokenAsUsed } = require('./backend/js/modules/reset-tokens');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -288,6 +288,61 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+// Save verification token (called from Node.js after user creation)
+app.post('/api/save-verification-token', async (req, res) => {
+  try {
+    const response = await axios.post('http://api:8080/api/save-verification-token', req.body);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error saving verification token:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to save verification token'
+    });
+  }
+});
+
+// Verify email with token
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+
+    // Call API to verify email
+    const response = await axios.post('http://api:8080/api/verify-email', { token });
+
+    res.json({ success: true, message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to verify email'
+    });
+  }
+});
+
+// Resend verification email
+app.post('/api/auth/resend-verification-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Call API to resend verification
+    const response = await axios.post('http://api:8080/api/resend-verification-email', { email });
+
+    res.json({ success: true, message: 'Verification email sent' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to resend verification email'
+    });
+  }
+});
+
 // =============================================================================
 // ROUTES API SPÉCIFIQUES ET CONTRÔLÉES
 // =============================================================================
@@ -342,9 +397,39 @@ app.get('/api/public/search', async (req, res) => {
 // Routes d'inscription (publiques)
 app.post('/api/users', async (req, res) => {
   try {
+    // Create user in API
     const response = await axios.post('http://api:8080/api/users', req.body);
-    res.json(response.data);
+    const user = response.data;
+
+    // Generate verification token
+    const crypto = require('crypto');
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Save verification token to DB
+    const tokenExpiresAt = new Date();
+    tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
+
+    await axios.post('http://api:8080/api/save-verification-token', {
+      email: req.body.email,
+      token: verificationToken,
+      user_id: user.id_utilisateur,
+      expires_at: tokenExpiresAt.toISOString()
+    });
+
+    // Send verification email
+    await sendVerificationEmail(
+      req.body.email,
+      req.body.firstName || 'User',
+      verificationToken
+    );
+
+    // Return created user with info about verification email
+    res.status(201).json({
+      ...user,
+      message: 'User created. Please check your email to verify your account.'
+    });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(error.response?.status || 500).json({
       error: error.response?.data?.error || 'Registration failed'
     });

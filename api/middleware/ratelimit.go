@@ -64,7 +64,7 @@ func (rl *rateLimiter) isAllowed(ip string) bool {
 
 var (
 	LoginLimiter    = newRateLimiter(5, 1*time.Minute)
-	RegisterLimiter = newRateLimiter(3, 5*time.Minute)
+	RegisterLimiter = newRateLimiter(15, 5*time.Minute)
 	APILimiter      = newRateLimiter(100, 1*time.Minute)
 	AdminLimiter    = newRateLimiter(600, 1*time.Minute)
 )

@@ -82,6 +82,12 @@ function setupEventListeners() {
         AdminLogs.init();
       } else if (sectionId === 'backup-section') {
         AdminBackup.load();
+      } else if (sectionId === 'newsletter-section') {
+        AdminNewsletter.loadSubscribers();
+        AdminNewsletter.loadCampaigns();
+      } else if (sectionId === 'roles-section') {
+        AdminRoles.loadRoles();
+        AdminRoles.loadPermissions();
       }
     });
   });
@@ -120,6 +126,16 @@ function setupEventListeners() {
 
   document.getElementById('saveProductBtn')?.addEventListener('click', () => {
     AdminProducts.saveProduct();
+  });
+
+  // Newsletter section handlers
+  document.getElementById('createNewsletterBtn')?.addEventListener('click', () => {
+    AdminNewsletter.createCampaign();
+  });
+
+  // Roles section handlers
+  document.getElementById('createRoleBtn')?.addEventListener('click', () => {
+    AdminRoles.createRole();
   });
 
   // Handle logout

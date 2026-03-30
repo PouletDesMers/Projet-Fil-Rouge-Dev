@@ -239,9 +239,11 @@
           <li class="nav-item"><a class="nav-link" href="#" data-section="orders" data-bs-dismiss="offcanvas"><i class="bi bi-bag-check-fill"></i> Commandes</a></li>
           <li class="nav-item"><a class="nav-link" href="#" data-section="quotes" data-bs-dismiss="offcanvas"><i class="bi bi-file-earmark-text-fill"></i> Devis</a></li>
           <li class="nav-item"><a class="nav-link" href="#" data-section="discounts" data-bs-dismiss="offcanvas"><i class="bi bi-percent"></i> Remises</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-section="newsletter" data-bs-dismiss="offcanvas"><i class="bi bi-envelope-fill"></i> Newsletter</a></li>
         </ul>
         <div class="sidebar-section-label">Système</div>
         <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" href="#" data-section="roles" data-bs-dismiss="offcanvas"><i class="bi bi-shield-check"></i> Rôles & Permissions</a></li>
           <li class="nav-item"><a class="nav-link" href="#" data-section="api-keys" data-bs-dismiss="offcanvas"><i class="bi bi-key-fill"></i> API Tokens</a></li>
           <li class="nav-item"><a class="nav-link" href="#" data-section="logs" data-bs-dismiss="offcanvas"><i class="bi bi-terminal-fill"></i> Logs API</a></li>
           <li class="nav-item"><a class="nav-link" href="#" data-section="backup" data-bs-dismiss="offcanvas"><i class="bi bi-shield-lock-fill"></i> Sauvegardes</a></li>
@@ -305,10 +307,20 @@
                   <i class="bi bi-percent"></i> Remises
                 </a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-section="newsletter">
+                  <i class="bi bi-envelope-fill"></i> Newsletter
+                </a>
+              </li>
             </ul>
 
             <div class="sidebar-section-label">Système</div>
             <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-section="roles">
+                  <i class="bi bi-shield-check"></i> Rôles & Permissions
+                </a>
+              </li>
               <li class="nav-item">
                 <a class="nav-link" href="#" data-section="api-keys">
                   <i class="bi bi-key-fill"></i> API Tokens
@@ -767,6 +779,110 @@
             <div id="discountsContainer">
               <div class="d-flex justify-content-center py-5">
                 <div class="spinner-border text-primary"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Newsletter Section -->
+          <section id="newsletter-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-envelope-fill text-primary me-2"></i>Gestion de la Newsletter</h1>
+                <p class="text-muted mb-0">Gérer les abonnés et envoyer des campagnes</p>
+              </div>
+              <button class="btn btn-primary" id="createNewsletterBtn">
+                <i class="bi bi-plus-circle"></i> Nouvelle Campagne
+              </button>
+            </div>
+
+            <!-- Onglets Newsletter -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="newsletter-subscribers-tab" data-bs-toggle="tab" data-bs-target="#newsletter-subscribers-pane" type="button" role="tab">
+                  <i class="bi bi-people me-1"></i>Abonnés
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="newsletter-campaigns-tab" data-bs-toggle="tab" data-bs-target="#newsletter-campaigns-pane" type="button" role="tab">
+                  <i class="bi bi-send me-1"></i>Campagnes
+                </button>
+              </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+              <!-- Abonnés Tab -->
+              <div class="tab-pane fade show active" id="newsletter-subscribers-pane" role="tabpanel">
+                <div id="newsletterContainer">
+                  <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Chargement...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Campagnes Tab -->
+              <div class="tab-pane fade" id="newsletter-campaigns-pane" role="tabpanel">
+                <div id="campaignsContainer">
+                  <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Chargement...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Rôles & Permissions Section -->
+          <section id="roles-section" class="section-content d-none">
+            <div class="header-admin">
+              <div>
+                <h1><i class="bi bi-shield-check text-primary me-2"></i>Gestion des Rôles & Permissions</h1>
+                <p class="text-muted mb-0">Créer et configurer les rôles d'accès</p>
+              </div>
+              <button class="btn btn-primary" id="createRoleBtn">
+                <i class="bi bi-plus-circle"></i> Nouveau Rôle
+              </button>
+            </div>
+
+            <!-- Onglets Rôles -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="roles-list-tab" data-bs-toggle="tab" data-bs-target="#roles-list-pane" type="button" role="tab">
+                  <i class="bi bi-list me-1"></i>Rôles
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="permissions-list-tab" data-bs-toggle="tab" data-bs-target="#permissions-list-pane" type="button" role="tab">
+                  <i class="bi bi-key me-1"></i>Permissions
+                </button>
+              </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+              <!-- Rôles Tab -->
+              <div class="tab-pane fade show active" id="roles-list-pane" role="tabpanel">
+                <div id="rolesContainer">
+                  <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Chargement...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Permissions Tab -->
+              <div class="tab-pane fade" id="permissions-list-pane" role="tabpanel">
+                <div id="permissionsContainer">
+                  <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Chargement...</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -1909,5 +2025,7 @@
     <script src="js/modules/discounts.js"></script>
     <script src="js/modules/logs.js"></script>
     <script src="js/modules/backup.js"></script>
+    <script src="js/modules/newsletter.js"></script>
+    <script src="js/modules/roles.js"></script>
   </body>
 </html>

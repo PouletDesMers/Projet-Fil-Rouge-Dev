@@ -22,6 +22,9 @@ func Register(r *mux.Router) {
 	// ── Public ─────────────────────────────────────────────────────────────────
 	r.Handle("/api/login", mw.RateLimitLogin(http.HandlerFunc(handlers.Login))).Methods("POST")
 	r.Handle("/api/password-reset", mw.RateLimitRegister(http.HandlerFunc(handlers.ResetPassword))).Methods("POST")
+	r.Handle("/api/verify-email", mw.RateLimitRegister(http.HandlerFunc(handlers.VerifyEmail))).Methods("POST")
+	r.Handle("/api/save-verification-token", mw.RateLimitRegister(http.HandlerFunc(handlers.SaveVerificationToken))).Methods("POST")
+	r.Handle("/api/resend-verification-email", mw.RateLimitRegister(http.HandlerFunc(handlers.ResendVerificationEmail))).Methods("POST")
 	r.Handle("/api/users", mw.RateLimitRegister(http.HandlerFunc(handlers.CreateUser))).Methods("POST")
 	r.HandleFunc("/api/users/exists", handlers.GetUserExists).Methods("GET")
 	r.HandleFunc("/api/swagger.json", handlers.GetSwaggerSpec).Methods("GET")
@@ -155,4 +158,26 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/backup/download", adminLim(http.HandlerFunc(handlers.DownloadBackup))).Methods("GET")
 	r.Handle("/api/admin/backup/restore", adminLim(http.HandlerFunc(handlers.RestoreBackup))).Methods("POST")
 	r.Handle("/api/admin/backup", adminRaw(http.HandlerFunc(handlers.DeleteBackup))).Methods("DELETE")
+
+	// ── Newsletter ──────────────────────────────────────────────────
+	r.HandleFunc("/api/newsletter/subscribe", handlers.SubscribeNewsletter).Methods("POST")
+	r.HandleFunc("/api/newsletter/unsubscribe", handlers.UnsubscribeNewsletter).Methods("POST")
+	r.Handle("/api/admin/newsletter/subscribers", auth(http.HandlerFunc(handlers.GetNewsletterSubscribers))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/campaigns/{id}/send", auth(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+
+	// ── Roles & Permissions ──────────────────────────────────────────
+	r.Handle("/api/admin/roles", adminRaw(http.HandlerFunc(handlers.GetRoles))).Methods("GET")
+	r.Handle("/api/admin/roles", adminRaw(http.HandlerFunc(handlers.CreateRole))).Methods("POST")
+	r.Handle("/api/admin/roles/{id}", adminRaw(http.HandlerFunc(handlers.UpdateRole))).Methods("PUT")
+	r.Handle("/api/admin/roles/{id}", adminRaw(http.HandlerFunc(handlers.DeleteRole))).Methods("DELETE")
+	r.Handle("/api/admin/permissions", adminRaw(http.HandlerFunc(handlers.GetPermissions))).Methods("GET")
+	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.GetRolePermissions))).Methods("GET")
+	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.AssignPermissionToRole))).Methods("POST")
+	r.Handle("/api/admin/roles/{id}/permissions/{code}", adminRaw(http.HandlerFunc(handlers.RemovePermissionFromRole))).Methods("DELETE")
+	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.GetUserRoles))).Methods("GET")
+	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.AssignRoleToUser))).Methods("POST")
+	r.Handle("/api/admin/users/{id}/roles/{roleId}", auth(http.HandlerFunc(handlers.RemoveRoleFromUser))).Methods("DELETE")
+	r.Handle("/api/admin/users/{id}/permissions", auth(http.HandlerFunc(handlers.GetUserPermissions))).Methods("GET")
 }
