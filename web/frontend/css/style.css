@@ -8,6 +8,7 @@
 body {
   background: var(--cyna-light);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
 }
 
 /* Navbar */
@@ -73,6 +74,12 @@ body {
 .carousel-inner {
   border-radius: 18px;
   overflow: hidden;
+}
+
+.app-root {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 12px;
 }
 
 /* Cards & Layout */
