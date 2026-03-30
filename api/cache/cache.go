@@ -150,12 +150,15 @@ var (
 	CatalogCache *Cache
 	// SearchCache — résultats de recherche (TTL: 2 min)
 	SearchCache *Cache
+	// AdminCache — données admin fréquentes (TTL: 30s)
+	AdminCache *Cache
 )
 
 func Init() {
 	CatalogCache = New(5*time.Minute, 1*time.Minute)
 	SearchCache = New(2*time.Minute, 30*time.Second)
-	log.Println("Cache initialized (catalog: 5min TTL, search: 2min TTL)")
+	AdminCache = New(30*time.Second, 15*time.Second)
+	log.Println("Cache initialized (catalog: 5min TTL, search: 2min TTL, admin: 30s TTL)")
 }
 
 // ===== CLÉS =====
@@ -170,6 +173,13 @@ const (
 func KeyProduitsByCategory(slug string) string      { return "produits:category:" + slug }
 func KeySearchResults(query string) string          { return "search:" + query }
 func KeyTarification(id int) string                 { return fmt.Sprintf("tarification:%d", id) }
+
+// ===== CLÉS ADMIN =====
+
+const (
+	KeyAdminUsers      = "admin:users"
+	KeyAdminCategories = "admin:categories"
+)
 
 // ===== INVALIDATION =====
 
@@ -190,6 +200,16 @@ func InvalidateTarifications() {
 	CatalogCache.Delete(KeyAllTarifications)
 	CatalogCache.DeleteByPrefix("tarification:")
 	log.Println("Cache invalidated: tarifications")
+}
+
+func InvalidateAdminUsers() {
+	AdminCache.Delete(KeyAdminUsers)
+	log.Println("Cache invalidated: admin users")
+}
+
+func InvalidateAdminCategories() {
+	AdminCache.Delete(KeyAdminCategories)
+	log.Println("Cache invalidated: admin categories")
 }
 
 // ===== HANDLERS ADMIN =====

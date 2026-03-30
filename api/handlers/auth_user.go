@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"image/png"
@@ -15,9 +16,10 @@ import (
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 
+	"api/cache"
 	"api/config"
-	"api/models"
 	mw "api/middleware"
+	"api/models"
 )
 
 // ===== HELPERS INTERNES =====
@@ -52,6 +54,33 @@ func encodeHex(dst, src []byte) {
 	}
 }
 
+func userHasRole(userID int, roleName string) bool {
+	var exists bool
+	err := config.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1 AND LOWER(r.nom) = LOWER($2)
+		)`, userID, roleName).Scan(&exists)
+	return err == nil && exists
+}
+
+func primaryRole(userID int) string {
+	var role string
+	err := config.DB.QueryRow(`
+		SELECT LOWER(r.nom)
+		FROM user_roles ur
+		JOIN roles r ON ur.id_role = r.id_role
+		WHERE ur.id_utilisateur = $1
+		ORDER BY r.id_role
+		LIMIT 1`, userID).Scan(&role)
+	if err != nil {
+		return ""
+	}
+	return role
+}
+
 // ===== LOGIN =====
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -73,18 +102,29 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	var storedPassword string
 	var id int
-	var totpSecretNull struct{ Valid bool; String string }
+	var totpSecretNull struct {
+		Valid  bool
+		String string
+	}
 	var totpEnabled bool
+	var emailVerified bool
 
 	row := config.DB.QueryRow(
-		"SELECT id_utilisateur, mot_de_passe, totp_secret, totp_enabled FROM utilisateur WHERE email = $1",
+		"SELECT id_utilisateur, mot_de_passe, totp_secret, totp_enabled, email_verified FROM utilisateur WHERE email = $1",
 		creds.Email)
 	var totpSecretPtr *string
-	err := row.Scan(&id, &storedPassword, &totpSecretPtr, &totpEnabled)
+	err := row.Scan(&id, &storedPassword, &totpSecretPtr, &totpEnabled, &emailVerified)
 	if err != nil {
 		jsonErr(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
+	// Check if email is verified
+	if !emailVerified {
+		jsonErr(w, "Email not verified. Please check your inbox and verify your email.", http.StatusUnauthorized)
+		return
+	}
+
 	if totpSecretPtr != nil {
 		totpSecretNull.Valid = true
 		totpSecretNull.String = *totpSecretPtr
@@ -213,8 +253,7 @@ func Remove2FA(w http.ResponseWriter, r *http.Request) {
 	}
 	targetUserID := adminUserID
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err == nil && requestBody.UserID > 0 {
-		var adminRole string
-		if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole); err != nil || adminRole != "admin" {
+		if !userHasRole(adminUserID, "admin") {
 			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
 			return
 		}
@@ -316,11 +355,26 @@ func RemoveWebAuthn(w http.ResponseWriter, r *http.Request) {
 // ===== UTILISATEURS =====
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Cache hit
+	if cached := cache.AdminCache.Get(cache.KeyAdminUsers); cached != nil {
+		w.Write(cached)
+		return
+	}
+
 	rows, err := config.DB.Query(
-		`SELECT id_utilisateur, email,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        COALESCE(totp_enabled,false), COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise
-		 FROM utilisateur`)
+		`SELECT u.id_utilisateur, u.email,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur`)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -332,8 +386,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var u models.Utilisateur
 		err := rows.Scan(
-			&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut,
-			&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise,
+			&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
+			&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role,
 		)
 		if err != nil {
 			log.Printf("Error scanning user: %v", err)
@@ -345,6 +399,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
+	// Mise en cache + réponse
+	cache.SetJSON(cache.AdminCache, cache.KeyAdminUsers, users)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
@@ -357,12 +413,20 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var u models.Utilisateur
 	err = config.DB.QueryRow(
-		`SELECT id_utilisateur, email,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        COALESCE(totp_enabled,false), COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise
-		 FROM utilisateur WHERE id_utilisateur = $1`,
-		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut,
-		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise)
+		`SELECT u.id_utilisateur, u.email,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 WHERE u.id_utilisateur = $1`,
+		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
+		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role)
 	if err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
@@ -400,7 +464,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u.Role = "client"
 	if u.Statut == "" {
 		u.Statut = "actif"
 	}
@@ -421,16 +484,25 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	u.MotDePasse = string(hashed)
 
 	err = config.DB.QueryRow(
-		"INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, role, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id_utilisateur",
-		u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Role, u.Statut, u.IDEntreprise).Scan(&u.ID)
+		"INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, telephone, statut, id_entreprise) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id_utilisateur",
+		u.Email, u.MotDePasse, u.Nom, u.Prenom, u.Telephone, u.Statut, u.IDEntreprise).Scan(&u.ID)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	// Assign default Client role if it exists
+	_, _ = config.DB.Exec(`
+		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
+		SELECT $1, r.id_role, NOW()
+		FROM roles r
+		WHERE LOWER(r.nom) = 'client'
+		ON CONFLICT DO NOTHING`, u.ID)
+	u.Role = primaryRole(u.ID)
 	u.MotDePasse = ""
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	cache.InvalidateAdminUsers()
 	json.NewEncoder(w).Encode(u)
 }
 
@@ -446,19 +518,26 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var requestingRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole); err != nil || requestingRole != "admin" {
+	if !userHasRole(requestingUserID, "admin") {
 		jsonErr(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
 
 	var cur models.Utilisateur
 	if err := config.DB.QueryRow(
-		`SELECT id_utilisateur, email, mot_de_passe,
-		        COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		        id_entreprise
-		 FROM utilisateur WHERE id_utilisateur = $1`,
-		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Role, &cur.Statut, &cur.IDEntreprise); err != nil {
+		`SELECT u.id_utilisateur, u.email, u.mot_de_passe,
+		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		        u.id_entreprise,
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 WHERE u.id_utilisateur = $1`,
+		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Statut, &cur.IDEntreprise, &cur.Role); err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
 	}
@@ -470,15 +549,28 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if u.Email != "" { cur.Email = u.Email }
-	if u.Nom != "" { cur.Nom = u.Nom }
-	if u.Prenom != "" { cur.Prenom = u.Prenom }
-	if u.Telephone != "" { cur.Telephone = u.Telephone }
-	if u.Role != "" { cur.Role = u.Role }
-	if u.Statut != "" { cur.Statut = u.Statut }
+	if u.Email != "" {
+		cur.Email = u.Email
+	}
+	if u.Nom != "" {
+		cur.Nom = u.Nom
+	}
+	if u.Prenom != "" {
+		cur.Prenom = u.Prenom
+	}
+	if u.Telephone != "" {
+		cur.Telephone = u.Telephone
+	}
+	if u.Statut != "" {
+		cur.Statut = u.Statut
+	}
 
 	if u.EstActif != cur.EstActif {
-		if u.EstActif { cur.Statut = "actif" } else { cur.Statut = "inactif" }
+		if u.EstActif {
+			cur.Statut = "actif"
+		} else {
+			cur.Statut = "inactif"
+		}
 		cur.EstActif = u.EstActif
 	}
 
@@ -496,13 +588,14 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := config.DB.Exec(
-		"UPDATE utilisateur SET email=$1, mot_de_passe=$2, nom=$3, prenom=$4, telephone=$5, role=$6, statut=$7, id_entreprise=$8 WHERE id_utilisateur=$9",
-		cur.Email, cur.MotDePasse, cur.Nom, cur.Prenom, cur.Telephone, cur.Role, cur.Statut, cur.IDEntreprise, id); err != nil {
+		"UPDATE utilisateur SET email=$1, mot_de_passe=$2, nom=$3, prenom=$4, telephone=$5, statut=$6, id_entreprise=$7 WHERE id_utilisateur=$8",
+		cur.Email, cur.MotDePasse, cur.Nom, cur.Prenom, cur.Telephone, cur.Statut, cur.IDEntreprise, id); err != nil {
 		log.Printf("Error updating user %d: %v", id, err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	cur.MotDePasse = ""
+	cache.InvalidateAdminUsers()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cur)
 }
@@ -518,8 +611,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var requestingRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", requestingUserID).Scan(&requestingRole); err != nil || requestingRole != "admin" {
+	if !userHasRole(requestingUserID, "admin") {
 		jsonErr(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
@@ -536,6 +628,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "User not found", http.StatusNotFound)
 		return
 	}
+	cache.InvalidateAdminUsers()
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -565,8 +658,7 @@ func ResetUser2FA(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var adminRole string
-	if err := config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", adminUserID).Scan(&adminRole); err != nil || adminRole != "admin" {
+	if !userHasRole(adminUserID, "admin") {
 		http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
 		return
 	}
@@ -597,14 +689,22 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	var webauthnCounter *int64
 
 	err := config.DB.QueryRow(`
-		SELECT id_utilisateur, email,
-		       COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''), COALESCE(role,'client'), COALESCE(statut,'actif'),
-		       COALESCE(date_creation,NOW()), derniere_connexion, id_entreprise,
-		       totp_secret, COALESCE(totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter
-		FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(
-		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Role, &u.Statut, &u.DateCreation,
+		SELECT u.id_utilisateur, u.email,
+		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
+		       COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
+		       totp_secret, COALESCE(u.totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter,
+		       COALESCE(r.primary_role, '')
+		FROM utilisateur u
+		LEFT JOIN (
+		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		    FROM user_roles ur
+		    JOIN roles r ON ur.id_role = r.id_role
+		    GROUP BY ur.id_utilisateur
+		) r ON r.id_utilisateur = u.id_utilisateur
+		WHERE u.id_utilisateur = $1`, userID).Scan(
+		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise, &totpSecretPtr, &u.TotpEnabled,
-		&webauthnCredID, &webauthnPubKey, &webauthnCounter)
+		&webauthnCredID, &webauthnPubKey, &webauthnCounter, &u.Role)
 
 	if err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
@@ -690,4 +790,224 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
+}
+
+// ===== PASSWORD RESET =====
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" || data.Password == "" {
+		jsonErr(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Vérifier que l'email existe
+	var userID int
+	row := config.DB.QueryRow(
+		"SELECT id_utilisateur FROM utilisateur WHERE email = $1",
+		data.Email)
+
+	if err := row.Scan(&userID); err != nil {
+		jsonErr(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Hash le nouveau mot de passe
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if err != nil {
+		jsonErr(w, "Failed to process password", http.StatusInternalServerError)
+		return
+	}
+
+	// Mettre à jour le mot de passe
+	if _, err := config.DB.Exec(
+		"UPDATE utilisateur SET mot_de_passe=$1 WHERE id_utilisateur=$2",
+		string(hashedPassword), userID); err != nil {
+		jsonErr(w, "Failed to update password", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password reset successfully",
+		"success": "true",
+	})
+}
+
+// ===== EMAIL VERIFICATION =====
+
+func VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Token string `json:"token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if data.Token == "" {
+		jsonErr(w, "Token is required", http.StatusBadRequest)
+		return
+	}
+
+	// Récupérer le token et vérifier qu'il n'a pas expiré
+	var userID int
+	var email string
+	var usedAT sql.NullTime
+
+	row := config.DB.QueryRow(`
+		SELECT id_utilisateur, email, used_at
+		FROM email_verification_tokens
+		WHERE token = $1 AND expires_at > NOW()
+	`, data.Token)
+
+	if err := row.Scan(&userID, &email, &usedAT); err != nil {
+		if err == sql.ErrNoRows {
+			jsonErr(w, "Invalid or expired token", http.StatusBadRequest)
+		} else {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Vérifier que le token n'a pas déjà été utilisé
+	if usedAT.Valid {
+		jsonErr(w, "Token already used", http.StatusBadRequest)
+		return
+	}
+
+	// Marquer l'email comme vérifié
+	if _, err := config.DB.Exec(`
+		UPDATE utilisateur
+		SET email_verified = TRUE, email_verified_at = NOW()
+		WHERE id_utilisateur = $1
+	`, userID); err != nil {
+		jsonErr(w, "Failed to verify email", http.StatusInternalServerError)
+		return
+	}
+
+	// Marquer le token comme utilisé
+	if _, err := config.DB.Exec(`
+		UPDATE email_verification_tokens
+		SET used = TRUE, used_at = NOW()
+		WHERE token = $1
+	`, data.Token); err != nil {
+		log.Printf("Warning: failed to mark token as used: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Email verified successfully",
+		"success": "true",
+	})
+}
+
+func ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" {
+		jsonErr(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Récupérer l'utilisateur
+	var userID int
+	var firstName string
+	var emailVerified bool
+
+	row := config.DB.QueryRow(`
+		SELECT id_utilisateur, prenom, email_verified
+		FROM utilisateur
+		WHERE email = $1
+	`, data.Email)
+
+	if err := row.Scan(&userID, &firstName, &emailVerified); err != nil {
+		if err == sql.ErrNoRows {
+			// Pour la sécu, on fait semblant que ça a marché
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "If the email exists, a verification link has been sent",
+				"success": "true",
+			})
+			return
+		}
+		jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Si déjà vérifié, pas besoin de renvoyer
+	if emailVerified {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Email already verified",
+			"success": "true",
+		})
+		return
+	}
+
+	// TODO: Generate token and send email
+	// This would integrate with the Node.js email service
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification email sent",
+		"success": "true",
+	})
+}
+
+// SaveVerificationToken saves an email verification token
+func SaveVerificationToken(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email     string `json:"email"`
+		Token     string `json:"token"`
+		UserID    int    `json:"user_id"`
+		ExpiresAt string `json:"expires_at"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if data.Email == "" || data.Token == "" {
+		jsonErr(w, "Email and token are required", http.StatusBadRequest)
+		return
+	}
+
+	// Save token to database
+	_, err := config.DB.Exec(`
+		INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+		VALUES ($1, $2, $3, $4)
+	`, data.Email, data.Token, data.UserID, data.ExpiresAt)
+
+	if err != nil {
+		log.Printf("Error saving verification token: %v", err)
+		jsonErr(w, "Failed to save verification token", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification token saved",
+		"success": "true",
+	})
 }

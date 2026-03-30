@@ -5,6 +5,8 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
+const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminNotification, sendNewsletterEmail } = require('./backend/js/modules/email');
+const { generateResetToken, saveResetToken, validateResetToken, markTokenAsUsed } = require('./backend/js/modules/reset-tokens');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -202,19 +204,141 @@ app.post('/auth/logout', (req, res) => {
 app.get('/auth/profile', async (req, res) => {
   try {
     const token = getAuthToken(req);
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    
+
     const response = await axios.get('http://api:8080/api/user/profile', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     res.json(response.data);
   } catch (error) {
     res.status(error.response?.status || 500).json({
       error: error.response?.data?.error || 'Failed to get profile'
+    });
+  }
+});
+
+// Request password reset
+app.post('/api/auth/request-password-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Vérifier que l'email existe
+    const userExists = await axios.get(`http://api:8080/api/users/exists?email=${encodeURIComponent(email)}`);
+
+    if (!userExists.data.exists) {
+      // Pour la sécu, on fait semblant que ça a marché (pas d'énumération d'emails)
+      return res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
+    }
+
+    // Générer un token
+    const resetToken = generateResetToken();
+    saveResetToken(email, resetToken);
+
+    // Envoyer l'email
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
+    await sendPasswordResetEmail(email, resetToken);
+
+    res.json({ success: true, message: 'Email sent' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to request password reset' });
+  }
+});
+
+// Reset password with token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' });
+    }
+
+    // Valider le token
+    const validation = validateResetToken(token);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const email = validation.email;
+
+    // Appeler l'API pour réinitialiser le mot de passe
+    const response = await axios.post('http://api:8080/api/password-reset', {
+      email,
+      password
+    });
+
+    // Marquer le token comme utilisé
+    markTokenAsUsed(token);
+
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to reset password'
+    });
+  }
+});
+
+// Save verification token (called from Node.js after user creation)
+app.post('/api/save-verification-token', async (req, res) => {
+  try {
+    const response = await axios.post('http://api:8080/api/save-verification-token', req.body);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error saving verification token:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to save verification token'
+    });
+  }
+});
+
+// Verify email with token
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+
+    // Call API to verify email
+    const response = await axios.post('http://api:8080/api/verify-email', { token });
+
+    res.json({ success: true, message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to verify email'
+    });
+  }
+});
+
+// Resend verification email
+app.post('/api/auth/resend-verification-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Call API to resend verification
+    const response = await axios.post('http://api:8080/api/resend-verification-email', { email });
+
+    res.json({ success: true, message: 'Verification email sent' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.error || 'Failed to resend verification email'
     });
   }
 });
@@ -273,9 +397,39 @@ app.get('/api/public/search', async (req, res) => {
 // Routes d'inscription (publiques)
 app.post('/api/users', async (req, res) => {
   try {
+    // Create user in API
     const response = await axios.post('http://api:8080/api/users', req.body);
-    res.json(response.data);
+    const user = response.data;
+
+    // Generate verification token
+    const crypto = require('crypto');
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Save verification token to DB
+    const tokenExpiresAt = new Date();
+    tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
+
+    await axios.post('http://api:8080/api/save-verification-token', {
+      email: req.body.email,
+      token: verificationToken,
+      user_id: user.id_utilisateur,
+      expires_at: tokenExpiresAt.toISOString()
+    });
+
+    // Send verification email
+    await sendVerificationEmail(
+      req.body.email,
+      req.body.firstName || 'User',
+      verificationToken
+    );
+
+    // Return created user with info about verification email
+    res.status(201).json({
+      ...user,
+      message: 'User created. Please check your email to verify your account.'
+    });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(error.response?.status || 500).json({
       error: error.response?.data?.error || 'Registration failed'
     });
@@ -290,6 +444,37 @@ app.get('/api/users/exists', async (req, res) => {
     res.status(error.response?.status || 500).json({
       error: error.response?.data?.error || 'Email check failed'
     });
+  }
+});
+
+// Endpoint de test email
+app.post('/api/test/send-email', async (req, res) => {
+  try {
+    const { type, email, firstName } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    let result;
+    switch (type) {
+      case 'welcome':
+        result = await sendWelcomeEmail(email, firstName || 'User');
+        break;
+      case 'reset':
+        result = await sendPasswordResetEmail(email, 'test-token-123');
+        break;
+      case 'admin':
+        result = await sendAdminNotification(email, 'Test', 'Ceci est un email de test');
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid email type' });
+    }
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error sending test email:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -367,6 +552,10 @@ app.get('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.put('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.delete('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.post('/admin/api/users/:id/reset-2fa', proxyToApiWithAuth('/users/:id/reset-2fa'));
+app.get('/admin/api/users/:id/roles', proxyToApiWithAuth('/admin/users/:id/roles'));
+app.post('/admin/api/users/:id/roles', proxyToApiWithAuth('/admin/users/:id/roles'));
+app.delete('/admin/api/users/:id/roles/:roleId', proxyToApiWithAuth('/admin/users/:id/roles/:roleId'));
+app.get('/admin/api/users/:id/permissions', proxyToApiWithAuth('/admin/users/:id/permissions'));
 
 app.get('/admin/api/categories', proxyToApiWithAuth('/web-categories'));
 app.post('/admin/api/categories', proxyToApiWithAuth('/web-categories'));
@@ -402,6 +591,22 @@ app.post('/admin/api/orders', proxyToApiWithAuth('/commandes'));
 app.get('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.put('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
 app.delete('/admin/api/orders/:id', proxyToApiWithAuth('/commandes/:id'));
+
+// Roles & Permissions (admin)
+app.get('/admin/api/roles', proxyToApiWithAuth('/admin/roles'));
+app.post('/admin/api/roles', proxyToApiWithAuth('/admin/roles'));
+app.put('/admin/api/roles/:id', proxyToApiWithAuth('/admin/roles/:id'));
+app.delete('/admin/api/roles/:id', proxyToApiWithAuth('/admin/roles/:id'));
+app.get('/admin/api/permissions', proxyToApiWithAuth('/admin/permissions'));
+app.get('/admin/api/roles/:id/permissions', proxyToApiWithAuth('/admin/roles/:id/permissions'));
+app.post('/admin/api/roles/:id/permissions', proxyToApiWithAuth('/admin/roles/:id/permissions'));
+app.delete('/admin/api/roles/:id/permissions/:code', proxyToApiWithAuth('/admin/roles/:id/permissions/:code'));
+
+// Newsletter (admin)
+app.get('/admin/api/newsletter/subscribers', proxyToApiWithAuth('/admin/newsletter/subscribers'));
+app.get('/admin/api/newsletter/campaigns', proxyToApiWithAuth('/admin/newsletter/campaigns'));
+app.post('/admin/api/newsletter/campaigns', proxyToApiWithAuth('/admin/newsletter/campaigns'));
+app.post('/admin/api/newsletter/campaigns/:id/send', proxyToApiWithAuth('/admin/newsletter/campaigns/:id/send'));
 
 // GET /admin/api/quotes — Devis (commandes devis_* en DB + enrichissement Stripe)
 app.get('/admin/api/quotes', checkAdminAuth, async (req, res) => {
@@ -1199,6 +1404,37 @@ app.use((err, req, res, next) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
   res.status(500).sendFile(path.join(__dirname, 'frontend', 'error.html'));
+});
+
+// ── Email Test Route (remove in production) ──────────────────────────────
+app.post('/api/test/send-email', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Test endpoints disabled in production' });
+  }
+
+  const { type, email, firstName } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    let result;
+    if (type === 'welcome') {
+      result = await sendWelcomeEmail(email, firstName || 'User');
+    } else if (type === 'reset') {
+      result = await sendPasswordResetEmail(email, 'test-token-12345');
+    } else if (type === 'admin') {
+      result = await sendAdminNotification(email, 'Test Admin Notification', 'This is a test message');
+    } else {
+      return res.status(400).json({ error: 'Invalid email type (welcome, reset, admin)' });
+    }
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Email test error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // 404 handler

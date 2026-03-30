@@ -6,12 +6,17 @@
 const AdminAPIKeys = {
   async loadAPIKeys() {
     try {
-      
+
       const container = document.getElementById('apiKeysContainer');
-      
+
       container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
-      
-      const response = await fetch('/admin/api/api-tokens');
+
+      const token = localStorage.getItem('token');
+      const response = await fetch('/admin/api/api-tokens', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) throw new Error('Erreur lors de la récupération des clés API');
       
@@ -87,19 +92,21 @@ const AdminAPIKeys = {
 
   async createKey() {
     try {
-      
+
       const nom = document.getElementById('apiKeyName').value.trim();
       const permissions = document.getElementById('apiKeyPermissions').value.trim();
-      
+
       if (!nom) {
         AdminUtils.showAlert('Le nom de la clé est requis', 'warning');
         return;
       }
-      
+
+      const token = localStorage.getItem('token');
       const response = await fetch('/admin/api/api-tokens', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ nom, permissions })
       });
@@ -130,11 +137,15 @@ const AdminAPIKeys = {
 
   async deleteKey(keyId) {
     if (!confirm('Voulez-vous vraiment supprimer cette clé API ? Cette action est irréversible.')) return;
-    
+
     try {
-      
+
+      const token = localStorage.getItem('token');
       const response = await fetch(`/admin/api/api-tokens/${keyId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (!response.ok) throw new Error('Erreur lors de la suppression');
@@ -150,11 +161,13 @@ const AdminAPIKeys = {
 
   async toggleKeyStatus(keyId, newStatus) {
     try {
-      
+
+      const token = localStorage.getItem('token');
       const response = await fetch(`/admin/api/api-tokens/${keyId}/status`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ est_actif: newStatus })
       });

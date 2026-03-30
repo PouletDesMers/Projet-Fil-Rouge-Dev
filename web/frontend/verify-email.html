@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vérifier l'email — CYNA</title>
+
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/auth.css" />
+  </head>
+
+  <body>
+    <div class="auth-container">
+      <a href="/index.html" class="auth-logo">
+        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" />
+        CYNA
+      </a>
+
+      <div id="msg" class="d-none">
+        <div class="error-box">
+          <i class="bi bi-exclamation-triangle"></i>
+          <div>
+            <h6 id="msgTitle">There was a problem</h6>
+            <p id="msgText"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h2 class="auth-title">Vérification en cours...</h2>
+          <p class="small text-muted">Merci de patienter.</p>
+        </div>
+
+        <!-- Success State -->
+        <div id="successState" class="d-none text-center">
+          <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+          <h2 class="auth-title mt-3">Email vérifié ✅</h2>
+          <p class="small">Votre compte est prêt à être utilisé!</p>
+          <a href="/auth.html" class="btn btn-auth-primary mt-3">Se connecter</a>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="d-none text-center">
+          <i class="bi bi-x-circle text-danger" style="font-size: 3rem;"></i>
+          <h2 class="auth-title mt-3">Erreur de vérification</h2>
+          <p id="errorMessage" class="small"></p>
+          <a href="/auth.html" class="btn btn-auth-secondary mt-3">Retour à la connexion</a>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/verify-email.js"></script>
+  </body>
+</html>

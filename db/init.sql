@@ -33,11 +33,13 @@ CREATE TABLE IF NOT EXISTS utilisateur (
     nom                   VARCHAR(100),
     prenom                VARCHAR(100),
     telephone             VARCHAR(30),
-    role                  VARCHAR(30)  DEFAULT 'client',  -- client | admin | support
     statut                VARCHAR(30)  DEFAULT 'actif',   -- actif | inactif | suspendu
     date_creation         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     derniere_connexion    TIMESTAMP,
     id_entreprise         INT          REFERENCES entreprise(id_entreprise),
+    -- Email verification
+    email_verified        BOOLEAN      DEFAULT FALSE,
+    email_verified_at     TIMESTAMP,
     -- 2FA / WebAuthn
     totp_secret           TEXT,
     totp_enabled          BOOLEAN      DEFAULT FALSE,
@@ -50,7 +52,10 @@ CREATE TABLE IF NOT EXISTS utilisateur (
 );
 
 CREATE INDEX IF NOT EXISTS idx_utilisateur_email  ON utilisateur(email);
-CREATE INDEX IF NOT EXISTS idx_utilisateur_role   ON utilisateur(role);
+
+-- Supprimer l'ancienne colonne role si elle existe encore
+ALTER TABLE IF EXISTS utilisateur DROP COLUMN IF EXISTS role;
+DROP INDEX IF EXISTS idx_utilisateur_role;
 
 
 -- ============================================================
@@ -121,6 +126,8 @@ CREATE TABLE IF NOT EXISTS produits (
     slug                    VARCHAR(150) NOT NULL,
     description_courte      TEXT,
     description_longue      TEXT,
+    description_html        TEXT,
+    images                  TEXT DEFAULT '[]',
     prix                    DECIMAL(10,2),
     devise                  VARCHAR(3)   DEFAULT 'EUR',
     duree                   VARCHAR(50)  DEFAULT 'mois',
@@ -287,14 +294,250 @@ CREATE INDEX IF NOT EXISTS idx_api_logs_user_id   ON api_logs (user_id) WHERE us
 
 
 -- ============================================================
+-- 14. EMAIL VERIFICATION TOKENS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id_token              SERIAL PRIMARY KEY,
+    email                 VARCHAR(255) NOT NULL,
+    token                 VARCHAR(500) UNIQUE NOT NULL,
+    created_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    expires_at            TIMESTAMP    NOT NULL,
+    used                  BOOLEAN      DEFAULT FALSE,
+    used_at               TIMESTAMP,
+    id_utilisateur        INT          REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_verify_token_email     ON email_verification_tokens(email);
+CREATE INDEX IF NOT EXISTS idx_verify_token_token    ON email_verification_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_verify_token_user_id  ON email_verification_tokens(id_utilisateur);
+
+
+-- ============================================================
+-- 15. NEWSLETTER SUBSCRIBERS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+    id_subscriber         SERIAL PRIMARY KEY,
+    email                 VARCHAR(255) UNIQUE NOT NULL,
+    is_subscribed         BOOLEAN      DEFAULT TRUE,
+    subscribed_at         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    unsubscribed_at       TIMESTAMP,
+    id_utilisateur        INT          REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_newsletter_sub_email ON newsletter_subscribers(email);
+CREATE INDEX IF NOT EXISTS idx_newsletter_sub_user  ON newsletter_subscribers(id_utilisateur);
+
+
+-- ============================================================
+-- 16. NEWSLETTER CAMPAIGNS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS newsletter_campaigns (
+    id_campaign           SERIAL PRIMARY KEY,
+    title                 VARCHAR(255) NOT NULL,
+    content               TEXT NOT NULL,
+    status                VARCHAR(30)  DEFAULT 'draft',  -- draft | sent | scheduled
+    created_by            INT          NOT NULL REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE,
+    created_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    sent_at               TIMESTAMP,
+    scheduled_for         TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_newsletter_campaign_status ON newsletter_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_newsletter_campaign_created_by ON newsletter_campaigns(created_by);
+
+
+-- ============================================================
+-- 17. NEWSLETTER CAMPAIGN SENDS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS newsletter_campaign_sends (
+    id_send               SERIAL PRIMARY KEY,
+    id_campaign           INT          NOT NULL REFERENCES newsletter_campaigns(id_campaign) ON DELETE CASCADE,
+    recipient_email       VARCHAR(255) NOT NULL,
+    sent_at               TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    status                VARCHAR(30)  DEFAULT 'sent',  -- sent | failed | bounced
+    error_message         TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_newsletter_send_campaign ON newsletter_campaign_sends(id_campaign);
+CREATE INDEX IF NOT EXISTS idx_newsletter_send_email    ON newsletter_campaign_sends(recipient_email);
+
+
+-- ============================================================
+-- 18. ROLES (RBAC)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS roles (
+    id_role               SERIAL PRIMARY KEY,
+    nom                   VARCHAR(100) UNIQUE NOT NULL,
+    description           TEXT,
+    actif                 BOOLEAN      DEFAULT TRUE,
+    is_system_role        BOOLEAN      DEFAULT FALSE,  -- Cannot be deleted if TRUE
+    date_creation         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_roles_nom ON roles(nom);
+
+
+-- ============================================================
+-- 19. PERMISSIONS (RBAC)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS permissions (
+    id_permission         SERIAL PRIMARY KEY,
+    code                  VARCHAR(50)  UNIQUE NOT NULL,  -- e.g., "users.view", "users.edit"
+    description           TEXT,
+    categorie             VARCHAR(50),  -- e.g., "users", "products", "billing", "admin"
+    actif                 BOOLEAN      DEFAULT TRUE,
+    date_creation         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_permissions_code ON permissions(code);
+CREATE INDEX IF NOT EXISTS idx_permissions_categorie ON permissions(categorie);
+
+
+-- ============================================================
+-- 20. ROLE PERMISSIONS (RBAC Junction Table)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id_role_perm          SERIAL PRIMARY KEY,
+    id_role               INT          NOT NULL REFERENCES roles(id_role) ON DELETE CASCADE,
+    id_permission         INT          NOT NULL REFERENCES permissions(id_permission) ON DELETE CASCADE,
+    UNIQUE(id_role, id_permission)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_perm_role ON role_permissions(id_role);
+CREATE INDEX IF NOT EXISTS idx_role_perm_permission ON role_permissions(id_permission);
+
+
+-- ============================================================
+-- 21. USER ROLES (RBAC Junction Table)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_roles (
+    id_user_role          SERIAL PRIMARY KEY,
+    id_utilisateur        INT          NOT NULL REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE,
+    id_role               INT          NOT NULL REFERENCES roles(id_role) ON DELETE CASCADE,
+    date_assignation      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(id_utilisateur, id_role)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_role_user ON user_roles(id_utilisateur);
+CREATE INDEX IF NOT EXISTS idx_user_role_role ON user_roles(id_role);
+
+
+-- ============================================================
 -- 13. DONNÉES INITIALES
 -- ============================================================
 
 -- Admin par défaut (mot de passe : Admin1234! — À CHANGER en production)
 -- Hash bcrypt généré pour "Admin1234!"
-INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, role, statut)
-SELECT 'admin@cyna.fr', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHuy', 'Admin', 'CYNA', 'admin', 'actif'
+INSERT INTO utilisateur (email, mot_de_passe, nom, prenom, statut, email_verified, email_verified_at)
+SELECT 'admin@cyna.fr', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHuy', 'Admin', 'CYNA', 'actif', TRUE, CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM utilisateur WHERE email = 'admin@cyna.fr');
+
+-- Token API système (généré automatiquement par l'API Go au démarrage
+-- via le bloc "if count == 0" dans main.go — ne pas en insérer un ici)
+
+-- ============================================================
+-- Rôles par défaut (RBAC)
+-- ============================================================
+INSERT INTO roles (id_role, nom, description, actif, is_system_role)
+SELECT 1, 'Admin', 'Administrateur système avec tous les droits', TRUE, TRUE
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'Admin');
+
+INSERT INTO roles (id_role, nom, description, actif, is_system_role)
+SELECT 2, 'Client', 'Utilisateur client standard avec droits de lecture', TRUE, TRUE
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'Client');
+
+INSERT INTO roles (id_role, nom, description, actif, is_system_role)
+SELECT 3, 'Moderator', 'Modérateur avec droits de modération', TRUE, FALSE
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'Moderator');
+
+INSERT INTO roles (id_role, nom, description, actif, is_system_role)
+SELECT 4, 'Support', 'Agent support avec accès limité', TRUE, FALSE
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nom = 'Support');
+
+SELECT setval('roles_id_role_seq', (SELECT MAX(id_role) FROM roles), true);
+
+-- ============================================================
+-- Permissions par défaut (RBAC)
+-- ============================================================
+-- Utilisateurs
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'users.view', 'Consulter les utilisateurs', 'users', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'users.view');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'users.edit', 'Modifier les utilisateurs', 'users', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'users.edit');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'users.create', 'Créer des utilisateurs', 'users', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'users.create');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'users.delete', 'Supprimer des utilisateurs', 'users', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'users.delete');
+
+-- Produits
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'products.view', 'Consulter les produits', 'products', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'products.view');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'products.edit', 'Modifier les produits', 'products', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'products.edit');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'products.create', 'Créer des produits', 'products', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'products.create');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'products.delete', 'Supprimer des produits', 'products', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'products.delete');
+
+-- Newsletter
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'newsletter.view', 'Consulter les abonnés', 'newsletter', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'newsletter.view');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'newsletter.manage', 'Gérer les campagnes', 'newsletter', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'newsletter.manage');
+
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'newsletter.send', 'Envoyer les campagnes', 'newsletter', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'newsletter.send');
+
+-- Rôles et permissions
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'roles.manage', 'Gérer les rôles et permissions', 'admin', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'roles.manage');
+
+-- Admin
+INSERT INTO permissions (code, description, categorie, actif)
+SELECT 'admin.access', 'Accès au panel admin', 'admin', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'admin.access');
+
+-- ============================================================
+-- Assigner les permissions aux rôles (RBAC)
+-- ============================================================
+-- Admin: tous les droits
+INSERT INTO role_permissions (id_role, id_permission)
+SELECT 1, id_permission FROM permissions
+ON CONFLICT (id_role, id_permission) DO NOTHING;
+
+-- Client: lecture seule
+INSERT INTO role_permissions (id_role, id_permission)
+SELECT 2, id_permission FROM permissions WHERE code IN ('users.view', 'products.view')
+ON CONFLICT (id_role, id_permission) DO NOTHING;
+
+-- Support: support permissions
+INSERT INTO role_permissions (id_role, id_permission)
+SELECT 4, id_permission FROM permissions WHERE code IN ('users.view', 'admin.access')
+ON CONFLICT (id_role, id_permission) DO NOTHING;
+
+-- Assigner admin au rôle Admin
+INSERT INTO user_roles (id_utilisateur, id_role)
+SELECT 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM user_roles WHERE id_utilisateur = 1 AND id_role = 1);
 
 -- Token API système (généré automatiquement par l'API Go au premier démarrage
 -- via le bloc "if count == 0" dans main.go — ne pas en insérer un ici)

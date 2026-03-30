@@ -41,6 +41,7 @@ async function fixDuplicateCategoryOrders(categories) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -77,7 +78,11 @@ async function loadCategories() {
     categoriesContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/admin/api/categories');
+    const response = await fetch('/admin/api/categories', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
 
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des catégories');
@@ -225,10 +230,12 @@ async function saveCategory() {
     const url = isEdit ? `/admin/api/categories/${categoryId}` : '/admin/api/categories';
     const method = isEdit ? 'PUT' : 'POST';
 
+    const token = localStorage.getItem('token');
     const response = await fetch(url, {
       method: method,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(categoryData)
     });
@@ -261,10 +268,10 @@ async function saveCategory() {
 // Load categories for product dropdown
 async function loadCategoriesForProducts() {
   try {
-    
-
+    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/categories', {
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -308,10 +315,10 @@ async function moveCategory(categoryId, direction) {
 // Edit category
 async function editCategory(categoryId) {
   try {
-    
-    
+    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/categories', {
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 

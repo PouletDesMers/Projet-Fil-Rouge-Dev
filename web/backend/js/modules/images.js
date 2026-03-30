@@ -41,6 +41,7 @@ async function fixDuplicateImageOrders(images) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -71,9 +72,14 @@ async function fixDuplicateImageOrders(images) {
 // Load images
 async function loadImages() {
   try {
-    
 
-    const response = await fetch('/admin/api/carousel-images');
+
+    const token = localStorage.getItem('token');
+    const response = await fetch('/admin/api/carousel-images', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
 
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des images');
@@ -275,10 +281,12 @@ async function saveImage() {
     const url = imageId ? `/admin/api/carousel-images/${imageId}` : '/admin/api/carousel-images';
     const method = imageId ? 'PUT' : 'POST';
 
+    const token = localStorage.getItem('token');
     const response = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(imageData)
     });
@@ -313,11 +321,13 @@ async function deleteImage(imageId) {
   }
 
   try {
-    
 
+
+    const token = localStorage.getItem('token');
     const response = await fetch(`/admin/api/carousel-images/${imageId}`, {
       method: 'DELETE',
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 

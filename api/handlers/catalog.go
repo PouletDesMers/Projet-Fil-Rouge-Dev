@@ -20,6 +20,13 @@ import (
 
 func GetCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Cache hit
+	if cached := cache.AdminCache.Get(cache.KeyAdminCategories); cached != nil {
+		w.Write(cached)
+		return
+	}
+
 	rows, err := config.DB.Query(`
 		SELECT id_categorie, nom, slug,
 		       COALESCE(description,''), COALESCE(icone,''), COALESCE(couleur,''),
@@ -42,6 +49,7 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 		}
 		categories = append(categories, c)
 	}
+	cache.SetJSON(cache.AdminCache, cache.KeyAdminCategories, categories)
 	json.NewEncoder(w).Encode(categories)
 }
 
@@ -100,6 +108,7 @@ func CreateCategorie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cache.InvalidateCategories()
+	cache.InvalidateAdminCategories()
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(c)
 }
@@ -127,6 +136,7 @@ func UpdateCategorie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cache.InvalidateCategories()
+	cache.InvalidateAdminCategories()
 	c.ID = id
 	json.NewEncoder(w).Encode(c)
 }
@@ -151,6 +161,7 @@ func DeleteCategorie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cache.InvalidateCategories()
+	cache.InvalidateAdminCategories()
 	w.WriteHeader(http.StatusNoContent)
 }
 
