@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { useAuth } from '@/context/auth-context';
+import { useCart } from '@/context/cart-context';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
@@ -11,8 +13,26 @@ function TabIcon({ name, color, size = 24 }: { name: IoniconsName; color: string
   return <Ionicons name={name} size={size} color={color} />;
 }
 
+function CartTabIcon({ color }: { color: string }) {
+  const { count } = useCart();
+  return (
+    <View>
+      <Ionicons name="cart-outline" size={24} color={color} />
+      {count > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{count > 99 ? '99+' : String(count)}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function TabLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+  if (isLoading) return null;
+  if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
     <Tabs
@@ -76,7 +96,7 @@ export default function TabLayout() {
         name="cart"
         options={{
           title: 'Panier',
-          tabBarIcon: ({ color }) => <TabIcon name="cart-outline" color={color} />,
+          tabBarIcon: ({ color }) => <CartTabIcon color={color} />,
           headerShown: true,
           headerTitle: 'Mon panier',
           headerStyle: { backgroundColor: '#3b12a3' },
@@ -101,3 +121,24 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#e53935',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+});

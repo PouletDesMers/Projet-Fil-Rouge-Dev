@@ -1,69 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import {
-    FlatList,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-
-export interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  duration: '1_month' | '1_year' | '2_years';
-  available: boolean;
-}
-
-const DURATION_LABELS: Record<CartItem['duration'], string> = {
-  '1_month': '1 mois',
-  '1_year':  '1 an (-10%)',
-  '2_years': '2 ans (-20%)',
-};
-
-const DURATION_DISCOUNT: Record<CartItem['duration'], number> = {
-  '1_month': 1,
-  '1_year':  0.9,
-  '2_years': 0.8,
-};
-
-// Contexte panier — sera déplacé dans un CartContext dédié lors du Sprint 4
-let globalCartItems: CartItem[] = [];
-export function addToCart(item: CartItem) { globalCartItems = [...globalCartItems, item]; }
+import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
 
 export default function CartScreen() {
   const router = useRouter();
-  const [items, setItems] = useState<CartItem[]>(globalCartItems);
-
-  const removeItem = (id: string) => {
-    const updated = items.filter((i) => i.id !== id);
-    globalCartItems = updated;
-    setItems(updated);
-  };
-
-  const changeDuration = (id: string, duration: CartItem['duration']) => {
-    const updated = items.map((i) => i.id === id ? { ...i, duration } : i);
-    globalCartItems = updated;
-    setItems(updated);
-  };
-
-  const changeQty = (id: string, delta: number) => {
-    const updated = items
-      .map((i) => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i);
-    globalCartItems = updated;
-    setItems(updated);
-  };
-
-  const subtotal = items.reduce((acc, item) => {
-    if (!item.available) return acc;
-    return acc + item.price * item.quantity * DURATION_DISCOUNT[item.duration];
-  }, 0);
+  const { items, total, removeItem, updateQty, updateDuration } = useCart();
 
   const unavailableItems = items.filter((i) => !i.available);
 
@@ -84,7 +34,7 @@ export default function CartScreen() {
           <TouchableOpacity
             key={d}
             style={[styles.durationChip, item.duration === d && styles.durationChipActive]}
-            onPress={() => changeDuration(item.id, d)}
+            onPress={() => updateDuration(item.id, d)}
           >
             <ThemedText style={[styles.durationText, item.duration === d && styles.durationTextActive]}>
               {DURATION_LABELS[d]}
@@ -96,11 +46,11 @@ export default function CartScreen() {
       <View style={styles.itemFooter}>
         {/* Quantité */}
         <View style={styles.qtyRow}>
-          <TouchableOpacity style={styles.qtyBtn} onPress={() => changeQty(item.id, -1)}>
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQty(item.id, -1)}>
             <ThemedText style={styles.qtyBtnText}>−</ThemedText>
           </TouchableOpacity>
           <ThemedText style={styles.qtyText}>{item.quantity}</ThemedText>
-          <TouchableOpacity style={styles.qtyBtn} onPress={() => changeQty(item.id, 1)}>
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQty(item.id, 1)}>
             <ThemedText style={styles.qtyBtnText}>+</ThemedText>
           </TouchableOpacity>
         </View>
@@ -154,7 +104,7 @@ export default function CartScreen() {
             )}
             <View style={styles.totalRow}>
               <ThemedText style={styles.totalLabel}>Total</ThemedText>
-              <ThemedText style={styles.totalAmount}>{subtotal.toFixed(2)} €</ThemedText>
+              <ThemedText style={styles.totalAmount}>{total.toFixed(2)} €</ThemedText>
             </View>
             <TouchableOpacity
               style={[styles.checkoutBtn, unavailableItems.length === items.length && styles.checkoutBtnDisabled]}
@@ -186,7 +136,7 @@ const styles = StyleSheet.create({
   unavailableBadge:    { backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   unavailableBadgeText:{ color: '#fff', fontSize: 10, fontWeight: '700' },
 
-  durationRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  durationRow: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
   durationChip: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16,
     backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#e0e0e0',
