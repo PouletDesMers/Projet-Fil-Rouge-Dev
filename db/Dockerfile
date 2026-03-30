@@ -4,6 +4,7 @@ ENV POSTGRES_DB=mydb
 ENV POSTGRES_USER=postgres
 ENV POSTGRES_PASSWORD=password
 
-COPY Base.sql /docker-entrypoint-initdb.d/
+# Fichier unique d'initialisation — remplace tous les anciens .sql éparpillés
+COPY init.sql /docker-entrypoint-initdb.d/01_init.sql
 
 EXPOSE 5432

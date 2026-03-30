@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CYNA — Connexion / Inscription</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
     <!-- Bootstrap CSS -->
     <link
@@ -16,165 +20,195 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
 
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/auth.css" />
   </head>
 
   <body>
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-cyna sticky-top">
-      <div class="container">
-        <a
-          class="navbar-brand d-flex align-items-center gap-2 fw-bold"
-          href="/index.html"
-        >
-          <img
-            src="/img/cyna-logo.png"
-            alt="Logo CYNA"
-            height="32"
-            class="d-inline-block align-text-top"
-          />
-          CYNA
-        </a>
-        <div class="d-flex align-items-center gap-2">
-          <a class="btn btn-outline-cyna" href="/index.html">Quitter</a>
+    <div class="auth-container">
+      <a href="/index.html" class="auth-logo">
+        <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" />
+        CYNA
+      </a>
+
+      <!-- Error Message Area -->
+      <div id="msg" class="d-none">
+        <div class="error-box">
+          <i class="bi bi-exclamation-triangle"></i>
+          <div>
+            <h6 id="msgTitle">There was a problem</h6>
+            <p id="msgText"></p>
+          </div>
         </div>
       </div>
-    </nav>
 
-    <div class="container">
-      <div class="login-card">
-        <h1 class="h4 text-center mb-4">Identification</h1>
+      <div class="auth-card">
+        <h1 class="auth-title" id="authTitle">Sign in</h1>
 
-        <div id="msg" class="alert d-none" role="alert"></div>
-
-        <!-- ÉTAPE 1: Email -->
-        <form id="emailForm">
+        <!-- STEP 1: Email -->
+        <form id="emailForm" class="step-fade">
           <div class="mb-3">
-            <label class="form-label">Email</label>
+            <label class="auth-label">Email or mobile phone number</label>
             <input
               id="email"
               name="email"
               type="email"
               class="form-control"
+              placeholder="Enter your email"
               required
-              placeholder="ex: test@test.fr"
             />
           </div>
-          <button class="btn btn-cyna w-100" type="submit">Continuer</button>
+          <button class="btn btn-auth-primary" type="submit">Continue</button>
+          
+          <div class="auth-legal">
+            By continuing, you agree to CYNA's <a href="#" class="text-decoration-none">Conditions of Use</a> and <a href="#" class="text-decoration-none">Privacy Notice</a>.
+          </div>
+          
+          <div class="auth-help" id="helpTrigger">
+            <i class="bi bi-caret-right-fill small text-muted"></i> <a href="#">Need help?</a>
+            <div id="helpLinks" class="d-none ms-3 mt-1">
+               <div><a href="#" class="small decoration-none">Forgot your password?</a></div>
+               <div><a href="#" class="small decoration-none">Other issues with Sign-In</a></div>
+            </div>
+          </div>
         </form>
 
-        <!-- ÉTAPE 2A: Connexion -->
-        <form id="loginForm" class="d-none">
-          <div class="mb-3 p-3 bg-light rounded shadow-sm">
-            <div class="small text-muted">Email</div>
-            <div id="loginEmail" class="fw-semibold text-break"></div>
+        <!-- STEP 2A: Connexion (Sign In - Password Step) -->
+        <form id="loginForm" class="d-none step-fade">
+          <div class="mb-3 d-flex align-items-center justify-content-between">
+             <span id="loginEmail" class="small fw-bold text-break"></span> 
+             <a href="#" id="back1" class="small text-decoration-none">Change</a>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Mot de passe</label>
-            <div class="password-wrapper">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <label class="auth-label">Password</label>
+              <a href="#" class="small text-decoration-none">Forgot your password?</a>
+            </div>
+            <div class="password-container">
               <input
                 id="loginPassword"
-                name="mot_de_passe"
+                name="password"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="loginPassword"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="loginPassword">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
           </div>
 
-          <div class="hstack gap-2 mt-4">
-            <button class="btn btn-cyna flex-fill" type="submit">
-              Se connecter
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="back1">
-              Retour
-            </button>
+          <button class="btn btn-auth-primary mb-3" type="submit">Sign in</button>
+          
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="rememberMe">
+            <label class="form-check-label small" for="rememberMe">Keep me signed in.</label>
           </div>
         </form>
 
-        <!-- ÉTAPE 2B: Inscription -->
-        <form id="registerForm" class="d-none">
-          <div class="mb-3 p-3 bg-light rounded shadow-sm">
-            <div class="small text-muted">Email</div>
-            <div id="registerEmail" class="fw-semibold text-break"></div>
+        <!-- STEP 2C: 2FA (TOTP Step) -->
+        <form id="twoFAForm" class="d-none step-fade">
+          <h1 class="auth-title">Two-Step Verification</h1>
+          <p class="small">Enter the 6-digit code from your authenticator app.</p>
+          
+          <div class="mb-3">
+            <label class="auth-label">Enter code</label>
+            <input
+              id="totpCodeInput"
+              name="totpCode"
+              type="text"
+              class="form-control text-center fw-bold"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="000000"
+              required
+            />
           </div>
+          
+          <button class="btn btn-auth-primary mb-3" type="submit">Verify and Sign in</button>
+          
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="trustDevice">
+            <label class="form-check-label small" for="trustDevice">Don't ask for codes on this device</label>
+          </div>
+          
+          <a href="#" id="backToLogin" class="small text-decoration-none">Back to password</a>
+        </form>
 
-          <div class="row g-2">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Prénom</label>
-              <input name="firstName" class="form-control" required />
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Nom</label>
-              <input name="lastName" class="form-control" required />
-            </div>
+        <!-- STEP 2B: Inscription (Register) -->
+        <form id="registerForm" class="d-none step-fade">
+          <div class="auth-title">Create account</div>
+          
+          <div class="mb-2">
+            <label class="auth-label">First name</label>
+            <input name="firstName" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="auth-label">Last name</label>
+            <input name="lastName" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="auth-label">Email</label>
+            <input id="registerEmailInput" name="email" type="email" class="form-control" required />
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Téléphone</label>
-            <input name="phone" class="form-control" />
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label">Mot de passe</label>
-            <div class="password-wrapper">
+            <label class="auth-label">Password</label>
+            <div class="password-container">
               <input
                 id="regPassword"
-                name="mot_de_passe"
+                name="password"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
                 minlength="8"
+                placeholder="At least 8 characters"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="regPassword"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="regPassword">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
-            <div class="form-text">
-              8 caractères min, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère
-              spécial.
-            </div>
+            <div class="small text-muted mt-1"><i class="bi bi-info-circle"></i> Passwords must be at least 8 characters.</div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Confirmer le mot de passe</label>
-            <div class="password-wrapper">
+            <label class="auth-label">Re-enter password</label>
+            <div class="password-container">
               <input
                 id="regPassword2"
                 type="password"
-                class="form-input"
+                class="form-control pe-5"
                 required
-                minlength="8"
               />
-              <button
-                type="button"
-                class="password-toggle"
-                data-target="regPassword2"
-              ></button>
+              <button type="button" class="password-toggle-btn" data-target="regPassword2">
+                <i class="bi bi-eye"></i>
+              </button>
             </div>
           </div>
 
-          <div class="hstack gap-2 mt-4">
-            <button class="btn btn-cyna flex-fill" type="submit">
-              Créer le compte
-            </button>
-            <button class="btn btn-outline-secondary" type="button" id="back2">
-              Retour
-            </button>
+          <button class="btn btn-auth-primary" type="submit">Create your CYNA account</button>
+          
+          <div class="auth-legal">
+            By creating an account, you agree to CYNA's <a href="#">Conditions of Use & Sale</a> and <a href="#">Privacy Notice</a>.
+          </div>
+          
+          <hr>
+          <div class="small">
+            Already have an account? <a href="#" id="back2">Sign in</a>
           </div>
         </form>
+      </div>
+
+      <!-- New to Amazon (New to CYNA)? -->
+      <div id="newToCyna" class="text-center">
+        <div class="auth-divider">New to CYNA?</div>
+        <a href="#" id="createAccountBtn" class="btn btn-auth-secondary">Create your CYNA account</a>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="auth-onepage.js"></script>
+    <script src="js/auth.js"></script>
   </body>
 </html>

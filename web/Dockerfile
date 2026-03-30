@@ -2,10 +2,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package.json .
-RUN npm install
+# Copy package files
+COPY package*.json ./
 
+# Use npm install to handle package.json changes without requiring an up-to-date lock file
+RUN npm install --only=production
+
+# Copy rest of the app
 COPY . .
+
+ENV NODE_ENV=production
 
 EXPOSE 3000
 

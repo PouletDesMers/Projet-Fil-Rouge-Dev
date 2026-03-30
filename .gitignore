@@ -41,3 +41,40 @@ app-example
 # generated native folders
 /ios
 /android
+# Secrets et variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Dépendances
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go — binaire compilé, couverture de tests
+api/api
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Docker
+*.tar
+
+# Éditeurs
+.idea/
+*.swp
+*.swo
+
+# Backup & tmp
+*.tmp
+restic-cache/
+backups/
+
+tp.md

@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CYNA — Accueil</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
     <!-- Bootstrap CSS -->
     <link
@@ -17,7 +21,7 @@
     />
 
     <!-- Charte graphique -->
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="css/style.css" />
   </head>
 
   <body>
@@ -32,51 +36,12 @@
           class="carousel slide"
           data-bs-ride="carousel"
         >
-          <div class="carousel-indicators">
-            <button
-              type="button"
-              data-bs-target="#carouselExampleIndicators"
-              data-bs-slide-to="0"
-              class="active"
-              aria-current="true"
-              aria-label="Slide 1"
-            ></button>
-            <button
-              type="button"
-              data-bs-target="#carouselExampleIndicators"
-              data-bs-slide-to="1"
-              aria-label="Slide 2"
-            ></button>
-            <button
-              type="button"
-              data-bs-target="#carouselExampleIndicators"
-              data-bs-slide-to="2"
-              aria-label="Slide 3"
-            ></button>
+          <div class="carousel-indicators" id="carouselIndicators">
+            <!-- Indicators will be loaded dynamically -->
           </div>
 
-          <div class="carousel-inner shadow-sm">
-            <div class="carousel-item active">
-              <img
-                src="https://placehold.co/1200x360/351E90/FFFFFF?text=Advanced+Endpoint+Protection"
-                class="d-block w-100"
-                alt="Slide 1"
-              />
-            </div>
-            <div class="carousel-item">
-              <img
-                src="https://placehold.co/1200x360/5610C0/FFFFFF?text=Global+SOC+Monitoring"
-                class="d-block w-100"
-                alt="Slide 2"
-              />
-            </div>
-            <div class="carousel-item">
-              <img
-                src="https://placehold.co/1200x360/7602F9/FFFFFF?text=24/7+Security+Assistance"
-                class="d-block w-100"
-                alt="Slide 3"
-              />
-            </div>
+          <div class="carousel-inner shadow-sm" id="carouselInner">
+            <!-- Slides will be loaded dynamically -->
           </div>
 
           <button
@@ -120,8 +85,8 @@
               <div class="card-body">
                 <h3 class="h6">Accès rapide</h3>
                 <div class="d-grid gap-2">
-                  <a class="btn btn-outline-secondary" href="/produit.html"
-                    >Voir tous les produits</a
+                  <a class="btn btn-outline-secondary" href="/categories.html"
+                    >Voir nos catégories</a
                   >
                   <a class="btn btn-outline-secondary" href="#" id="homeCartBtn"
                     >Voir mon panier</a
@@ -139,7 +104,8 @@
 
     <!-- Bootstrap JS (dropdown + carousel) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/navbar.js"></script>
-    <script src="/cart.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/carousel.js"></script>
   </body>
 </html>
