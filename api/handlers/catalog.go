@@ -223,7 +223,6 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.DB.Query(`
 		SELECT p.id_produit, p.nom, p.slug,
 		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
-		       p.description_html, COALESCE(p.images::text, '[]'),
 		       p.prix, COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
 		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
 		       COALESCE(p.ordre_affichage,0)
@@ -237,14 +236,12 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	produits := []models.ProduitWeb{}
 	for rows.Next() {
 		var p models.ProduitWeb
-		var descHTML sql.NullString
 		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
-			&descHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut,
+			&p.Prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut,
 			&p.TypeAchat, &p.OrdreAffichage); err != nil {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		if descHTML.Valid { p.DescriptionHTML = descHTML.String }
 		produits = append(produits, p)
 	}
 	cache.SetJSON(cache.CatalogCache, cacheKey, produits)
@@ -353,7 +350,6 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.DB.Query(`
 		SELECT p.id_produit, p.nom, p.slug,
 		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
-		       COALESCE(p.description_html,''), COALESCE(p.images::text, '[]'),
 		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
 		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
 		       COALESCE(p.ordre_affichage,0),
@@ -374,8 +370,6 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		Slug              string  `json:"slug"`
 		DescriptionCourte string  `json:"description_courte"`
 		DescriptionLongue string  `json:"description_longue"`
-		DescriptionHTML   string  `json:"description_html"`
-		Images            string  `json:"images"`
 		Prix              float64 `json:"prix"`
 		Devise            string  `json:"devise"`
 		Duree             string  `json:"duree"`
@@ -385,15 +379,17 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		OrdreAffichage    int     `json:"ordre_affichage"`
 		CategorieNom      string  `json:"categorie_nom"`
 		CategorieSlug     string  `json:"categorie_slug"`
+		NomCategorie      string  `json:"nom_categorie"`
 	}
 	results := []SearchResult{}
 	for rows.Next() {
 		var p SearchResult
 		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
-			&p.DescriptionHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.Tag,
+			&p.Prix, &p.Devise, &p.Duree, &p.Tag,
 			&p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.CategorieNom, &p.CategorieSlug); err != nil {
 			continue
 		}
+		p.NomCategorie = p.CategorieNom
 		results = append(results, p)
 	}
 	cache.SetJSON(cache.SearchCache, cacheKey, results)
