@@ -160,7 +160,7 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     id:          String(raw.id_produit ?? raw.id ?? ''),
     nom:         (raw.nom ?? '') as string,
     slug:        (raw.slug ?? '') as string,
-    description: ((raw.description_courte || raw.description_longue || raw.description) ?? '') as string,
+    description: ((raw.descriCoption_courte || raw.description_longue || raw.description) ?? '') as string,
     prix:        prix ?? 0,
     image:       images[0],
     images:      images,
