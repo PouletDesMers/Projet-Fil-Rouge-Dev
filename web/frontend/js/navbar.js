@@ -117,3 +117,20 @@ function initializeCartBadge() {
     updateCartBadge();
   }
 }
+
+function ensureCookieConsentAssets() {
+  if (!document.querySelector('link[href="/css/cookie-consent.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/css/cookie-consent.css';
+    document.head.appendChild(link);
+  }
+
+  if (!document.querySelector('script[src="/js/cookie-consent.js"]')) {
+    const script = document.createElement('script');
+    script.src = '/js/cookie-consent.js';
+    document.body.appendChild(script);
+  }
+}
+
+ensureCookieConsentAssets();
