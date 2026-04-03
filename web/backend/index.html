@@ -21,6 +21,7 @@
     
     <!-- Quill Rich Text Editor CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" />
+    <link rel="stylesheet" href="/css/cookie-consent.css" />
 
     <!-- Swagger UI -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css" />
@@ -580,13 +581,24 @@
                   Liste complète des utilisateurs du système
                 </p>
               </div>
-              <button
-                class="btn btn-primary"
-                id="refreshUsersBtn"
-                title="Actualiser la liste"
-              >
-                <i class="bi bi-arrow-clockwise"></i> Actualiser
-              </button>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-primary" id="createUserBtn">
+                  <i class="bi bi-person-plus"></i> Nouveau compte
+                </button>
+                <button
+                  class="btn btn-primary"
+                  id="refreshUsersBtn"
+                  title="Actualiser la liste"
+                >
+                  <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </button>
+              </div>
+            </div>
+
+            <div class="btn-group mb-3" role="tablist" aria-label="Filtrer les comptes utilisateurs">
+              <button type="button" class="btn btn-outline-secondary active" data-user-filter="all">Tous</button>
+              <button type="button" class="btn btn-outline-secondary" data-user-filter="admins">Admins</button>
+              <button type="button" class="btn btn-outline-secondary" data-user-filter="users">Utilisateurs</button>
             </div>
 
             <div id="usersContainer">
@@ -647,10 +659,15 @@
                 <h1><i class="bi bi-box"></i> <span id="categoryProductsTitle">Produits de la catégorie</span></h1>
                 <p class="text-muted mb-0" id="categoryProductsSubtitle">Gérer les produits de cette catégorie</p>
               </div>
-              <div>
-                <button class="btn btn-outline-secondary me-2" onclick="backToCategories()">
+              <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-outline-secondary" onclick="backToCategories()">
                   <i class="bi bi-arrow-left"></i> Retour aux catégories
                 </button>
+
+                <button class="btn btn-outline-primary" id="importProductsBtn">
+                  <i class="bi bi-upload me-1"></i> Import fichier
+                </button>
+
                 <button class="btn btn-primary" id="addProductToCategoryBtn">
                   <i class="bi bi-plus-circle"></i> Ajouter Produit
                 </button>
@@ -1849,6 +1866,48 @@
       </div>
     </div>
 
+    <!-- Modal de création utilisateur -->
+    <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="bi bi-person-plus"></i> Nouveau compte</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info small mb-3">
+              <i class="bi bi-info-circle"></i> Un compte administrateur sera créé avec un mot de passe provisoire. L'administrateur devra définir un nouveau mot de passe à sa première connexion.
+            </div>
+            <form id="createUserForm" onsubmit="event.preventDefault(); return false;">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="createUserLastName">Nom <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="createUserLastName" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="createUserFirstName">Prénom</label>
+                  <input type="text" class="form-control" id="createUserFirstName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="createUserEmail">Email <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" id="createUserEmail" required>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label" for="createUserPassword">Mot de passe provisoire <span class="text-danger">*</span></label>
+                  <input type="password" class="form-control" id="createUserPassword" required minlength="8" placeholder="Au moins 8 caractères">
+                  <div class="form-text">Ce mot de passe devra être changé lors de la première connexion.</div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-primary" id="saveCreateUserBtn"><i class="bi bi-check-circle"></i> Créer le compte</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal permissions par rôle -->
     <div class="modal fade" id="rolePermissionsModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg">
@@ -2044,5 +2103,76 @@
     <script src="js/modules/backup.js"></script>
     <script src="js/modules/newsletter.js"></script>
     <script src="js/modules/roles.js"></script>
+    <script src="/js/cookie-consent.js"></script>
+
+    <!-- Modal Import Produits -->
+    <div class="modal fade" id="importProductsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-upload me-2"></i>Import en masse de produits
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+            <div id="importProductsAlert" class="alert d-none"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Fichier</label>
+              <input type="file" class="form-control" id="importProductsFile" accept=".csv,.xlsx,.xls">
+              <div class="form-text">
+                Formats acceptes : CSV, XLSX, XLS.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Mode</label>
+              <select class="form-select" id="importProductsMode">
+                <option value="upsert" selected>Creer ou mettre a jour</option>
+                <option value="insert">Creer seulement</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Categorie</label>
+              <select class="form-select" id="importProductsCategoryMode">
+                <option value="file" selected>Prendre la categorie du fichier</option>
+                <option value="current">Forcer la categorie affichee</option>
+              </select>
+              <div class="form-text">
+                Si "Forcer la categorie affichee" est choisi, tous les produits importes iront dans la categorie ouverte.
+              </div>
+            </div>
+
+            <div class="border rounded p-3 bg-light small">
+              <div class="fw-semibold mb-2">Colonnes supportees :</div>
+              <code>
+                nom, slug, description_courte, description_longue, description_html,
+                images, prix, devise, duree, id_categorie, tag, statut, type_achat,
+                ordre_affichage, actif
+              </code>
+              <hr>
+              <div class="mb-1 fw-semibold">Format de <code>images</code> :</div>
+              <div>JSON : <code>["https://site/img1.jpg","https://site/img2.jpg"]</code></div>
+              <div>ou texte separe par <code>|</code> :
+                <code>https://site/img1.jpg|https://site/img2.jpg</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-outline-secondary" type="button" id="downloadImportTemplateBtn">
+              <i class="bi bi-download me-1"></i>Telecharger modele CSV
+            </button>
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button class="btn btn-primary" type="button" id="confirmImportProductsBtn">
+              <i class="bi bi-upload me-1"></i>Importer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

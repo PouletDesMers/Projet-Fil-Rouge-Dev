@@ -48,19 +48,20 @@ type Entreprise struct {
 }
 
 type Utilisateur struct {
-	ID                int        `json:"id_utilisateur"`
-	Email             string     `json:"email"`
-	MotDePasse        string     `json:"password"`
-	Nom               string     `json:"lastName"`
-	Prenom            string     `json:"firstName"`
-	Telephone         string     `json:"phone"`
-	Role              string     `json:"role"`
-	Statut            string     `json:"status"`
-	EstActif          bool       `json:"est_actif"`
-	DateCreation      time.Time  `json:"createdAt"`
-	DerniereConnexion *time.Time `json:"lastLogin"`
-	IDEntreprise      *int       `json:"companyId"`
-	DateInscription   time.Time  `json:"date_inscription"`
+	ID                  int        `json:"id_utilisateur"`
+	Email               string     `json:"email"`
+	MotDePasse          string     `json:"password"`
+	Nom                 string     `json:"lastName"`
+	Prenom              string     `json:"firstName"`
+	Telephone           string     `json:"phone"`
+	Role                string     `json:"role"`
+	Statut              string     `json:"status"`
+	EstActif            bool       `json:"est_actif"`
+	DateCreation        time.Time  `json:"createdAt"`
+	DerniereConnexion   *time.Time `json:"lastLogin"`
+	IDEntreprise        *int       `json:"companyId"`
+	DateInscription     time.Time  `json:"date_inscription"`
+	PasswordNeedsChange bool       `json:"password_needs_change,omitempty"`
 	// 2FA
 	TotpSecret           *string `json:"-"`
 	TotpEnabled          bool    `json:"totp_enabled"`

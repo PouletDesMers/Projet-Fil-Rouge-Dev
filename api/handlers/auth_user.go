@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp/totp"
@@ -155,6 +156,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Account is disabled", http.StatusForbidden)
 		return
 	}
+	// Check if this is the user's first login
+	var derniereConnexion *time.Time
+	config.DB.QueryRow("SELECT derniere_connexion FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&derniereConnexion)
+	isFirstLogin := derniereConnexion == nil
+	needsPasswordChange := isFirstLogin && primaryRole(id) == "admin"
 
 	sessionToken := generateRandomToken()
 	if sessionToken == "" {
@@ -169,10 +175,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	config.DB.Exec("UPDATE utilisateur SET derniere_connexion = NOW() WHERE id_utilisateur = $1", id)
-
+	if !needsPasswordChange {
+		config.DB.Exec("UPDATE utilisateur SET derniere_connexion = NOW() WHERE id_utilisateur = $1", id)
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"token": sessionToken, "user_id": id})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"token":                 sessionToken,
+		"user_id":               id,
+		"password_needs_change": needsPasswordChange,
+	})
 }
 
 // ===== 2FA =====
@@ -445,6 +456,19 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isAdminPanel := strings.EqualFold(r.Header.Get("X-Admin-Panel"), "true")
+	requestedRole := strings.ToLower(strings.TrimSpace(u.Role))
+	if requestedRole == "" {
+		requestedRole = "client"
+	}
+	if !isAdminPanel && requestedRole != "client" {
+		jsonErr(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	if requestedRole != "client" && requestedRole != "admin" {
+		requestedRole = "client"
+	}
+
 	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
 	if u.Email == "" || !mw.IsValidEmail(u.Email) {
 		jsonErr(w, "Valid email is required", http.StatusBadRequest)
@@ -491,13 +515,17 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	// Assign default Client role if it exists
+	// Assign role based on the creation context
+	roleName := "client"
+	if isAdminPanel && requestedRole == "admin" {
+		roleName = "admin"
+	}
 	_, _ = config.DB.Exec(`
 		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
 		SELECT $1, r.id_role, NOW()
 		FROM roles r
-		WHERE LOWER(r.nom) = 'client'
-		ON CONFLICT DO NOTHING`, u.ID)
+		WHERE LOWER(r.nom) = $2
+		ON CONFLICT DO NOTHING`, u.ID, roleName)
 	u.Role = primaryRole(u.ID)
 	u.MotDePasse = ""
 	w.Header().Set("Content-Type", "application/json")
@@ -767,6 +795,8 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		// Password changed successfully: this account is no longer considered in first-login state.
+		_, _ = config.DB.Exec("UPDATE utilisateur SET derniere_connexion = NOW() WHERE id_utilisateur = $1", userID)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 		return

@@ -3,6 +3,10 @@
  * Charge les catégories, produits vedettes et texte fixe
  */
 
+function t(key) {
+  return window.i18next ? window.i18next.t(key) : key;
+}
+
 // Charger les catégories
 async function loadCategories() {
   try {
@@ -12,7 +16,7 @@ async function loadCategories() {
     
     if (!categories || categories.length === 0) {
       document.getElementById('categoriesGrid').innerHTML = 
-        '<p class="text-muted">Aucune catégorie disponible</p>';
+        `<p class="text-muted">${t('home.no_categories')}</p>`;
       return;
     }
     
@@ -20,7 +24,7 @@ async function loadCategories() {
   } catch (error) {
     console.error('Erreur lors du chargement des catégories:', error);
     document.getElementById('categoriesGrid').innerHTML = 
-      '<p class="text-danger">Erreur lors du chargement des catégories</p>';
+      `<p class="text-danger">${t('home.categories_error')}</p>`;
   }
 }
 
@@ -105,7 +109,7 @@ function renderTopProducts(products) {
   grid.innerHTML = '';
   
   if (products.length === 0) {
-    grid.innerHTML = '<p class="text-muted">Aucun produit disponible</p>';
+    grid.innerHTML = `<p class="text-muted">${t('home.no_products')}</p>`;
     return;
   }
   
@@ -147,8 +151,8 @@ function loadFixedText() {
     const titleEl = document.getElementById('fixedTextTitle');
     const contentEl = document.getElementById('fixedTextContent');
     
-    if (titleEl) titleEl.textContent = 'Bienvenue chez CYNA';
-    if (contentEl) contentEl.textContent = 'Découvrez nos solutions de sécurité innovantes';
+    if (titleEl) titleEl.textContent = t('home.fixed_title');
+    if (contentEl) contentEl.textContent = t('home.fixed_content');
   } catch (error) {
     console.warn('Erreur texte fixe:', error);
   }
@@ -164,6 +168,12 @@ function escapeHtml(text) {
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
+  loadFixedText();
+  loadCategories();
+  loadTopProducts();
+});
+
+document.addEventListener('languageChanged', () => {
   loadFixedText();
   loadCategories();
   loadTopProducts();

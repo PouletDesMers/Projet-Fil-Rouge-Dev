@@ -13,6 +13,7 @@
 
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/auth.css" />
+    <link rel="stylesheet" href="/css/cookie-consent.css" />
   </head>
 
   <body>
@@ -38,29 +39,31 @@
           <div class="spinner-border text-primary mb-3" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
-          <h2 class="auth-title">Vérification en cours...</h2>
-          <p class="small text-muted">Merci de patienter.</p>
+          <h2 class="auth-title" data-i18n="verify.checking">Vérification en cours...</h2>
+          <p class="small text-muted" data-i18n="verify.please_wait">Merci de patienter.</p>
         </div>
 
         <!-- Success State -->
         <div id="successState" class="d-none text-center">
           <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-          <h2 class="auth-title mt-3">Email vérifié ✅</h2>
-          <p class="small">Votre compte est prêt à être utilisé!</p>
-          <a href="/auth.html" class="btn btn-auth-primary mt-3">Se connecter</a>
+          <h2 class="auth-title mt-3" data-i18n="verify.success">Email vérifié ✅</h2>
+          <p class="small" data-i18n="verify.success_desc">Votre compte est prêt à être utilisé!</p>
+          <a href="/auth.html" class="btn btn-auth-primary mt-3" data-i18n="verify.login_btn">Se connecter</a>
         </div>
 
         <!-- Error State -->
         <div id="errorState" class="d-none text-center">
           <i class="bi bi-x-circle text-danger" style="font-size: 3rem;"></i>
-          <h2 class="auth-title mt-3">Erreur de vérification</h2>
+          <h2 class="auth-title mt-3" data-i18n="verify.error_title">Erreur de vérification</h2>
           <p id="errorMessage" class="small"></p>
-          <a href="/auth.html" class="btn btn-auth-secondary mt-3">Retour à la connexion</a>
+          <a href="/auth.html" class="btn btn-auth-secondary mt-3" data-i18n="reset.back_to_login">Retour à la connexion</a>
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/main.js"></script>
     <script src="js/verify-email.js"></script>
+    <script src="/js/cookie-consent.js"></script>
   </body>
 </html>

@@ -28,9 +28,9 @@
     <div class="collapse navbar-collapse" id="mainNavbar">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link" href="/index.html">Accueil</a>
+          <a class="nav-link" href="/index.html" data-i18n="nav.home">Accueil</a>
         </li>
-        <li class="nav-item"><a class="nav-link" href="/categories.html">Catégories</a></li>
+        <li class="nav-item"><a class="nav-link" href="/categories.html" data-i18n="nav.categories">Catégories</a></li>
         
       </ul>
 
@@ -47,7 +47,9 @@
           type="search"
           name="q"
           placeholder="Rechercher un produit..."
+          data-i18n-placeholder="nav.search_placeholder"
           aria-label="Rechercher"
+          data-i18n-aria-label="nav.search_label"
           minlength="1"
           maxlength="100"
           autocomplete="off"
@@ -56,17 +58,49 @@
           class="btn btn-cyna"
           type="submit"
           aria-label="Lancer la recherche"
+          data-i18n-aria-label="nav.search_button_label"
         >
           <i class="bi bi-search"></i>
         </button>
       </form>
 
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 navbar-actions">
+        <div class="dropdown language-dropdown">
+          <button
+            class="btn btn-outline-cyna dropdown-toggle language-toggle"
+            type="button"
+            id="languageMenuBtn"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <span class="lang-flag" id="currentLangFlag">🇫🇷</span>
+            <span class="lang-code" id="currentLangCode">FR</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end language-menu" aria-labelledby="languageMenuBtn">
+            <li><button type="button" class="dropdown-item language-option" data-language="fr" data-flag="🇫🇷">🇫🇷 Français</button></li>
+            <li><button type="button" class="dropdown-item language-option" data-language="en" data-flag="🇬🇧">🇬🇧 English</button></li>
+            <li><button type="button" class="dropdown-item language-option" data-language="es" data-flag="🇪🇸">🇪🇸 Español</button></li>
+            <li><button type="button" class="dropdown-item language-option" data-language="ar" data-flag="🇸🇦">🇸🇦 العربية</button></li>
+            <li><button type="button" class="dropdown-item language-option" data-language="zh" data-flag="🇨🇳">🇨🇳 中文</button></li>
+          </ul>
+        </div>
+
+        <button
+          class="btn btn-outline-cyna theme-toggle-btn"
+          type="button"
+          id="themeToggleBtn"
+          aria-label="Activer le mode sombre"
+        >
+          <i class="bi bi-moon-stars"></i>
+          <span class="theme-toggle-text">Dark</span>
+        </button>
+
         <a
           class="btn btn-outline-cyna position-relative"
           href="#"
           id="navCartBtn"
           aria-label="Panier"
+          data-i18n-aria-label="nav.cart_label"
         >
           <i class="bi bi-cart3"></i>
           <span
@@ -86,27 +120,25 @@
             data-bs-toggle="dropdown"
             aria-expanded="false"
           >
-            Mon compte
+            <span data-i18n="nav.account">Mon compte</span>
           </button>
           <ul
             class="dropdown-menu dropdown-menu-end"
             aria-labelledby="accountMenu"
           >
-            <li><a class="dropdown-item" href="/profil.html">Mon profil</a></li>
+            <li><a class="dropdown-item" href="/profil.html" data-i18n="nav.profile">Mon profil</a></li>
             <li>
-              <a class="dropdown-item" href="/parametres.html">Paramètres</a>
+              <a class="dropdown-item" href="/parametres.html" data-i18n="nav.settings">Paramètres</a>
             </li>
             <li>
-              <a class="dropdown-item" href="/mes-commandes.html"
-                >Mes commandes</a
-              >
+              <a class="dropdown-item" href="/mes-commandes.html" data-i18n="nav.orders">Mes commandes</a>
             </li>
             <li id="adminMenuItemContainer" class="d-none">
               <hr class="dropdown-divider" />
             </li>
             <li id="adminMenuItem" class="d-none">
               <a class="dropdown-item text-warning fw-bold" href="/backend/index.html">
-                <i class="bi bi-shield-lock"></i> Panneau Admin
+                <i class="bi bi-shield-lock"></i> <span data-i18n="nav.admin_panel">Panneau Admin</span>
               </a>
             </li>
             <li><hr class="dropdown-divider" /></li>
@@ -115,13 +147,14 @@
                 class="dropdown-item text-danger"
                 type="button"
                 id="logoutBtn"
+                data-i18n="nav.logout"
               >
                 Se déconnecter
               </button>
             </li>
           </ul>
         </div>
-        <a class="btn btn-cyna" href="/auth.html" id="loginBtn">S’identifier</a>
+        <a class="btn btn-cyna" href="/auth.html" id="loginBtn" data-i18n="nav.login">S’identifier</a>
       </div>
     </div>
   </div>

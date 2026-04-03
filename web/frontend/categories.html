@@ -163,8 +163,8 @@
           <div class="crumbs">
             <a href="/index.html">Accueil</a><span>›</span><span>Catégories</span>
           </div>
-          <h1>Catégories de services</h1>
-          <p>
+          <h1 data-i18n="categories_page.title">Catégories de services</h1>
+          <p data-i18n="categories_page.subtitle">
             Choisissez une catégorie pour accéder au catalogue correspondant.
           </p>
         </div>
@@ -175,8 +175,8 @@
       <div class="container">
         <div class="row">
           <div class="col">
-            <h2>Nos services</h2>
-            <p class="text-muted">Sélectionnez une catégorie de services</p>
+            <h2 data-i18n="categories_page.services_title">Nos services</h2>
+            <p class="text-muted" data-i18n="categories_page.services_hint">Sélectionnez une catégorie de services</p>
           </div>
         </div>
 
@@ -184,7 +184,7 @@
           <!-- Categories will be loaded dynamically -->
           <div class="text-center">
             <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Chargement...</span>
+              <span class="visually-hidden" data-i18n="categories_page.loading">Chargement...</span>
             </div>
           </div>
         </section>
@@ -193,6 +193,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/main.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/categories.js"></script>

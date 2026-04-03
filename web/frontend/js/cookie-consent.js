@@ -1,4 +1,8 @@
 (function () {
+  if (window.location.pathname.startsWith('/backend')) {
+    return;
+  }
+
   const STORAGE_KEY = 'cyna_cookie_consent';
   const VALUE_ACCEPTED = 'accepted';
   const VALUE_REFUSED = 'refused';
