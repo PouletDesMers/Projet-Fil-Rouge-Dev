@@ -2,7 +2,8 @@
 // iOS simulateur : http://localhost:8080
 // Android émulateur : http://10.0.2.2:8080
 // Appareil physique : http://<IP_LOCAL>:8080
-const BASE_URL = 'http://localhost:8080';
+const BASE_URL = 'http://172.16.2.124:8080';
+// const BASE_URL = 'http://localhost:8080';
 
 let authToken: string | null = null;
 
