@@ -1,6 +1,9 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 import { api, LoginResponse, setAuthToken, UserProfile } from '@/services/api';
+
+const TOKEN_KEY = 'cyna_auth_token';
 
 export interface User {
   id: string;
@@ -28,9 +31,37 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+
+  // Restaurer le token au démarrage
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const savedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+        if (savedToken) {
+          setAuthToken(savedToken);
+          setToken(savedToken);
+          const profile = await api.get<UserProfile>('/api/user/profile');
+          setUser({
+            id:        String(profile.id_utilisateur),
+            email:     profile.email,
+            firstName: profile.firstName,
+            lastName:  profile.lastName,
+          });
+          setIsAuthenticated(true);
+        }
+      } catch {
+        // Token expiré ou invalide — on nettoie
+        await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+        setAuthToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    restoreSession();
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -41,11 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('2FA_REQUIRED');
       }
 
-      // Stocker le token avant de fetch le profil (qui nécessite l'auth)
       setAuthToken(data.token);
       setToken(data.token);
+      await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
-      // Récupérer le profil complet
       const profile = await api.get<UserProfile>('/api/user/profile');
       setUser({
         id:        String(profile.id_utilisateur),
@@ -55,20 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       setIsAuthenticated(true);
     } catch (err) {
-      // En cas d'erreur, on nettoie le token
       setAuthToken(null);
       setToken(null);
+      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
       throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setAuthToken(null);
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
+    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
   }, []);
 
   return (

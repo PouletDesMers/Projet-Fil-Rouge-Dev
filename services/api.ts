@@ -123,6 +123,51 @@ export interface Invoice {
   pdfUrl?: string;
 }
 
+export interface Abonnement {
+  id: number;
+  startDate: string;
+  endDate?: string | null;
+  quantity?: number | null;
+  status: string;
+  autoRenewal: boolean;
+  companyId: number;
+  productId: number;
+  pricingId: number;
+}
+
+// ── Normalizers backend → frontend pour les commandes ────────────────────────
+// Le backend retourne orderDate / totalAmount / id numérique
+
+export function normalizeOrder(raw: Record<string, unknown>): Order {
+  return {
+    id:     String(raw.id ?? ''),
+    date:   (raw.orderDate ?? raw.date ?? '') as string,
+    total:  (raw.totalAmount ?? raw.total ?? 0) as number,
+    status: (raw.status ?? '') as string,
+    items:  ((raw.items ?? []) as Record<string, unknown>[]).map(normalizeOrderItem),
+  };
+}
+
+export function normalizeOrderItem(raw: Record<string, unknown>): OrderItem {
+  return {
+    productId:   String(raw.product_slug ?? raw.productId ?? ''),
+    productName: (raw.product_name ?? raw.productName ?? '') as string,
+    quantity:    (raw.quantity ?? 1) as number,
+    price:       (raw.price ?? 0) as number,
+    duration:    raw.duration as string | undefined,
+  };
+}
+
+export function normalizeInvoice(raw: Record<string, unknown>): Invoice {
+  return {
+    id:      String(raw.id ?? ''),
+    date:    (raw.invoiceDate ?? raw.date ?? '') as string,
+    total:   (raw.amount ?? raw.total ?? 0) as number,
+    orderId: String(raw.orderId ?? ''),
+    pdfUrl:  (raw.pdfLink ?? raw.pdfUrl) as string | undefined,
+  };
+}
+
 // ── Normalizers backend → frontend ───────────────────────────────────────────
 // Le backend renvoie du snake_case; les composants utilisent du camelCase.
 

@@ -38,7 +38,7 @@ export default function HomeScreen() {
       const [carouselRaw, categoriesRaw, produitsRaw] = await Promise.all([
         api.get<Record<string, unknown>[]>('/api/public/carousel-images'),
         api.get<Record<string, unknown>[]>('/api/public/categories'),
-        api.get<Record<string, unknown>[]>('/api/produits'),
+        api.get<Record<string, unknown>[]>('/api/public/top-products'),
       ]);
       setCarousel((carouselRaw || []).map(normalizeCarouselImage));
       setCategories((categoriesRaw || []).map(normalizeCategory));

@@ -100,11 +100,11 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Mon compte</ThemedText>
           <View style={styles.card}>
-            <MenuItem icon="person-outline"       label="Informations personnelles"  onPress={() => {}} />
+            <MenuItem icon="person-outline"       label="Informations personnelles"  onPress={() => router.push('/account/profile' as any)} />
             <View style={styles.divider} />
-            <MenuItem icon="location-outline"     label="Carnet d'adresses"          onPress={() => {}} />
+            <MenuItem icon="location-outline"     label="Carnet d'adresses"          onPress={() => router.push('/account/addresses' as any)} />
             <View style={styles.divider} />
-            <MenuItem icon="card-outline"         label="Méthodes de paiement"       onPress={() => {}} />
+            <MenuItem icon="card-outline"         label="Méthodes de paiement"       onPress={() => router.push('/account/payment-methods' as any)} />
           </View>
         </View>
 
@@ -112,11 +112,11 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Abonnements & Commandes</ThemedText>
           <View style={styles.card}>
-            <MenuItem icon="refresh-circle-outline" label="Mes abonnements actifs"  onPress={() => {}} />
+            <MenuItem icon="refresh-circle-outline" label="Mes abonnements actifs"  onPress={() => router.push('/account/subscriptions' as any)} />
             <View style={styles.divider} />
             <MenuItem icon="receipt-outline"        label="Historique des commandes" onPress={() => router.push('/orders')} />
             <View style={styles.divider} />
-            <MenuItem icon="document-text-outline"  label="Mes factures"            onPress={() => {}} />
+            <MenuItem icon="document-text-outline"  label="Mes factures"            onPress={() => router.push('/account/invoices' as any)} />
           </View>
         </View>
 

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { api, Order } from '@/services/api';
+import { api, normalizeOrder, Order } from '@/services/api';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   'En attente',
@@ -47,8 +47,8 @@ export default function OrdersScreen() {
 
   const loadOrders = async () => {
     try {
-      const data = await api.get<Order[]>('/api/commandes');
-      setOrders(data || []);
+      const data = await api.get<Record<string, unknown>[]>('/api/commandes');
+      setOrders((data || []).map(normalizeOrder));
     } catch {
       setOrders([]);
     } finally {
@@ -97,7 +97,7 @@ export default function OrdersScreen() {
             day: '2-digit', month: 'long',
           });
           return (
-            <TouchableOpacity style={styles.orderCard} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.orderCard} activeOpacity={0.8} onPress={() => router.push(`/orders/${order.id}` as any)}>
               <View style={styles.orderRow}>
                 <View style={styles.orderLeft}>
                   <ThemedText style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</ThemedText>
