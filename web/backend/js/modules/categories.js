@@ -41,6 +41,7 @@ async function fixDuplicateCategoryOrders(categories) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify(updateData)
         }).then(response => {
@@ -77,7 +78,11 @@ async function loadCategories() {
     categoriesContainer.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch('/admin/api/categories');
+    const response = await fetch('/admin/api/categories', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
 
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des catégories');
@@ -191,6 +196,8 @@ function openCategoryModal(category = null) {
     document.getElementById('categoryCouleur').value = category.couleur || '#7602F9';
     document.getElementById('categoryOrder').value = category.ordre_affichage || 1;
     document.getElementById('categoryActive').checked = category.actif;
+    document.getElementById('categoryImage').value = category.image || '';
+    document.getElementById('categoryPlaceholder').value = category.placeholder || '';
   } else {
     titleText.textContent = 'Ajouter Catégorie';
     saveBtn.textContent = 'Ajouter';
@@ -200,6 +207,8 @@ function openCategoryModal(category = null) {
     document.getElementById('categoryCouleur').value = '#7602F9';
     document.getElementById('categoryOrder').value = '1';
     document.getElementById('categoryActive').checked = true;
+    document.getElementById('categoryImage').value = '';
+    document.getElementById('categoryPlaceholder').value = '';
   }
 
   modal.show();
@@ -219,16 +228,20 @@ async function saveCategory() {
       icone: document.getElementById('categoryIcone').value || 'bi bi-tag',
       couleur: document.getElementById('categoryCouleur').value,
       ordre_affichage: parseInt(document.getElementById('categoryOrder').value) || 1,
-      actif: document.getElementById('categoryActive').checked
+      actif: document.getElementById('categoryActive').checked,
+      image: document.getElementById('categoryImage').value.trim(),
+      placeholder: document.getElementById('categoryPlaceholder').value.trim()
     };
 
     const url = isEdit ? `/admin/api/categories/${categoryId}` : '/admin/api/categories';
     const method = isEdit ? 'PUT' : 'POST';
 
+    const token = localStorage.getItem('token');
     const response = await fetch(url, {
       method: method,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(categoryData)
     });
@@ -261,10 +274,10 @@ async function saveCategory() {
 // Load categories for product dropdown
 async function loadCategoriesForProducts() {
   try {
-    
-
+    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/categories', {
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -308,10 +321,10 @@ async function moveCategory(categoryId, direction) {
 // Edit category
 async function editCategory(categoryId) {
   try {
-    
-    
+    const token = localStorage.getItem('token');
     const response = await fetch('/admin/api/categories', {
       headers: {
+        'Authorization': `Bearer ${token}`
       }
     });
 

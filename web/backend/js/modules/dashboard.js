@@ -12,24 +12,31 @@ const AdminDashboard = {
     const el = document.getElementById('dash-date');
     if (el) el.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+    // Fetch users une seule fois, partagé entre loadStats et loadRecentUsers
+    let usersData = null;
+    try {
+      const res = await fetch('/admin/api/users', { credentials: 'include' });
+      if (res.ok) usersData = await res.json();
+    } catch (e) { /* on continue sans users */ }
+
     await Promise.all([
-      this.loadStats(),
-      this.loadRecentUsers(),
+      this.loadStats(usersData),
+      this.loadRecentUsers(usersData),
       this.loadRecentProducts(),
       this.loadSystemStats(),
+      this.loadTopProducts(),
     ]);
     this.renderRevenueChart();
   },
 
-  async loadStats() {
+  async loadStats(usersData) {
     try {
-      const [usersRes, categoriesRes, ordersRes] = await Promise.all([
-        fetch('/admin/api/users', { credentials: 'include' }),
+      const [categoriesRes, ordersRes] = await Promise.all([
         fetch('/admin/api/categories', { credentials: 'include' }),
         fetch('/admin/api/orders', { credentials: 'include' }).catch(() => null),
       ]);
 
-      const users      = usersRes.ok ? await usersRes.json() : [];
+      const users      = Array.isArray(usersData) ? usersData : [];
       const categories = categoriesRes.ok ? await categoriesRes.json() : [];
       const orders     = (ordersRes && ordersRes.ok) ? await ordersRes.json() : [];
 
@@ -92,12 +99,10 @@ const AdminDashboard = {
     }
   },
 
-  async loadRecentUsers() {
+  async loadRecentUsers(usersData) {
     try {
-      const res = await fetch('/admin/api/users', { credentials: 'include' });
-      if (!res.ok) return;
-      const users = await res.json();
-      const recent = Array.isArray(users)
+      const users = Array.isArray(usersData) ? usersData : [];
+      const recent = users.length > 0
         ? [...users].sort((a, b) => new Date(b.date_creation || b.createdAt || 0) - new Date(a.date_creation || a.createdAt || 0)).slice(0, 6)
         : [];
       const tbody = document.getElementById('dash-recent-users');
@@ -139,6 +144,63 @@ const AdminDashboard = {
       `).join('') || '<tr><td colspan="5" class="text-center text-muted ps-3">Aucun produit</td></tr>';
     } catch (e) {
       console.error('Recent products error:', e);
+    }
+  },
+
+  async loadTopProducts() {
+    const container = document.getElementById('dash-top-products');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="d-flex justify-content-center py-4 text-muted">
+        <div class="spinner-border text-primary"></div>
+      </div>`;
+
+    try {
+      const res = await fetch('/admin/api/stats/top-products', { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const items = Array.isArray(data.top_products) ? data.top_products : [];
+      const fromLabel = data.from ? new Date(data.from).toLocaleDateString('fr-FR') : '3 derniers mois';
+
+      if (!items.length) {
+        container.innerHTML = `<div class="text-center text-muted py-4">Aucune vente enregistrée depuis le ${fromLabel}</div>`;
+        return;
+      }
+
+      const rows = items.map((p, idx) => `
+        <tr>
+          <td class="ps-3 text-muted fw-semibold">${idx + 1}</td>
+          <td class="fw-semibold">${p.nom || '—'}</td>
+          <td>${p.total_sales ?? 0}</td>
+          <td>${p.total_quantity ?? p.total_sales ?? 0}</td>
+          <td class="fw-bold text-primary">${(p.total_amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</td>
+        </tr>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center px-3 pt-2 pb-1 small text-muted">
+          <span>Période depuis le ${fromLabel}</span>
+          <span>${items.length} produit${items.length > 1 ? 's' : ''}</span>
+        </div>
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3" style="width:60px">#</th>
+              <th>Produit</th>
+              <th>Ventes</th>
+              <th>Quantité</th>
+              <th>CA estimé</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    } catch (e) {
+      console.error('Top products load error:', e);
+      container.innerHTML = `
+        <div class="alert alert-warning m-3 mb-4">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Impossible de charger le top ventes. Vérifiez les abonnements récents.
+        </div>`;
     }
   },
 

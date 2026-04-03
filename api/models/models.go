@@ -87,6 +87,7 @@ type CategorieWeb struct {
 	Nom                   string    `json:"nom"`
 	Slug                  string    `json:"slug"`
 	Description           string    `json:"description"`
+	Image                 string    `json:"image"`
 	Icone                 string    `json:"icone"`
 	Couleur               string    `json:"couleur"`
 	OrdreAffichage        int       `json:"ordre_affichage"`
@@ -131,12 +132,13 @@ type Abonnement struct {
 }
 
 type Commande struct {
-	ID            int       `json:"id"`
-	DateCommande  time.Time `json:"orderDate"`
-	MontantTotal  float64   `json:"totalAmount"`
-	Statut        string    `json:"status"`
-	IDUtilisateur int       `json:"userId"`
-	PromoCode     string    `json:"promoCode,omitempty"`
+	ID            int         `json:"id"`
+	DateCommande  time.Time   `json:"orderDate"`
+	MontantTotal  float64     `json:"totalAmount"`
+	Statut        string      `json:"status"`
+	IDUtilisateur int         `json:"userId"`
+	PromoCode     string      `json:"promoCode,omitempty"`
+	Items         []OrderItem `json:"items,omitempty"`
 }
 
 type Facture struct {
@@ -194,3 +196,25 @@ const (
 	UserIDKey   ContextKey = "userID"
 	UserRoleKey ContextKey = "userRole"
 )
+
+type TopProductSales struct {
+	ID            int      `json:"id"`
+	Slug          string   `json:"slug,omitempty"`
+	Nom           string   `json:"nom"`
+	TotalSales    int      `json:"total_sales"`
+	TotalQuantity int      `json:"total_quantity"`
+	TotalAmount   float64  `json:"total_amount"`
+	Images        string   `json:"images,omitempty"`
+	Prix          *float64 `json:"prix,omitempty"`
+	Devise        string   `json:"devise,omitempty"`
+	Duree         string   `json:"duree,omitempty"`
+	Tag           string   `json:"tag,omitempty"`
+}
+
+type OrderItem struct {
+	ProductSlug string  `json:"product_slug,omitempty"`
+	ProductName string  `json:"product_name,omitempty"`
+	Price       float64 `json:"price,omitempty"`
+	Quantity    int     `json:"quantity,omitempty"`
+	Duration    string  `json:"duration,omitempty"`
+}

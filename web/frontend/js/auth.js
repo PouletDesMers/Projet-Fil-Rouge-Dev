@@ -3,6 +3,8 @@ const API_BASE = "";
 // DEBUG: Uncomment to see logs
 const DEBUG = true;
 
+const REMEMBER_KEY = "cyna_remember_email";
+
 // Helper function to set cookie
 function setCookie(name, value, days = 30) {
   const date = new Date();
@@ -36,6 +38,8 @@ const EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const msg = document.getElementById("msg");
 const msgTitle = document.getElementById("msgTitle");
 const msgText = document.getElementById("msgText");
+const msgBox = document.getElementById("msgBox");
+const msgIcon = document.getElementById("msgIcon");
 
 // Password toggles logic
 function initPasswordToggles() {
@@ -72,6 +76,7 @@ const registerForm = document.getElementById("registerForm");
 const registerEmailInput = document.getElementById("registerEmailInput");
 const regPassword = document.getElementById("regPassword");
 const regPassword2 = document.getElementById("regPassword2");
+const rememberMe = document.getElementById("rememberMe");
 
 const back1 = document.getElementById("back1");
 const back2 = document.getElementById("back2");
@@ -101,11 +106,27 @@ const twoFABtn = document.getElementById("twoFABtn");
 
 let currentEmail = "";
 
-function showMsg(type, text, title = "There was a problem") {
-  msgTitle.textContent = title;
+// Prefill email from remember
+const remembered = localStorage.getItem(REMEMBER_KEY);
+if (remembered) {
+  emailInput.value = remembered;
+  currentEmail = remembered;
+}
+
+function showMsg(type = "error", text, title) {
+  const t = type || "error";
+  const variants = {
+    error: { cls: "is-error", icon: "bi bi-exclamation-triangle", defaultTitle: "There was a problem" },
+    success: { cls: "is-success", icon: "bi bi-check-circle", defaultTitle: "Success" },
+    info: { cls: "is-info", icon: "bi bi-info-circle", defaultTitle: "Notice" },
+  };
+  const variant = variants[t] || variants.error;
+
+  msgBox.className = `alert-box ${variant.cls}`;
+  msgIcon.className = variant.icon;
+  msgTitle.textContent = title || variant.defaultTitle;
   msgText.textContent = text;
   msg.classList.remove("d-none");
-  // type is not used with the new amazon style box but kept for compatibility
 }
 function hideMsg() {
   msg.classList.add("d-none");
@@ -282,7 +303,12 @@ loginForm.addEventListener("submit", async (e) => {
     if (result?.success) {
       // Token is now stored in httpOnly cookie automatically by server
       // No need to store in localStorage anymore for security
-      
+      if (rememberMe?.checked) {
+        localStorage.setItem(REMEMBER_KEY, currentEmail);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+
       showMsg("success", "Connected ✅", "Success");
       setTimeout(() => (window.location.href = "/index.html"), 500);
     } else {
@@ -362,8 +388,10 @@ registerForm.addEventListener("submit", async (e) => {
       firstName: formData.firstName,
     });
 
-    showStep("login");
+    currentEmail = regEmail;
+    emailInput.value = regEmail;
     loginEmail.textContent = regEmail;
+    showStep("login");
     showMsg("success", "Account created ✅ You can now log in.", "Success");
   } catch (err) {
     showMsg("danger", err.message);

@@ -468,33 +468,47 @@
       // Load single product
       async function loadProduct() {
         const { category, slug } = getProductFromURL();
-        
-        if (!category || !slug) {
-          showError();
-          return;
-        }
+        if (!slug) { showError(); return; }
 
         try {
-          // Load all products from this category
-          const response = await fetch(`/api/public/products/${category}`);
-          if (!response.ok) throw new Error('Failed to fetch');
-          
-          const products = await response.json();
-          const product = products.find(p => p.slug === slug);
-          
-          if (!product) {
-            showError();
-            return;
+          let product = null;
+          let catSlug = category;
+
+          if (catSlug) {
+            const response = await fetch(`/api/public/products/${catSlug}`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            const products = await response.json();
+            product = products.find(p => p.slug === slug);
           }
+
+          // Fallback: chercher dans toutes les catégories
+          if (!product) {
+            const catRes = await fetch('/api/public/categories');
+            if (catRes.ok) {
+              const categories = await catRes.json();
+              for (const c of categories) {
+                try {
+                  const r = await fetch(`/api/public/products/${c.slug}`);
+                  if (r.ok) {
+                    const prods = await r.json();
+                    const found = prods.find(p => p.slug === slug);
+                    if (found) { product = found; catSlug = c.slug; break; }
+                  }
+                } catch (_) {}
+              }
+            }
+          }
+
+          if (!product) { showError(); return; }
 
           // Load category info
           const categoryResponse = await fetch('/api/public/categories');
           if (categoryResponse.ok) {
             const categories = await categoryResponse.json();
-            const categoryInfo = categories.find(c => c.slug === category);
+            const categoryInfo = categories.find(c => c.slug === catSlug);
             if (categoryInfo) {
               document.getElementById('categoryLink').textContent = categoryInfo.nom;
-              document.getElementById('categoryLink').href = `/catalogue.html?category=${category}`;
+              document.getElementById('categoryLink').href = `/catalogue.html?category=${catSlug}`;
             }
           }
 
@@ -528,7 +542,26 @@
 
         // Galerie d’images
         let images = [];
-        try { images = JSON.parse(product.images || '[]'); } catch (_) {}
+        try {
+          const raw = product.images;
+          if (Array.isArray(raw)) {
+            images = raw;
+          } else if (typeof raw === 'string' && raw.trim() !== '') {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) images = parsed;
+            else if (typeof parsed === 'string') {
+              try { images = JSON.parse(parsed); } catch { images = [parsed]; }
+            }
+          }
+        } catch (_) { images = []; }
+        const origin = window.location.origin;
+        images = (images || []).flatMap(img => {
+          let url = '';
+          if (typeof img === 'string') url = img;
+          else if (img && typeof img === 'object') url = img.url || img.url_image || img.src || '';
+          if (url && url.startsWith('/')) url = `${origin}${url}`;
+          return url ? [url] : [];
+        }).filter(Boolean);
         const gallery = document.getElementById('productGallery');
         if (images.length > 0) {
           document.getElementById('galleryMain').src = images[0];
@@ -568,7 +601,7 @@
           // Escape single quotes in the name to avoid breaking the inline onclick
           const safeName = (product.nom || '').replace(/'/g, "\\'");
           orderButtons.innerHTML = `
-            <button class="btn btn-primary" onclick="addToCart({id:${product.id_produit},name:'${safeName}',price:${product.prix || 0},qty:1,duration:'${product.duree || 'mois'}'})">
+            <button class="btn btn-primary" onclick="addToCart({id:'${product.slug || product.id_produit}',slug:'${product.slug || product.id_produit}',name:'${safeName}',price:${product.prix || 0},qty:1,duration:'${product.duree || 'mois'}'})">
               <i class="bi bi-cart-plus"></i> Ajouter au panier
             </button>
             <button class="btn btn-secondary" onclick="openQuoteModal()">

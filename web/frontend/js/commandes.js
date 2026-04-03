@@ -60,10 +60,29 @@
     const totalTTC   = Number(order.totalAmount || 0);
     const totalHT    = totalTTC / 1.2;
     const tva        = totalTTC - totalHT;
+    const items      = Array.isArray(order.items) ? order.items : [];
     const promoLine  = order.promoCode
       ? `<tr><td class="text-muted"><i class="bi bi-tag-fill me-1 text-success"></i>Code promo</td>
              <td class="text-end fw-semibold text-success">${order.promoCode}</td></tr>`
       : '';
+    const itemsRows = items.length
+      ? items.map((it) => {
+          const qty = Number(it.quantity || 1);
+          const price = Number(it.price || 0);
+          const lineTotal = price * qty;
+          const name = it.product_name || it.productName || 'Produit';
+          const duration = it.duration ? `<div class="small text-muted">${it.duration}</div>` : '';
+          return `<tr>
+            <td>
+              <div class="fw-semibold">${name}</div>
+              ${duration}
+            </td>
+            <td class="text-center">${qty}</td>
+            <td class="text-end">${price.toFixed(2)} €</td>
+            <td class="text-end fw-semibold">${lineTotal.toFixed(2)} €</td>
+          </tr>`;
+        }).join('')
+      : `<tr><td colspan="4" class="text-muted text-center">Détails non disponibles</td></tr>`;
 
     document.getElementById('orderDetailBody').innerHTML = `
       <table class="table table-borderless mb-0">
@@ -81,6 +100,27 @@
           </tr>
         </tbody>
       </table>`;
+
+    const itemsTable = document.getElementById('orderDetailItems');
+    if (itemsTable) {
+      itemsTable.innerHTML = `
+        <div class="mt-3">
+          <h6 class="fw-bold mb-2">Articles</h6>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Produit</th>
+                  <th class="text-center">Qté</th>
+                  <th class="text-end">Prix</th>
+                  <th class="text-end">Sous-total</th>
+                </tr>
+              </thead>
+              <tbody>${itemsRows}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
 
     const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
     modal.show();
@@ -270,6 +310,7 @@
           totalAmount: pending.totalAmount || 0,
           demo: pending.demo || params.get('demo') === '1',
           promoCode: pending.promoCode || null,
+          items: Array.isArray(pending.items) ? pending.items : [],
         }),
       }).catch(e => console.warn('[confirm-order]', e.message));
 

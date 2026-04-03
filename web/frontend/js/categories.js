@@ -25,7 +25,11 @@ function renderCategories(categories) {
 
   grid.innerHTML = categories.map(category => `
     <a class="cat-card" href="/catalogue.html?category=${category.slug}" aria-label="Voir ${category.nom}">
-      <div class="cat-cover" style="background: radial-gradient(520px 160px at 20% 30%, ${category.couleur}55, transparent 55%), radial-gradient(420px 140px at 80% 20%, ${category.couleur}55, transparent 55%), linear-gradient(135deg, ${category.couleur}92, ${category.couleur}80);">
+      <div class="cat-cover" style="background:
+        ${getCategoryImage(category) ? `url('${getCategoryImage(category)}') center/cover no-repeat,` : ''}
+        radial-gradient(520px 160px at 20% 30%, ${category.couleur}55, transparent 55%),
+        radial-gradient(420px 140px at 80% 20%, ${category.couleur}55, transparent 55%),
+        linear-gradient(135deg, ${category.couleur}92, ${category.couleur}80);">
         <i class="${category.icone} cat-icon"></i>
         <div class="badge">Actif</div>
       </div>
@@ -35,6 +39,15 @@ function renderCategories(categories) {
       </div>
     </a>
   `).join('');
+}
+
+function getCategoryImage(category) {
+  const placeholder = 'https://via.placeholder.com/640x360?text=Category';
+  let url = category.image || '';
+  if (url && url.startsWith('/')) {
+    url = `${window.location.origin}${url}`;
+  }
+  return url || placeholder;
 }
 
 function renderErrorState() {

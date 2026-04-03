@@ -33,8 +33,8 @@
 
       <!-- Error Message Area -->
       <div id="msg" class="d-none">
-        <div class="error-box">
-          <i class="bi bi-exclamation-triangle"></i>
+        <div id="msgBox" class="alert-box is-error">
+          <i id="msgIcon" class="bi bi-exclamation-triangle"></i>
           <div>
             <h6 id="msgTitle">There was a problem</h6>
             <p id="msgText"></p>
@@ -83,7 +83,7 @@
           <div class="mb-3">
             <div class="d-flex justify-content-between">
               <label class="auth-label">Password</label>
-              <a href="#" class="small text-decoration-none">Forgot your password?</a>
+              <a href="/reset-password.html" class="small text-decoration-none">Forgot your password?</a>
             </div>
             <div class="password-container">
               <input

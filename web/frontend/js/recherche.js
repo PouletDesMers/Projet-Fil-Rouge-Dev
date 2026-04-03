@@ -38,19 +38,25 @@
 
   // Construire une card produit
   function buildCard(p) {
+    const isCategory = p.type === 'category' || p.type === 'service';
     const card = document.createElement('article');
     card.className = 'card';
 
-    const tag = p.tag || p.categorie_nom || '';
-    const catLabel = p.categorie_nom || '';
-    const prix = formatPrice(p.prix, p.devise, p.duree, p.type_achat);
-    const statut = formatStatut(p.statut);
+    const img = getFirstImage(p.images);
+    const tag = isCategory ? (p.type === 'service' ? 'Service' : 'Catégorie') : (p.tag || p.categorie_nom || '');
+    const catLabel = isCategory ? (p.nom || '') : (p.categorie_nom || '');
+    const prix = isCategory ? 'Voir les offres' : formatPrice(p.prix, p.devise, p.duree, p.type_achat);
+    const statut = isCategory ? 'Parcourir' : formatStatut(p.statut);
     const desc = p.description_courte || '';
     const slug = p.slug || '';
-    const catSlug = p.categorie_slug || '';
+    const catSlug = p.categorie_slug || slug || '';
+    const link = isCategory
+      ? `/catalogue.html?category=${encodeURIComponent(catSlug)}`
+      : `/produit.html?category=${encodeURIComponent(catSlug)}&product=${encodeURIComponent(slug)}`;
+    const actionLabel = isCategory ? 'Voir la catégorie' : 'Voir le produit';
 
     card.innerHTML = `
-      <div class="cover">
+      <div class="cover" style="background-image:url('${img}');background-size:cover;background-position:center;background-color:#f5f5f5;">
         ${tag ? `<span class="tag-badge"><i class="bi bi-shield-check me-1"></i>${escapeHtml(tag)}</span>` : ''}
         ${catLabel ? `<span class="cat-badge">${escapeHtml(catLabel)}</span>` : ''}
       </div>
@@ -61,8 +67,8 @@
           <span class="price">${escapeHtml(prix)}</span>
           <span class="status"><i class="bi bi-circle-fill me-1" style="font-size:8px;color:#16a34a;"></i>${escapeHtml(statut)}</span>
         </div>
-        <a href="/produit.html?slug=${encodeURIComponent(slug)}" class="btn btn-cyna btn-action w-100">
-          Voir le produit
+        <a href="${link}" class="btn btn-cyna btn-action w-100">
+          ${escapeHtml(actionLabel)}
         </a>
       </div>
     `;
@@ -77,6 +83,28 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function getFirstImage(raw) {
+    let images = [];
+    try {
+      if (Array.isArray(raw)) {
+        images = raw;
+      } else if (typeof raw === 'string' && raw.trim() !== '') {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) images = parsed;
+        else if (typeof parsed === 'string') images = [parsed];
+      }
+    } catch (_) { images = []; }
+    const origin = window.location.origin;
+    for (const img of images) {
+      let url = '';
+      if (typeof img === 'string') url = img;
+      else if (img && typeof img === 'object') url = img.url || img.url_image || img.src || '';
+      if (url && url.startsWith('/')) url = `${origin}${url}`;
+      if (url) return url;
+    }
+    return 'https://via.placeholder.com/640x360?text=Produit';
   }
 
   // Afficher l'état vide
@@ -115,6 +143,18 @@
     header.textContent = '';
   }
 
+  // Afficher l'état erreur
+  function showError(message) {
+    grid.innerHTML = `
+      <div class="state-box">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+        <p class="text-danger">${escapeHtml(message)}</p>
+        <p class="hint">Vérifiez votre connexion et réessayez.</p>
+      </div>
+    `;
+    header.textContent = '';
+  }
+
   // Lancer la recherche
   async function doSearch(q) {
     if (!q.trim()) {
@@ -127,7 +167,7 @@
     try {
       const res = await fetch(`/api/public/search?q=${encodeURIComponent(q)}`);
       if (!res.ok) {
-        throw new Error(`Erreur ${res.status}`);
+        throw new Error(`Erreur serveur ${res.status}`);
       }
       const products = await res.json();
 
@@ -143,13 +183,7 @@
 
     } catch (err) {
       console.error('Erreur de recherche:', err);
-      grid.innerHTML = `
-        <div class="state-box">
-          <i class="bi bi-exclamation-circle text-danger"></i>
-          <p class="text-danger">Une erreur est survenue. Veuillez réessayer.</p>
-        </div>
-      `;
-      header.textContent = '';
+      showError('Une erreur est survenue lors de la recherche. Veuillez réessayer.');
     }
   }
 

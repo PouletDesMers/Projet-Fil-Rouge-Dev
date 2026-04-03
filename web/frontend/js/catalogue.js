@@ -103,12 +103,14 @@ function renderProducts(products) {
 }
 
 function renderProductCard(product) {
+  const img = getFirstImage(product.images);
   const priceDisplay = product.prix ? 
     `<span class="price">${product.prix}€ / ${product.duree}</span>` : 
     `<span class="price">Sur devis</span>`;
 
   const categorySlug = getCategoryFromURL();
   const productUrl = `/produit.html?category=${categorySlug}&product=${product.slug}`;
+  const coverStyle = `background-image:url('${img}');background-size:cover;background-position:center;background-color:#f5f5f5;`;
 
   const actionButton = product.type_achat === 'devis' ?
     `<div class="d-grid gap-2">
@@ -130,7 +132,7 @@ function renderProductCard(product) {
 
   return `
     <div class="card">
-      <div class="cover">
+      <div class="cover" style="${coverStyle}">
         <span class="tag">${product.tag}</span>
       </div>
       <div class="card-body">
@@ -150,6 +152,28 @@ function renderProductCard(product) {
       </div>
     </div>
   `;
+}
+
+function getFirstImage(raw) {
+  let images = [];
+  try {
+    if (Array.isArray(raw)) {
+      images = raw;
+    } else if (typeof raw === 'string' && raw.trim() !== '') {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) images = parsed;
+      else if (typeof parsed === 'string') images = [parsed];
+    }
+  } catch (_) { images = []; }
+  const origin = window.location.origin;
+  for (const img of images) {
+    let url = '';
+    if (typeof img === 'string') url = img;
+    else if (img && typeof img === 'object') url = img.url || img.url_image || img.src || '';
+    if (url && url.startsWith('/')) url = `${origin}${url}`;
+    if (url) return url;
+  }
+  return 'https://via.placeholder.com/640x360?text=Produit';
 }
 
 function renderErrorState(message) {
@@ -173,7 +197,7 @@ function renderErrorState(message) {
 }
 
 function addProductToCart(id, name, price, duration) {
-  addToCart({ id, name, price, qty: 1, duration });
+  addToCart({ id, slug: id, name, price, qty: 1, duration });
   showToast('success', `✓ ${name} ajouté au panier`);
 }
 

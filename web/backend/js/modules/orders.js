@@ -170,6 +170,19 @@ const AdminOrders = (() => {
     // TVA simulée 20 %
     const ht  = order.totalAmount / 1.2;
     const tva = order.totalAmount - ht;
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemsRows = items.length ? items.map(it => {
+      const qty   = Number(it.quantity || it.qty || 1);
+      const price = Number(it.price || 0);
+      const name  = it.product_name || it.productName || 'Produit';
+      const dur   = it.duration ? `<div class="text-muted small">${it.duration}</div>` : '';
+      return `<tr>
+        <td><div class="fw-semibold">${name}</div>${dur}</td>
+        <td class="text-center">${qty}</td>
+        <td class="text-end">${price.toFixed(2)} €</td>
+        <td class="text-end fw-semibold">${(price * qty).toFixed(2)} €</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="4" class="text-muted text-center">Aucun article enregistré</td></tr>`;
 
     const body = document.getElementById('orderDetailsBody');
     if (body) {
@@ -209,6 +222,25 @@ const AdminOrders = (() => {
                   <dd class="col-7 fw-bold text-primary fs-6">${money(order.totalAmount)}</dd>
                 </dl>
               </div>
+            </div>
+          </div>
+        </div>`;
+      body.innerHTML += `
+        <div class="card border-0 shadow-sm mt-3">
+          <div class="card-body">
+            <h6 class="card-title text-muted small text-uppercase mb-3">Articles</h6>
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Produit</th>
+                    <th class="text-center">Qté</th>
+                    <th class="text-end">Prix</th>
+                    <th class="text-end">Sous-total</th>
+                  </tr>
+                </thead>
+                <tbody>${itemsRows}</tbody>
+              </table>
             </div>
           </div>
         </div>`;
