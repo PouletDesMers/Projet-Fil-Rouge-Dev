@@ -35,12 +35,12 @@ check-services.bat
 
 ### 3. Configurer l'app mobile
 
-**Créez le fichier : `services/config.ts`**
-```typescript
-export const API_URL = 'http://VOTRE_IP_ICI:8080/api';
+**Créez un fichier `.env` à la racine du projet et ajoutez :**
+```env
+EXPO_PUBLIC_API_URL=http://VOTRE_IP_ICI:8080/api
 ```
 
-**Remplacez VOTRE_IP_ICI** par votre adresse IP locale trouvée à l'étape 2.
+Si vous testez sur le même ordinateur que Docker, `http://localhost:8080/api` peut suffire sur iOS/web, et `http://10.0.2.2:8080/api` sur l'émulateur Android.
 
 ### 4. Utiliser le service API
 
@@ -71,7 +71,9 @@ Puis scannez le QR code avec **Expo Go** sur votre smartphone.
 - **test-api.bat** - Teste les endpoints de l'API
 
 ### Configuration mobile
+- **services/api.ts** - Client API principal utilisé par l'app Expo
 - **services/apiService.ts** - Service API complet avec toutes les méthodes
+- **services/api-base-url.ts** - Résolution centralisée de l'URL API
 - **constants/config.example.ts** - Configuration d'exemple
 
 ### Documentation
@@ -107,7 +109,7 @@ docker-compose exec db psql -U postgres -d mydb -c "SELECT COUNT(*) FROM utilisa
 
 ### Test 4 : Depuis votre mobile
 
-1. Configurez l'IP dans `services/apiService.ts` (ligne 6)
+1. Configurez `EXPO_PUBLIC_API_URL` dans `.env`
 2. Lancez `npm start`
 3. Scannez le QR code avec Expo Go
 4. Testez la connexion depuis l'app
@@ -118,7 +120,7 @@ docker-compose exec db psql -U postgres -d mydb -c "SELECT COUNT(*) FROM utilisa
 
 **Solution :**
 1. Vérifiez votre IP locale : `ipconfig`
-2. Mettez à jour l'IP dans `services/apiService.ts`
+2. Mettez à jour `EXPO_PUBLIC_API_URL` dans `.env`
 3. Vérifiez que votre téléphone est sur le même WiFi
 4. Testez l'API dans votre navigateur : `http://VOTRE_IP:8080/api/health`
 

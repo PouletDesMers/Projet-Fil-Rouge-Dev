@@ -80,10 +80,10 @@ Créez ou modifiez le fichier de configuration de l'API dans votre app mobile :
 
 **Fichier : `constants/config.ts` ou similaire**
 ```typescript
-// Remplacez 192.168.1.100 par VOTRE adresse IP locale
-export const API_URL = __DEV__ 
-  ? 'http://192.168.1.100:8080/api'  // Développement - CHANGEZ L'IP !
-  : 'https://api.cyna.com/api';      // Production
+// Utilisez EXPO_PUBLIC_API_URL si possible
+export const API_URL = __DEV__
+  ? process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api'
+  : 'https://api.cyna.com/api';
 
 export const API_CONFIG = {
   baseURL: API_URL,
@@ -98,7 +98,7 @@ export const API_CONFIG = {
 
 **Fichier : `services/api.ts`**
 ```typescript
-const API_BASE_URL = 'http://192.168.1.100:8080/api'; // CHANGEZ L'IP !
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
   async login(email: string, password: string) {

@@ -3,7 +3,9 @@
  * Gère toutes les communications avec le backend
  */
 
-const API_BASE_URL = 'http://192.168.1.100:8080/api'; // ⚠️ CHANGEZ CETTE IP !
+import { resolveApiBaseUrl } from '@/services/api-base-url';
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export interface LoginResponse {
   token: string;
@@ -76,14 +78,12 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
+    const headers = new Headers(options.headers);
+    headers.set('Content-Type', 'application/json');
 
     // Ajouter le token si disponible
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      headers.set('Authorization', `Bearer ${this.token}`);
     }
 
     try {
