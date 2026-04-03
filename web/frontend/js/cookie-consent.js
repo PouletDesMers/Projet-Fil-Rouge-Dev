@@ -2,12 +2,43 @@
   const STORAGE_KEY = 'cyna_cookie_consent';
   const VALUE_ACCEPTED = 'accepted';
   const VALUE_REFUSED = 'refused';
+  const VALUE_CUSTOM = 'custom';
   const BANNER_ID = 'cyna-cookie-banner';
   const LAUNCHER_ID = 'cyna-cookie-launcher';
+  const PREFERENCES_ID = 'cyna-cookie-preferences';
+
+  const DEFAULT_PREFERENCES = {
+    necessary: true,
+    statistics: false,
+    marketing: false,
+  };
 
   function getConsent() {
     try {
-      return localStorage.getItem(STORAGE_KEY);
+      const rawValue = localStorage.getItem(STORAGE_KEY);
+      if (!rawValue) return null;
+
+      if (rawValue === VALUE_ACCEPTED || rawValue === VALUE_REFUSED) {
+        return {
+          status: rawValue,
+          preferences: {
+            ...DEFAULT_PREFERENCES,
+            statistics: rawValue === VALUE_ACCEPTED,
+            marketing: rawValue === VALUE_ACCEPTED,
+          },
+        };
+      }
+
+      const parsed = JSON.parse(rawValue);
+      if (!parsed || typeof parsed !== 'object') return null;
+
+      return {
+        status: parsed.status || VALUE_CUSTOM,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          ...(parsed.preferences || {}),
+        },
+      };
     } catch (_) {
       return null;
     }
@@ -15,7 +46,7 @@
 
   function setConsent(value) {
     try {
-      localStorage.setItem(STORAGE_KEY, value);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch (_) {}
   }
 
@@ -35,8 +66,7 @@
     launcher.setAttribute('aria-label', 'Ouvrir les préférences cookies');
     launcher.innerHTML = '<i class="bi bi-shield-lock me-1"></i>Cookies';
     launcher.addEventListener('click', () => {
-      buildBanner();
-      launcher.remove();
+      openPreferences();
     });
 
     document.body.appendChild(launcher);
@@ -47,14 +77,135 @@
     if (existing) existing.remove();
   }
 
-  function acceptCookies() {
-    setConsent(VALUE_ACCEPTED);
+  function hidePreferences() {
+    const existing = document.getElementById(PREFERENCES_ID);
+    if (existing) existing.remove();
+    document.body.classList.remove('cyna-cookie-preferences-open');
+  }
+
+  function openPreferences(consent = getConsent()) {
     hideBanner();
+    hideLauncher();
+    hidePreferences();
+
+    const preferences = consent?.preferences || DEFAULT_PREFERENCES;
+
+    const overlay = document.createElement('div');
+    overlay.id = PREFERENCES_ID;
+    overlay.className = 'cyna-cookie-preferences';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Préférences cookies');
+
+    overlay.innerHTML = `
+      <div class="cyna-cookie-preferences__panel">
+        <div class="cyna-cookie-preferences__header">
+          <div>
+            <h3>Préférences cookies</h3>
+            <p>Choisissez les cookies que vous autorisez. Les cookies nécessaires restent toujours actifs.</p>
+          </div>
+          <button type="button" class="cyna-cookie-preferences__close" data-cookie-action="close" aria-label="Fermer">&times;</button>
+        </div>
+
+        <div class="cyna-cookie-preferences__group">
+          <div class="cyna-cookie-preferences__row is-disabled">
+            <div>
+              <strong>Cookies nécessaires</strong>
+              <p>Indispensables au fonctionnement du site, à l'authentification et à la sécurité.</p>
+            </div>
+            <span class="badge bg-success">Toujours actifs</span>
+          </div>
+
+          <label class="cyna-cookie-preferences__row" for="cookie-statistics">
+            <div>
+              <strong>Cookies statistiques</strong>
+              <p>Mesure de fréquentation et amélioration des pages.</p>
+            </div>
+            <input id="cookie-statistics" type="checkbox" ${preferences.statistics ? 'checked' : ''} />
+          </label>
+
+          <label class="cyna-cookie-preferences__row" for="cookie-marketing">
+            <div>
+              <strong>Cookies marketing</strong>
+              <p>Personnalisation des contenus et suivi des campagnes.</p>
+            </div>
+            <input id="cookie-marketing" type="checkbox" ${preferences.marketing ? 'checked' : ''} />
+          </label>
+        </div>
+
+        <div class="cyna-cookie-preferences__actions">
+          <button type="button" class="btn btn-outline-light btn-sm" data-cookie-action="refuse-all">Tout refuser</button>
+          <button type="button" class="btn btn-light btn-sm" data-cookie-action="save">Enregistrer</button>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        openLauncherAfterClose();
+        return;
+      }
+
+      const button = event.target.closest('[data-cookie-action]');
+      if (!button) return;
+
+      const action = button.getAttribute('data-cookie-action');
+      if (action === 'close') {
+        hidePreferences();
+        showLauncher();
+      }
+
+      if (action === 'refuse-all') {
+        refuseCookies();
+        showLauncher();
+      }
+
+      if (action === 'save') {
+        const nextConsent = {
+          status: VALUE_CUSTOM,
+          preferences: {
+            ...DEFAULT_PREFERENCES,
+            statistics: overlay.querySelector('#cookie-statistics')?.checked === true,
+            marketing: overlay.querySelector('#cookie-marketing')?.checked === true,
+          },
+        };
+        setConsent(nextConsent);
+        hidePreferences();
+        showLauncher();
+      }
+    });
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('cyna-cookie-preferences-open');
+  }
+
+  function openLauncherAfterClose() {
+    hidePreferences();
+    showLauncher();
+  }
+
+  function acceptCookies() {
+    setConsent({
+      status: VALUE_ACCEPTED,
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        statistics: true,
+        marketing: true,
+      },
+    });
+    hideBanner();
+    hidePreferences();
+    showLauncher();
   }
 
   function refuseCookies() {
-    setConsent(VALUE_REFUSED);
+    setConsent({
+      status: VALUE_REFUSED,
+      preferences: { ...DEFAULT_PREFERENCES },
+    });
     hideBanner();
+    hidePreferences();
+    showLauncher();
   }
 
   function buildBanner() {
@@ -86,6 +237,7 @@
         </div>
         <div class="cyna-cookie-banner__actions">
           <button type="button" class="btn btn-outline-light btn-sm" data-cookie-action="refuse">Refuser</button>
+          <button type="button" class="btn btn-outline-light btn-sm" data-cookie-action="customize">Personnaliser</button>
           <button type="button" class="btn btn-light btn-sm" data-cookie-action="accept">Accepter tout</button>
         </div>
       </div>
@@ -98,6 +250,7 @@
       const action = button.getAttribute('data-cookie-action');
       if (action === 'accept') acceptCookies();
       if (action === 'refuse') refuseCookies();
+      if (action === 'customize') openPreferences();
     });
 
     document.body.appendChild(banner);
@@ -105,8 +258,13 @@
   }
 
   function init() {
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', init, { once: true });
+      return;
+    }
+
     const consent = getConsent();
-    if (consent === VALUE_ACCEPTED || consent === VALUE_REFUSED) {
+    if (consent?.status === VALUE_ACCEPTED || consent?.status === VALUE_REFUSED || consent?.status === VALUE_CUSTOM) {
       hideBanner();
       showLauncher();
       return;
@@ -123,12 +281,14 @@
   window.CynaCookieConsent = {
     accept: acceptCookies,
     refuse: refuseCookies,
+    openPreferences,
     open: buildBanner,
     reset: function () {
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (_) {}
       hideLauncher();
+      hidePreferences();
       buildBanner();
     },
     getConsent,
