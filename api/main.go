@@ -25,21 +25,30 @@ func main() {
 	logger.InitLogDB()
 	handlers.InitBackupScheduler()
 
-	// Auto-génération d'un token système si la table est vide
-	var count int
-	config.DB.QueryRow("SELECT COUNT(*) FROM api_token").Scan(&count)
-	if count == 0 {
+	// Auto-génération d'un token système s'il n'existe pas déjà.
+	// Important: la table peut déjà contenir des clés de démo, donc COUNT(*) != 0.
+	var systemTokenCount int
+	if err := config.DB.QueryRow("SELECT COUNT(*) FROM api_token WHERE nom = 'System Token'").Scan(&systemTokenCount); err != nil {
+		log.Printf("Failed checking system API token existence: %v", err)
+	} else if systemTokenCount == 0 {
 		b := make([]byte, 32)
-		if _, err := cryptoRandRead(b); err == nil {
+		if _, err := cryptoRandRead(b); err != nil {
+			log.Printf("Failed generating system API token bytes: %v", err)
+		} else {
 			newToken := encodeHexStr(b)
 			var userID int
-			err := config.DB.QueryRow("SELECT id_utilisateur FROM utilisateur LIMIT 1").Scan(&userID)
-			if err == nil {
-				config.DB.Exec(
+			err := config.DB.QueryRow("SELECT id_utilisateur FROM utilisateur ORDER BY id_utilisateur ASC LIMIT 1").Scan(&userID)
+			if err != nil {
+				log.Printf("Failed finding a user for system API token: %v", err)
+			} else {
+				if _, err := config.DB.Exec(
 					"INSERT INTO api_token (cle_api, nom, permissions, id_utilisateur) VALUES ($1, $2, $3, $4)",
 					newToken, "System Token", "all", userID,
-				)
-				log.Println("System API token generated successfully (check DB for the key)")
+				); err != nil {
+					log.Printf("Failed creating system API token: %v", err)
+				} else {
+					log.Println("System API token generated successfully (check DB for the key)")
+				}
 			}
 		}
 	}
