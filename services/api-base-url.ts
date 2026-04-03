@@ -1,10 +1,6 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-function normalizeApiUrl(value: string) {
-  const trimmed = value.trim().replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-}
 
 function getExpoDevHost() {
   const hostUri =
@@ -28,13 +24,14 @@ function getExpoDevHost() {
 export function resolveApiBaseUrl() {
   const configured = process.env.EXPO_PUBLIC_API_URL;
   if (configured) {
-    return normalizeApiUrl(configured);
+    // Enlever le /api final si présent — les paths dans le code l'incluent déjà
+    return configured.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
   }
 
   if (__DEV__) {
     const host = getExpoDevHost() || (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
-    return normalizeApiUrl(`http://${host}:8080`);
+    return `http://${host}:8080`;
   }
 
-  return 'https://api.cyna.com/api';
+  return 'https://api.cyna.com';
 }
