@@ -162,4 +162,100 @@ export default {
 
     copyright: "© 2026 CYNA. Todos los derechos reservados.",
   },
+
+  contact: {
+    title: "Contáctanos",
+    subtitle: "Estamos aquí para ayudarte. Envíanos un mensaje y te responderemos lo antes posible.",
+    success_message: "¡Gracias! Tu mensaje se ha enviado correctamente. Nos pondremos en contacto pronto.",
+    info_notice: "Todos los campos marcados con un asterisco (*) son obligatorios.",
+    
+    form_name: "Nombre completo *",
+    form_name_placeholder: "Tu nombre",
+    form_email: "Correo electrónico *",
+    form_email_placeholder: "tu.email@ejemplo.com",
+    form_phone: "Teléfono",
+    form_phone_placeholder: "+34 6 12 34 56 78",
+    form_subject: "Asunto *",
+    form_subject_placeholder: "Selecciona un asunto...",
+    form_message: "Mensaje *",
+    form_message_placeholder: "Por favor explícanos cómo podemos ayudarte...",
+    form_submit: "Enviar mensaje",
+    form_submit_error: "Ocurrió un error al enviar el mensaje.",
+    form_invalid_email: "Por favor ingresa una dirección de correo electrónico válida.",
+
+    subject_general: "Pregunta general",
+    subject_support: "Soporte técnico",
+    subject_billing: "Facturación",
+    subject_partnership: "Asociación",
+    subject_other: "Otro",
+
+    email_title: "Correo electrónico",
+    phone_title: "Teléfono",
+    address_title: "Dirección",
+    address: "123 Calle de la Ciberseguridad<br />75000 París, Francia",
+  },
+
+  team: {
+    title: "Nuestro Equipo",
+    subtitle: "Conoce a los expertos apasionados que construyen CYNA cada día. Juntos, creamos soluciones innovadoras de ciberseguridad para proteger tu negocio.",
+    
+    mission_title: "Nuestra Misión",
+    mission_description: "En CYNA, creemos que toda organización merece una protección cibernética robusta y accesible. Nuestro equipo se dedica a transformar la forma en que los negocios abordan la seguridad.",
+    mission_box_title: "¿Por qué lo hacemos?",
+    mission_box_content: "Fundamos CYNA para ofrecer protección pragmática y global contra las ciberamenazas a las PYMES y empresas medianas que a menudo carecen de recursos y experiencia. Nuestra misión es hacer la ciberseguridad accesible para todos.",
+    
+    team_members_title: "Equipo del Proyecto",
+    team_members_description: "Estos apasionados unieron sus habilidades para crear CYNA. Juntos, aportan una experiencia diversa en desarrollo, ciberseguridad y gestión de proyectos.",
+    
+    role_developer: "Desarrollador",
+    role_security: "Experto en Seguridad",
+    role_devops: "DevOps e Infraestructura",
+    
+    member1_bio: "Experto en desarrollo backend e infraestructura, apasionado por crear soluciones robustas y escalables.",
+    member2_bio: "Especialista en frontend y experiencia del usuario, creando interfaces intuitivas y modernas.",
+    member3_bio: "Especialista en ciberseguridad y pruebas de penetración, garantizando que CYNA ofrezca protección máxima.",
+    member4_bio: "Experto en infraestructura en la nube y DevOps, asegurando confiabilidad y escalabilidad de nuestros servicios.",
+    
+    values_title: "Nuestros Valores",
+    value_security: "Seguridad",
+    value_security_desc: "Proteger tus datos es nuestra prioridad absoluta.",
+    value_expertise: "Experiencia",
+    value_expertise_desc: "Un equipo de expertos apasionados y comprometidos.",
+    value_innovation: "Innovación",
+    value_innovation_desc: "Soluciones modernas y de vanguardia.",
+    value_partnership: "Asociación",
+    value_partnership_desc: "Trabajamos como un verdadero socio.",
+    
+    cta_title: "¿Quieres unirte a nosotros?",
+    cta_description: "Siempre buscamos talentos apasionados para fortalecer nuestro equipo.",
+    cta_button: "Contáctanos",
+  },
+
+  footer: {
+    about_title: "Acerca de",
+    about_cyna: "Acerca de CYNA",
+    team: "Nuestro equipo",
+    careers: "Carreras",
+    blog: "Blog",
+
+    products_title: "Productos",
+    categories: "Categorías",
+    pricing: "Precios",
+    comparison: "Comparación",
+    roadmap: "Hoja de ruta",
+
+    support_title: "Soporte",
+    help_center: "Centro de ayuda",
+    documentation: "Documentación",
+    contact: "Contáctanos",
+    status: "Estado del servicio",
+
+    legal_title: "Legal",
+    terms: "Términos de uso",
+    privacy: "Política de privacidad",
+    cookies: "Política de cookies",
+    legal_notice: "Aviso legal",
+
+    copyright: "© 2026 CYNA. Todos los derechos reservados.",
+  },
 };

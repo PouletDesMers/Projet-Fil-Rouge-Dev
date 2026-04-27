@@ -162,4 +162,100 @@ export default {
 
     copyright: "© 2026 CYNA。保留所有权利。",
   },
+
+  contact: {
+    title: "联系我们",
+    subtitle: "我们来帮助您。发送消息，我们将尽快回复您。",
+    success_message: "谢谢！您的邮件已成功发送。我们很快就会联系您。",
+    info_notice: "所有标有星号 (*) 的字段为必填项。",
+    
+    form_name: "全名 *",
+    form_name_placeholder: "您的名字",
+    form_email: "电子邮箱 *",
+    form_email_placeholder: "you.email@example.com",
+    form_phone: "电话",
+    form_phone_placeholder: "+86 10 1234 5678",
+    form_subject: "主题 *",
+    form_subject_placeholder: "选择主题...",
+    form_message: "消息 *",
+    form_message_placeholder: "请告诉我们如何帮助您...",
+    form_submit: "发送消息",
+    form_submit_error: "发送消息时出错。",
+    form_invalid_email: "请输入有效的电子邮箱地址。",
+
+    subject_general: "常见问题",
+    subject_support: "技术支持",
+    subject_billing: "账单",
+    subject_partnership: "合作伙伴关系",
+    subject_other: "其他",
+
+    email_title: "电子邮箱",
+    phone_title: "电话",
+    address_title: "地址",
+    address: "123 网络安全街<br />75000 巴黎，法国",
+  },
+
+  team: {
+    title: "我们的团队",
+    subtitle: "认识每天构建 CYNA 的热情专家。一起，我们创造创新的网络安全解决方案来保护您的业务。",
+    
+    mission_title: "我们的使命",
+    mission_description: "在 CYNA，我们相信每个组织都应该获得强大且易于访问的网络安全保护。我们的团队致力于改变企业处理安全的方式。",
+    mission_box_title: "我们为什么这样做？",
+    mission_box_content: "我们创办 CYNA 是为了向通常缺乏资源和专业知识的中小企业和中等企业提供务实和全面的网络威胁防护。我们的使命是让网络安全易于所有人使用。",
+    
+    team_members_title: "项目团队",
+    team_members_description: "这些热情的个人团结他们的技能来创建 CYNA。一起，他们在开发、网络安全和项目管理方面带来了多样化的专业知识。",
+    
+    role_developer: "开发者",
+    role_security: "安全专家",
+    role_devops: "DevOps 和基础设施",
+    
+    member1_bio: "后端开发和基础设施专家，热衷于创建强大且可扩展的解决方案。",
+    member2_bio: "前端专家和用户体验专家，创建直观和现代的界面。",
+    member3_bio: "网络安全专家和渗透测试专家，确保 CYNA 提供最大保护。",
+    member4_bio: "云基础设施和 DevOps 专家，确保我们服务的可靠性和可扩展性。",
+    
+    values_title: "我们的价值观",
+    value_security: "安全",
+    value_security_desc: "保护您的数据是我们的绝对优先事项。",
+    value_expertise: "专业知识",
+    value_expertise_desc: "由热情和承诺的专家组成的团队。",
+    value_innovation: "创新",
+    value_innovation_desc: "现代和前沿的解决方案。",
+    value_partnership: "合作伙伴关系",
+    value_partnership_desc: "我们作为真正的合作伙伴工作。",
+    
+    cta_title: "想加入我们吗？",
+    cta_description: "我们一直在寻求热情的人才来加强我们的团队。",
+    cta_button: "联系我们",
+  },
+
+  footer: {
+    about_title: "关于",
+    about_cyna: "关于 CYNA",
+    team: "我们的团队",
+    careers: "招聘",
+    blog: "博客",
+
+    products_title: "产品",
+    categories: "分类",
+    pricing: "价格",
+    comparison: "对比",
+    roadmap: "路线图",
+
+    support_title: "支持",
+    help_center: "帮助中心",
+    documentation: "文档",
+    contact: "联系我们",
+    status: "服务状态",
+
+    legal_title: "法律信息",
+    terms: "使用条款",
+    privacy: "隐私政策",
+    cookies: "Cookie 政策",
+    legal_notice: "法律声明",
+
+    copyright: "© 2026 CYNA。保留所有权利。",
+  },
 };
