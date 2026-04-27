@@ -188,7 +188,7 @@ export function normalizeCategory(raw: Record<string, unknown>): Category {
     nom:         (raw.nom ?? '') as string,
     slug:        (raw.slug ?? '') as string,
     description: (raw.description ?? '') as string | undefined,
-    image:       (raw.icone ?? raw.image) as string | undefined,
+    image:       (raw.image ?? raw.icone) as string | undefined,
   };
 }
 
@@ -198,16 +198,17 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
   if (!Array.isArray(images)) images = [];
 
   const prix = raw.prix as number | null;
+  const statut = (raw.statut as string | null | undefined) ?? '';
 
   return {
     id:          String(raw.id_produit ?? raw.id ?? ''),
     nom:         (raw.nom ?? '') as string,
     slug:        (raw.slug ?? '') as string,
-    description: ((raw.descriCoption_courte || raw.description_longue || raw.description) ?? '') as string,
+    description: ((raw.description_courte || raw.description_longue || raw.description) ?? '') as string,
     prix:        prix ?? 0,
     image:       images[0],
     images:      images,
-    disponible:  raw.actif === true && (raw.statut === 'actif' || raw.statut == null),
+    disponible:  raw.actif !== false && statut !== 'Indisponible' && statut.toLowerCase() !== 'inactif',
     priorite:    (raw.ordre_affichage ?? 0) as number,
     categorie:   (raw.categorie_slug || raw.id_categorie) ? {
       id:          String(raw.id_categorie ?? ''),
