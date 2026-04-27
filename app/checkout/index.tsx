@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
+import { useAuth } from '@/context/auth-context';
 import { api } from '@/services/api';
 
 type Step = 'recap' | 'address' | 'payment' | 'confirm';
@@ -30,7 +31,43 @@ const STEPS: { key: Step; label: string }[] = [
 export default function CheckoutScreen() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
+  const { isAuthenticated } = useAuth();
   const [step, setStep] = useState<Step>('recap');
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle}>Commande</ThemedText>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.authGate}>
+          <Ionicons name="lock-closed-outline" size={56} color="#3b12a3" />
+          <ThemedText style={styles.authGateTitle}>Connexion requise</ThemedText>
+          <ThemedText style={styles.authGateText}>
+            Vous devez être connecté pour finaliser votre commande.
+          </ThemedText>
+          <TouchableOpacity
+            style={styles.authGateBtn}
+            onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.8}
+          >
+            <ThemedText style={styles.authGateBtnText}>Se connecter</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.authGateBtnOutline}
+            onPress={() => router.push('/(auth)/register')}
+            activeOpacity={0.8}
+          >
+            <ThemedText style={styles.authGateBtnOutlineText}>Créer un compte</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -505,6 +542,14 @@ const styles = StyleSheet.create({
   ctaButtonText:  { color: '#fff', fontSize: 16, fontWeight: '700' },
   ctaButtonOutline:     { backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 40, width: '100%', alignItems: 'center', borderWidth: 2, borderColor: '#3b12a3' },
   ctaButtonOutlineText: { color: '#3b12a3', fontSize: 15, fontWeight: '600' },
+
+  authGate:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 14 },
+  authGateTitle:      { fontSize: 22, fontWeight: '800', color: '#1a1a1a' },
+  authGateText:       { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
+  authGateBtn:        { backgroundColor: '#3b12a3', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 40, width: '100%', alignItems: 'center', marginTop: 8 },
+  authGateBtnText:    { color: '#fff', fontSize: 16, fontWeight: '700' },
+  authGateBtnOutline: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 40, width: '100%', alignItems: 'center', borderWidth: 2, borderColor: '#3b12a3' },
+  authGateBtnOutlineText: { color: '#3b12a3', fontSize: 15, fontWeight: '600' },
 
   footer: { padding: 16, paddingBottom: 20, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee' },
   nextBtn: {

@@ -34,6 +34,8 @@ export default function CatalogueScreen() {
   const [maxPrice, setMaxPrice] = useState('');
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  type SortKey = 'default' | 'price_asc' | 'price_desc' | 'name_asc';
+  const [sortKey, setSortKey] = useState<SortKey>('default');
 
   useEffect(() => {
     loadCategories();
@@ -42,7 +44,7 @@ export default function CatalogueScreen() {
   useEffect(() => {
     const timer = setTimeout(() => doSearch(), 300);
     return () => clearTimeout(timer);
-  }, [search, selectedCat, minPrice, maxPrice, onlyAvailable]);
+  }, [search, selectedCat, minPrice, maxPrice, onlyAvailable, sortKey]);
 
   const loadCategories = async () => {
     try {
@@ -79,10 +81,13 @@ export default function CatalogueScreen() {
       if (onlyAvailable) products = products.filter(p => p.disponible);
       if (minPrice)      products = products.filter(p => p.prix >= Number(minPrice));
       if (maxPrice)      products = products.filter(p => p.prix <= Number(maxPrice));
-      // Pour la recherche textuelle, filtrer par catégorie côté client
       if (search.trim() && selectedCat) {
         products = products.filter(p => p.categorie?.slug === selectedCat);
       }
+
+      if (sortKey === 'price_asc')  products = [...products].sort((a, b) => a.prix - b.prix);
+      if (sortKey === 'price_desc') products = [...products].sort((a, b) => b.prix - a.prix);
+      if (sortKey === 'name_asc')   products = [...products].sort((a, b) => a.nom.localeCompare(b.nom));
 
       setProducts(products);
     } catch {
@@ -177,6 +182,24 @@ export default function CatalogueScreen() {
             </View>
             <ThemedText style={styles.availableLabel}>Disponibles uniquement</ThemedText>
           </TouchableOpacity>
+          <View style={styles.sortRow}>
+            {([
+              { key: 'default',    label: 'Pertinence' },
+              { key: 'price_asc',  label: 'Prix ↑' },
+              { key: 'price_desc', label: 'Prix ↓' },
+              { key: 'name_asc',   label: 'A→Z' },
+            ] as { key: SortKey; label: string }[]).map((s) => (
+              <TouchableOpacity
+                key={s.key}
+                style={[styles.sortChip, sortKey === s.key && styles.sortChipActive]}
+                onPress={() => setSortKey(s.key)}
+              >
+                <ThemedText style={[styles.sortChipText, sortKey === s.key && styles.sortChipTextActive]}>
+                  {s.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       )}
 
@@ -245,6 +268,11 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: '#3b12a3' },
   checkmark:       { color: '#fff', fontSize: 12, fontWeight: '700' },
   availableLabel:  { fontSize: 14, color: '#444' },
+  sortRow:          { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  sortChip:         { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#e0e0e0' },
+  sortChipActive:   { backgroundColor: '#3b12a3', borderColor: '#3b12a3' },
+  sortChipText:     { fontSize: 12, color: '#555', fontWeight: '500' },
+  sortChipTextActive: { color: '#fff', fontWeight: '600' },
 
   catsWrapper: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   catsList:    { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },

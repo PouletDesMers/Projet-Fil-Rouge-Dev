@@ -70,8 +70,9 @@ export default function MenuModal() {
           <>
             <View style={styles.separator} />
             <MenuLink icon="person-outline"         label="Mon compte"            onPress={() => go('/(tabs)/account')} />
+            <MenuLink icon="settings-outline"       label="Mes paramètres"        onPress={() => go('/account/profile')} />
             <MenuLink icon="receipt-outline"        label="Mes commandes"         onPress={() => go('/orders')} />
-            <MenuLink icon="refresh-circle-outline" label="Mes abonnements"       onPress={() => go('/(tabs)/account')} />
+            <MenuLink icon="refresh-circle-outline" label="Mes abonnements"       onPress={() => go('/account/subscriptions')} />
           </>
         ) : (
           <>

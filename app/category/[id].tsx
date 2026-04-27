@@ -110,9 +110,16 @@ export default function CategoryScreen() {
           </View>
         }
         ListHeaderComponent={
-          category?.description ? (
-            <View style={styles.catDesc}>
-              <ThemedText style={styles.catDescText}>{category.description}</ThemedText>
+          (category?.image || category?.description) ? (
+            <View style={styles.catHeader}>
+              {category.image && (
+                <Image source={{ uri: category.image }} style={styles.catHeroImage} resizeMode="cover" />
+              )}
+              {category?.description && (
+                <View style={styles.catDesc}>
+                  <ThemedText style={styles.catDescText}>{category.description}</ThemedText>
+                </View>
+              )}
             </View>
           ) : null
         }
@@ -132,8 +139,10 @@ const styles = StyleSheet.create({
   backBtn:     { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#fff', textAlign: 'center' },
 
-  catDesc:     { backgroundColor: '#fff', padding: 16, marginBottom: 12 },
-  catDescText: { fontSize: 14, color: '#555', lineHeight: 20 },
+  catHeader:    { marginBottom: 12 },
+  catHeroImage: { width: '100%', height: 160 },
+  catDesc:      { backgroundColor: '#fff', padding: 16 },
+  catDescText:  { fontSize: 14, color: '#555', lineHeight: 20 },
 
   list: { padding: 12, gap: 12 },
   productCard: {

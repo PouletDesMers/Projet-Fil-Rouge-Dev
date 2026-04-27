@@ -20,18 +20,25 @@ import { api } from '@/services/api';
 export default function ContactScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!isAuthenticated && !email.trim()) {
+      Alert.alert('Erreur', 'Veuillez saisir votre adresse e-mail');
+      return;
+    }
     if (!subject.trim() || !message.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir le sujet et le message');
       return;
     }
     setIsLoading(true);
     try {
-      await api.post('/api/tickets', { subject, message });
+      const payload: Record<string, string> = { subject, message };
+      if (!isAuthenticated) payload.email = email.trim();
+      await api.post('/api/tickets', payload);
       Alert.alert(
         'Message envoyé',
         'Notre équipe vous répondra dans les plus brefs délais.',
@@ -69,52 +76,53 @@ export default function ContactScreen() {
             </View>
           </View>
 
-          {isAuthenticated ? (
-            <View style={styles.form}>
-              <ThemedText style={styles.formTitle}>Envoyer un message</ThemedText>
+          <View style={styles.form}>
+            <ThemedText style={styles.formTitle}>Envoyer un message</ThemedText>
+            {!isAuthenticated && (
               <TextInput
                 style={styles.input}
-                placeholder="Sujet *"
+                placeholder="Votre e-mail *"
                 placeholderTextColor="#aaa"
-                value={subject}
-                onChangeText={setSubject}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Votre message *"
-                placeholderTextColor="#aaa"
-                value={message}
-                onChangeText={setMessage}
-                multiline
-                numberOfLines={6}
-                textAlignVertical="top"
-              />
-              <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="send-outline" size={18} color="#fff" />
-                <ThemedText style={styles.buttonText}>
-                  {isLoading ? 'Envoi...' : 'Envoyer'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.loginPrompt}>
-              <ThemedText style={styles.loginPromptText}>
-                Connectez-vous pour envoyer un message à notre support.
+            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Sujet *"
+              placeholderTextColor="#aaa"
+              value={subject}
+              onChangeText={setSubject}
+            />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Votre message *"
+              placeholderTextColor="#aaa"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={[styles.button, isLoading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="send-outline" size={18} color="#fff" />
+              <ThemedText style={styles.buttonText}>
+                {isLoading ? 'Envoi...' : 'Envoyer'}
               </ThemedText>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => router.push('/(auth)/login')}
-                activeOpacity={0.8}
-              >
-                <ThemedText style={styles.buttonText}>Se connecter</ThemedText>
+            </TouchableOpacity>
+            {!isAuthenticated && (
+              <TouchableOpacity onPress={() => router.push('/(auth)/login')} activeOpacity={0.7}>
+                <ThemedText style={styles.loginLink}>Déjà client ? Se connecter</ThemedText>
               </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -149,6 +157,5 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  loginPrompt:     { alignItems: 'center', gap: 16, paddingTop: 16 },
-  loginPromptText: { fontSize: 15, color: '#666', textAlign: 'center' },
+  loginLink: { fontSize: 14, color: '#3b12a3', textAlign: 'center', fontWeight: '600' },
 });
