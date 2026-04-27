@@ -154,6 +154,7 @@ func Register(r *mux.Router) {
 
 	// ── Backup (admin + adminLimiter) ──────────────────────────────────────────
 	r.Handle("/api/admin/backup", adminLim(http.HandlerFunc(handlers.TriggerBackup))).Methods("POST")
+	r.Handle("/api/admin/backup/status", adminLim(http.HandlerFunc(handlers.GetBackupStatus))).Methods("GET")
 	r.Handle("/api/admin/backup/list", adminLim(http.HandlerFunc(handlers.ListBackups))).Methods("GET")
 	r.Handle("/api/admin/backup/stats", adminLim(http.HandlerFunc(handlers.GetBackupStats))).Methods("GET")
 	r.Handle("/api/admin/backup/schedule", adminLim(http.HandlerFunc(handlers.GetBackupSchedule))).Methods("GET")

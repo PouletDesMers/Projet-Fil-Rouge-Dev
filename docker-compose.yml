@@ -33,8 +33,10 @@ services:
       API_SECRET: ${API_SECRET}
       RESTIC_PASSWORD: ${RESTIC_PASSWORD}
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-/backups/restic-repo}
+      LOG_FILE_PATH: /var/log/api/api.log
     volumes:
       - backups_data:/backups
+      - api_logs:/var/log/api
 
   web:
     build: ./web
@@ -58,3 +60,4 @@ volumes:
   postgres_data:
   uploads_data:
   backups_data:
+  api_logs:

@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -20,10 +22,29 @@ import (
 )
 
 // ============================================================
-// BACKUP POSTGRESQL avec RESTIC
+// BACKUP POSTGRESQL avec RESTIC + fallback pg_dump
 // ============================================================
 
 const resticRepo = "/backups/restic-repo"
+
+// ============================================================
+// SUIVI DE BACKUP ASYNCHRONE
+// ============================================================
+
+type backupJob struct {
+	Running    bool      `json:"running"`
+	Success    bool      `json:"success"`
+	Error      string    `json:"error,omitempty"`
+	FileName   string    `json:"file_name,omitempty"`
+	StartedAt  time.Time `json:"started_at"`
+	FinishedAt time.Time `json:"finished_at,omitempty"`
+	BackupType string    `json:"backup_type"`
+}
+
+var currentBackup struct {
+	sync.Mutex
+	*backupJob
+}
 
 // ===== ENV HELPERS =====
 
@@ -33,6 +54,19 @@ func resticPassword() (string, error) {
 		return "", fmt.Errorf("RESTIC_PASSWORD is required")
 	}
 	return p, nil
+}
+
+var (
+	resticAvailableCached    bool
+	resticAvailableCacheTime time.Time
+	resticAvailableCacheMu   sync.Mutex
+)
+
+const resticAvailableCacheTTL = 60 * time.Second // Re-vérifier toutes les 60s
+
+func resticAvailable() bool {
+	// Forcé à false — on utilise toujours pg_dump
+	return false
 }
 
 func resticEnv() ([]string, error) {
@@ -58,6 +92,8 @@ func resticEnv() ([]string, error) {
 	return filtered, nil
 }
 
+// ===== RESTIC HELPERS =====
+
 func runRestic(args ...string) (string, error) {
 	cmd := exec.Command("restic", args...)
 	env, err := resticEnv()
@@ -72,15 +108,39 @@ func runRestic(args ...string) (string, error) {
 	return out.String(), err
 }
 
+// runResticTimed exécute restic avec un timeout. Tue le processus si le timeout est dépassé.
+func runResticTimed(timeout time.Duration, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "restic", args...)
+	env, err := resticEnv()
+	if err != nil {
+		return "", err
+	}
+	cmd.Env = env
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err = cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("restic timeout (%v)", timeout)
+	}
+	return out.String(), err
+}
+
 // ===== INIT REPO =====
 
 func initResticRepo() error {
 	os.MkdirAll(resticRepo, 0700)
-	out, err := runRestic("snapshots", "--json")
-	if err == nil || strings.Contains(out, "[]") {
+	out, err := runResticTimed(10*time.Second, "snapshots", "--json")
+	if err == nil && strings.HasPrefix(strings.TrimSpace(out), "[") {
 		return nil
 	}
-	_, err = runRestic("init")
+	// Tentative d'init seulement si snapshots a échoué
+	if err != nil {
+		log.Printf("[initResticRepo] snapshots failed (tentative init): %v", err)
+	}
+	_, err = runResticTimed(30*time.Second, "init")
 	if err != nil {
 		return fmt.Errorf("restic init: %w", err)
 	}
@@ -122,6 +182,60 @@ func pgDumpArgs(host, port, user, dbname, backupType string) []string {
 	default: // "full"
 		return base
 	}
+}
+
+// ===== FALLBACK PG_DUMP =====
+
+func runPGDumpBackup(backupType string, tags ...string) (string, error) {
+	if err := os.MkdirAll("/backups/pgdump/", 0700); err != nil {
+		return "", fmt.Errorf("mkdir pgdump: %w", err)
+	}
+
+	host, port, user, password, dbname := config.DBEnv()
+
+	args := pgDumpArgs(host, port, user, dbname, backupType)
+	cmd := exec.Command("pg_dump", args...)
+	cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
+
+	timestamp := time.Now().UTC().Format("20060102_150405")
+	filename := fmt.Sprintf("%s_%s.sql", backupType, timestamp)
+	for _, tag := range tags {
+		if tag == "auto" {
+			filename = fmt.Sprintf("auto_%s_%s.sql", backupType, timestamp)
+			break
+		}
+	}
+	filepath := filepath.Join("/backups/pgdump/", filename)
+
+	outFile, err := os.Create(filepath)
+	if err != nil {
+		return "", fmt.Errorf("create file: %w", err)
+	}
+	defer outFile.Close()
+
+	var stderr bytes.Buffer
+	cmd.Stdout = outFile
+	cmd.Stderr = &stderr
+
+	// Timeout de 120s pour éviter que pg_dump ne bloque indéfiniment
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("pg_dump start: %w", err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			return "", fmt.Errorf("pg_dump: %v — %s", err, stderr.String())
+		}
+	case <-time.After(120 * time.Second):
+		cmd.Process.Kill()
+		return "", fmt.Errorf("pg_dump timeout (120s) — fichier partiel: %s", filename)
+	}
+
+	return filename, nil
 }
 
 func runResticBackup(tags ...string) (string, error) {
@@ -251,15 +365,15 @@ type backupScheduler struct {
 }
 
 type scheduleRule struct {
-	ID            string    `json:"id"`
-	Type          string    `json:"type"`
-	IntervalHours int       `json:"interval_hours"`
-	Enabled       bool      `json:"enabled"`
-	LastRun       time.Time `json:"-"`
-	LastSnap      string    `json:"last_snapshot"`
-	NextRun       time.Time `json:"-"`
-	stop          chan struct{}
-	ticker        *time.Ticker
+	ID              string    `json:"id"`
+	Type            string    `json:"type"`
+	IntervalMinutes int       `json:"interval_minutes"`
+	Enabled         bool      `json:"enabled"`
+	LastRun         time.Time `json:"-"`
+	LastSnap        string    `json:"last_snapshot"`
+	NextRun         time.Time `json:"-"`
+	stop            chan struct{}
+	ticker          *time.Ticker
 }
 
 func (r *scheduleRule) LastRunStr() interface{} {
@@ -285,29 +399,29 @@ var bScheduler = &backupScheduler{}
 
 func InitBackupScheduler() {
 	os.MkdirAll("/backups", 0700)
-	if err := initResticRepo(); err != nil {
-		log.Printf("[WARN] Restic init: %v", err)
-	}
-	if h := os.Getenv("BACKUP_INTERVAL_HOURS"); h != "" {
-		var hours int
-		fmt.Sscanf(h, "%d", &hours)
-		if hours > 0 {
-			mScheduler.addRule("full", hours)
+	loadSchedules()
+	log.Println("[INFO] Backup scheduler prêt — fallback pg_dump")
+	if m := os.Getenv("BACKUP_INTERVAL_MINUTES"); m != "" {
+		var minutes int
+		fmt.Sscanf(m, "%d", &minutes)
+		if minutes > 0 {
+			mScheduler.addRule("full", minutes)
 		}
 	}
-	log.Printf("[INFO] Backup multi-scheduler prêt (restic repo: %s)", resticRepo)
+	log.Printf("[INFO] Backup scheduler ready (interval: minutes)")
 }
 
-func (ms *multiScheduler) addRule(backupType string, intervalHours int) string {
+func (ms *multiScheduler) addRule(backupType string, intervalMinutes int) string {
 	ms.mu.Lock()
-	defer ms.mu.Unlock()
-	id := fmt.Sprintf("%s-%d-%d", backupType, intervalHours, time.Now().UnixNano()%100000)
+	id := fmt.Sprintf("%s-%d-%d", backupType, intervalMinutes, time.Now().UnixNano()%100000)
 	rule := &scheduleRule{
 		ID: id, Type: backupType,
-		IntervalHours: intervalHours, Enabled: true,
+		IntervalMinutes: intervalMinutes, Enabled: true,
 	}
 	ms.rules = append(ms.rules, rule)
+	ms.mu.Unlock()
 	ms.startRule(rule)
+	saveSchedules(ms.toJSON())
 	return id
 }
 
@@ -316,24 +430,34 @@ func (ms *multiScheduler) startRule(rule *scheduleRule) {
 		close(rule.stop)
 		rule.ticker.Stop()
 	}
-	rule.ticker = time.NewTicker(time.Duration(rule.IntervalHours) * time.Hour)
+	rule.ticker = time.NewTicker(time.Duration(rule.IntervalMinutes) * time.Minute)
 	rule.stop = make(chan struct{})
-	rule.NextRun = time.Now().Add(time.Duration(rule.IntervalHours) * time.Hour)
+	rule.NextRun = time.Now().Add(time.Duration(rule.IntervalMinutes) * time.Minute)
 	go func(r *scheduleRule) {
 		for {
 			select {
 			case <-r.ticker.C:
 				log.Printf("[INFO] Backup auto (règle %s, type %s)", r.ID, r.Type)
-				id, err := runResticBackup("auto", r.Type)
+
+				var id string
+				var err error
+				if resticAvailable() {
+					id, err = runResticBackup("auto", r.Type)
+				} else {
+					id, err = runPGDumpBackup(r.Type, "auto", r.Type)
+				}
+
 				if err != nil {
 					log.Printf("[ERROR] Backup auto règle %s: %v", r.ID, err)
 				} else {
 					log.Printf("[INFO] Backup auto OK snapshot %s (règle %s)", id, r.ID)
-					runRestic("forget", "--keep-last", "10", "--prune", "--tag", "auto")
+					if resticAvailable() {
+						runRestic("forget", "--keep-last", "10", "--prune", "--tag", "auto")
+					}
 					ms.mu.Lock()
 					r.LastRun = time.Now()
 					r.LastSnap = id
-					r.NextRun = time.Now().Add(time.Duration(r.IntervalHours) * time.Hour)
+					r.NextRun = time.Now().Add(time.Duration(r.IntervalMinutes) * time.Minute)
 					ms.mu.Unlock()
 					logger.Security(fmt.Sprintf("Backup auto OK — snapshot %s (type: %s)", id[:backupMin(8, len(id))], r.Type))
 					bScheduler.mu.Lock()
@@ -350,7 +474,6 @@ func (ms *multiScheduler) startRule(rule *scheduleRule) {
 
 func (ms *multiScheduler) deleteRule(id string) bool {
 	ms.mu.Lock()
-	defer ms.mu.Unlock()
 	for i, r := range ms.rules {
 		if r.ID == id {
 			if r.stop != nil {
@@ -358,15 +481,18 @@ func (ms *multiScheduler) deleteRule(id string) bool {
 				r.ticker.Stop()
 			}
 			ms.rules = append(ms.rules[:i], ms.rules[i+1:]...)
+			ms.mu.Unlock()
+			saveSchedules(ms.toJSON())
 			return true
 		}
 	}
+	ms.mu.Unlock()
 	return false
 }
 
 func (ms *multiScheduler) toggleRule(id string, enabled bool) bool {
 	ms.mu.Lock()
-	defer ms.mu.Unlock()
+	var saved bool
 	for _, r := range ms.rules {
 		if r.ID == id {
 			if enabled && !r.Enabled {
@@ -382,10 +508,15 @@ func (ms *multiScheduler) toggleRule(id string, enabled bool) bool {
 				}
 				r.NextRun = time.Time{}
 			}
-			return true
+			saved = true
+			break
 		}
 	}
-	return false
+	ms.mu.Unlock()
+	if saved {
+		saveSchedules(ms.toJSON())
+	}
+	return saved
 }
 
 func (ms *multiScheduler) toJSON() []map[string]interface{} {
@@ -394,19 +525,57 @@ func (ms *multiScheduler) toJSON() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(ms.rules))
 	for _, r := range ms.rules {
 		out = append(out, map[string]interface{}{
-			"id":             r.ID,
-			"type":           r.Type,
-			"interval_hours": r.IntervalHours,
-			"enabled":        r.Enabled,
-			"last_run":       r.LastRunStr(),
-			"next_run":       r.NextRunStr(),
-			"last_snapshot":  r.LastSnap,
+			"id":               r.ID,
+			"type":             r.Type,
+			"interval_minutes": r.IntervalMinutes,
+			"enabled":          r.Enabled,
+			"last_run":         r.LastRunStr(),
+			"next_run":         r.NextRunStr(),
+			"last_snapshot":    r.LastSnap,
 		})
 	}
 	return out
 }
 
-func startScheduler(intervalHours int) {
+func saveSchedules(rules []map[string]interface{}) {
+	data, err := json.MarshalIndent(rules, "", "  ")
+	if err != nil {
+		log.Printf("[ERROR] saveSchedules: %v", err)
+		return
+	}
+	if err := os.WriteFile("/backups/schedules.json", data, 0600); err != nil {
+		log.Printf("[ERROR] saveSchedules: %v", err)
+	}
+}
+
+func loadSchedules() {
+	data, err := os.ReadFile("/backups/schedules.json")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		log.Printf("[ERROR] loadSchedules: %v", err)
+		return
+	}
+	var rules []struct {
+		Type            string `json:"type"`
+		IntervalMinutes int    `json:"interval_minutes"`
+		Enabled         bool   `json:"enabled"`
+	}
+	if err := json.Unmarshal(data, &rules); err != nil {
+		log.Printf("[ERROR] loadSchedules: %v", err)
+		return
+	}
+	for _, rule := range rules {
+		id := mScheduler.addRule(rule.Type, rule.IntervalMinutes)
+		if !rule.Enabled {
+			mScheduler.toggleRule(id, false)
+		}
+	}
+	log.Printf("[INFO] Planifications chargees depuis /backups/schedules.json: %d regle(s)", len(rules))
+}
+
+func startScheduler(intervalMinutes int) {
 	mScheduler.mu.Lock()
 	for i := len(mScheduler.rules) - 1; i >= 0; i-- {
 		r := mScheduler.rules[i]
@@ -419,9 +588,9 @@ func startScheduler(intervalHours int) {
 		}
 	}
 	mScheduler.mu.Unlock()
-	mScheduler.addRule("full", intervalHours)
+	mScheduler.addRule("full", intervalMinutes)
 	bScheduler.mu.Lock()
-	bScheduler.interval = intervalHours
+	bScheduler.interval = intervalMinutes
 	bScheduler.mu.Unlock()
 }
 
@@ -467,30 +636,110 @@ func TriggerBackup(w http.ResponseWriter, r *http.Request) {
 		backupType = "full"
 	}
 
-	logger.Security(fmt.Sprintf("Backup Restic manuel déclenché (type: %s)", backupType))
-	id, err := runResticBackup("manual", backupType)
-	if err != nil {
-		log.Printf("[ERROR] TriggerBackup: %v", err)
+	currentBackup.Lock()
+	if currentBackup.backupJob != nil && currentBackup.backupJob.Running {
+		currentBackup.Unlock()
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("Backup échoué: %v", err)})
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Un backup est déjà en cours"})
 		return
 	}
 
-	bScheduler.mu.Lock()
-	bScheduler.lastRun = time.Now()
-	bScheduler.lastSnap = id
-	bScheduler.mu.Unlock()
+	job := &backupJob{
+		Running:    true,
+		StartedAt:  time.Now(),
+		BackupType: backupType,
+	}
+	currentBackup.backupJob = job
+	currentBackup.Unlock()
 
-	logger.Security(fmt.Sprintf("Backup OK — snapshot %s (type: %s)", id[:backupMin(8, len(id))], backupType))
+	logger.Security(fmt.Sprintf("Backup manuel déclenché (type: %s)", backupType))
+
+	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				currentBackup.Lock()
+				job.Running = false
+				job.Success = false
+				job.Error = fmt.Sprintf("panic: %v", rec)
+				job.FinishedAt = time.Now()
+				currentBackup.Unlock()
+				log.Printf("[PANIC] TriggerBackup goroutine: %v", rec)
+			}
+		}()
+
+		var id string
+		var err error
+		if resticAvailable() {
+			id, err = runResticBackup("manual", backupType)
+		} else {
+			id, err = runPGDumpBackup(backupType)
+		}
+
+		currentBackup.Lock()
+		defer currentBackup.Unlock()
+
+		job.FinishedAt = time.Now()
+		job.Running = false
+
+		if err != nil {
+			job.Success = false
+			job.Error = err.Error()
+			log.Printf("[ERROR] TriggerBackup async: %v", err)
+			return
+		}
+
+		job.Success = true
+		job.FileName = id
+
+		bScheduler.mu.Lock()
+		bScheduler.lastRun = time.Now()
+		bScheduler.lastSnap = id
+		bScheduler.mu.Unlock()
+
+		logger.Security(fmt.Sprintf("Backup OK — %s %s (type: %s)", resticRepoLabel(), id[:backupMin(8, len(id))], backupType))
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success":     true,
-		"snapshot_id": id,
+		"status":      "started",
 		"backup_type": backupType,
-		"message":     fmt.Sprintf("Snapshot %s créé: %s", backupType, id),
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"started_at":  job.StartedAt.UTC().Format(time.RFC3339),
 	})
+}
+
+// GetBackupStatus retourne l'état du backup asynchrone en cours
+func GetBackupStatus(w http.ResponseWriter, r *http.Request) {
+	userRole, _ := r.Context().Value(models.UserRoleKey).(string)
+	if userRole != "admin" {
+		http.Error(w, `{"error":"Forbidden"}`, http.StatusForbidden)
+		return
+	}
+
+	currentBackup.Lock()
+	defer currentBackup.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if currentBackup.backupJob == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"running": false,
+			"success": false,
+			"error":   "no_backup",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(currentBackup.backupJob)
+}
+
+// resticRepoLabel retourne le libellé adapté au mode actif
+func resticRepoLabel() string {
+	if resticAvailable() {
+		return "snapshot"
+	}
+	return "fichier"
 }
 
 func ListBackups(w http.ResponseWriter, r *http.Request) {
@@ -500,11 +749,116 @@ func ListBackups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !resticAvailable() {
+		entries, err := os.ReadDir("/backups/pgdump/")
+		if err != nil {
+			log.Printf("[ListBackups] /backups/pgdump/ read error: %v (creating directory)", err)
+			// Créer le dossier s'il n'existe pas
+			os.MkdirAll("/backups/pgdump/", 0700)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"snapshots":  []ResticSnapshot{},
+				"schedule":   map[string]interface{}{"rules": mScheduler.toJSON()},
+				"repository": "/backups/pgdump/",
+			})
+			return
+		}
+
+		snapshots := make([]ResticSnapshot, 0)
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+				continue
+			}
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+
+			tags := []string{"pgdump"}
+			name := entry.Name()
+			// Détection auto/manuel
+			if strings.HasPrefix(name, "auto_") {
+				tags = append(tags, "auto")
+				name = strings.TrimPrefix(name, "auto_")
+			}
+			// Détection du type (data/logs/full)
+			if strings.HasPrefix(name, "data_") {
+				tags = append(tags, "data")
+			} else if strings.HasPrefix(name, "logs_") {
+				tags = append(tags, "logs")
+			} else if strings.HasPrefix(name, "full_") {
+				tags = append(tags, "full")
+			}
+
+			snapshots = append(snapshots, ResticSnapshot{
+				ID:       entry.Name(),
+				ShortID:  entry.Name(),
+				Time:     info.ModTime(),
+				Hostname: "pgdump",
+				Tags:     tags,
+				Paths:    []string{filepath.Join("/backups/pgdump/", entry.Name())},
+			})
+		}
+
+		// Tri du plus récent au plus ancien
+		for i, j := 0, len(snapshots)-1; i < j; i, j = i+1, j-1 {
+			snapshots[i], snapshots[j] = snapshots[j], snapshots[i]
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"snapshots":  snapshots,
+			"schedule":   map[string]interface{}{"rules": mScheduler.toJSON()},
+			"repository": "/backups/pgdump/",
+		})
+		return
+	}
+
+	// Fallback: Restic disponible mais peut échouer → essayer pgdump
+	log.Printf("[ListBackups] resticAvailable=true, tentatives Restic…")
 	snapshots, err := listResticSnapshots()
 	if err != nil {
+		log.Printf("[ListBackups] listResticSnapshots failed: %v (fallback pgdump)", err)
+		// Fallback vers pgdump au lieu de retourner 500
+		entries, dirErr := os.ReadDir("/backups/pgdump/")
+		if dirErr != nil {
+			log.Printf("[ListBackups] pgdump fallback also failed: %v", dirErr)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Erreur: " + err.Error() + " | pgdump: " + dirErr.Error()})
+			return
+		}
+		pgSnaps := make([]ResticSnapshot, 0)
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+				continue
+			}
+			info, infoErr := entry.Info()
+			if infoErr != nil {
+				continue
+			}
+			tags := []string{"pgdump"}
+			if strings.HasPrefix(entry.Name(), "data_") {
+				tags = append(tags, "data")
+			} else if strings.HasPrefix(entry.Name(), "logs_") {
+				tags = append(tags, "logs")
+			} else if strings.HasPrefix(entry.Name(), "full_") {
+				tags = append(tags, "full")
+			}
+			pgSnaps = append(pgSnaps, ResticSnapshot{
+				ID: entry.Name(), ShortID: entry.Name(), Time: info.ModTime(),
+				Hostname: "pgdump", Tags: tags,
+				Paths: []string{filepath.Join("/backups/pgdump/", entry.Name())},
+			})
+		}
+		for i, j := 0, len(pgSnaps)-1; i < j; i, j = i+1, j-1 {
+			pgSnaps[i], pgSnaps[j] = pgSnaps[j], pgSnaps[i]
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Erreur lecture des snapshots: " + err.Error()})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"snapshots": pgSnaps, "schedule": map[string]interface{}{"rules": mScheduler.toJSON()},
+			"repository": "/backups/pgdump/",
+		})
 		return
 	}
 
@@ -523,14 +877,78 @@ func GetBackupStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats, err := getResticStats()
-	if err != nil {
-		log.Printf("[ERROR] GetBackupStats: %v", err)
+	if !resticAvailable() {
+		entries, err := os.ReadDir("/backups/pgdump/")
+		if err != nil {
+			log.Printf("[GetBackupStats] /backups/pgdump/ read error: %v (creating directory)", err)
+			os.MkdirAll("/backups/pgdump/", 0700)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"total_size":       0,
+				"total_file_count": 0,
+				"snapshots_count":  0,
+			})
+			return
+		}
+
+		var totalSize int64
+		var count int
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+				continue
+			}
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			totalSize += info.Size()
+			count++
+		}
+
+		stats := map[string]interface{}{
+			"total_size":       totalSize,
+			"total_file_count": 0,
+			"snapshots_count":  count,
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Erreur stats restic: " + err.Error()})
+		json.NewEncoder(w).Encode(stats)
 		return
 	}
+
+	stats, err := getResticStats()
+	if err != nil {
+		log.Printf("[GetBackupStats] getResticStats failed: %v (fallback pgdump)", err)
+		// Fallback vers les stats pgdump
+		entries, dirErr := os.ReadDir("/backups/pgdump/")
+		if dirErr != nil {
+			log.Printf("[GetBackupStats] pgdump fallback also failed: %v", dirErr)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Restic: " + err.Error() + " | pgdump: " + dirErr.Error()})
+			return
+		}
+		var totalSize int64
+		var snapCount int
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+				continue
+			}
+			info, infoErr := entry.Info()
+			if infoErr != nil {
+				continue
+			}
+			totalSize += info.Size()
+			snapCount++
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"total_size":       totalSize,
+			"total_file_count": 0,
+			"snapshots_count":  snapCount,
+		})
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
 }
@@ -554,11 +972,11 @@ func SetBackupSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Action        string `json:"action"`
-		Type          string `json:"type"`
-		IntervalHours int    `json:"interval_hours"`
-		ID            string `json:"id"`
-		Enabled       bool   `json:"enabled"`
+		Action          string `json:"action"`
+		Type            string `json:"type"`
+		IntervalMinutes int    `json:"interval_minutes"`
+		ID              string `json:"id"`
+		Enabled         bool   `json:"enabled"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -579,12 +997,12 @@ func SetBackupSchedule(w http.ResponseWriter, r *http.Request) {
 			writeErr("type doit être data, logs ou full", http.StatusBadRequest)
 			return
 		}
-		if body.IntervalHours < 1 || body.IntervalHours > 720 {
-			writeErr("interval_hours doit être entre 1 et 720", http.StatusBadRequest)
+		if body.IntervalMinutes < 1 || body.IntervalMinutes > 43200 {
+			writeErr("interval_minutes doit être entre 1 et 43200 (30 jours)", http.StatusBadRequest)
 			return
 		}
-		id := mScheduler.addRule(body.Type, body.IntervalHours)
-		logger.Security(fmt.Sprintf("Règle backup ajoutée: type=%s, interval=%dh, id=%s", body.Type, body.IntervalHours, id))
+		id := mScheduler.addRule(body.Type, body.IntervalMinutes)
+		logger.Security(fmt.Sprintf("Règle backup ajoutée: type=%s, interval=%dmin, id=%s", body.Type, body.IntervalMinutes, id))
 	case "delete":
 		if body.ID == "" {
 			writeErr("id requis", http.StatusBadRequest)
@@ -611,10 +1029,10 @@ func SetBackupSchedule(w http.ResponseWriter, r *http.Request) {
 		logger.Security(fmt.Sprintf("Règle backup %s: %s", action, body.ID))
 	default:
 		// Rétro-compat : ancien body { "interval_hours": N }
-		if body.IntervalHours > 0 {
-			startScheduler(body.IntervalHours)
-			logger.Security(fmt.Sprintf("Backup automatique configuré: toutes les %dh", body.IntervalHours))
-		} else if body.IntervalHours == 0 && body.Action == "" {
+		if body.IntervalMinutes > 0 {
+			startScheduler(body.IntervalMinutes)
+			logger.Security(fmt.Sprintf("Backup automatique configuré: toutes les %dmin", body.IntervalMinutes))
+		} else if body.IntervalMinutes == 0 && body.Action == "" {
 			stopScheduler()
 			logger.Security("Backup automatique désactivé (compat)")
 		} else {
@@ -640,6 +1058,62 @@ func DownloadBackup(w http.ResponseWriter, r *http.Request) {
 	if snapID == "" {
 		snapID = "latest"
 	}
+
+	if !resticAvailable() {
+		var filePath string
+		if snapID == "latest" {
+			entries, err := os.ReadDir("/backups/pgdump/")
+			if err != nil || len(entries) == 0 {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Aucun backup pgdump trouvé"})
+				return
+			}
+			var newest os.FileInfo
+			for _, entry := range entries {
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+					continue
+				}
+				info, err := entry.Info()
+				if err != nil {
+					continue
+				}
+				if newest == nil || info.ModTime().After(newest.ModTime()) {
+					newest = info
+				}
+			}
+			if newest == nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Aucun fichier .sql trouvé dans /backups/pgdump/"})
+				return
+			}
+			filePath = filepath.Join("/backups/pgdump/", newest.Name())
+			snapID = newest.Name()
+		} else {
+			// Éviter les traversées de répertoire
+			if strings.Contains(snapID, "/") || strings.Contains(snapID, "..") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "snapshot ID invalide"})
+				return
+			}
+			filePath = filepath.Join("/backups/pgdump/", snapID)
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Fichier pgdump introuvable: " + snapID})
+				return
+			}
+		}
+
+		downloadName := fmt.Sprintf("pgdump-%s", filepath.Base(filePath))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, downloadName))
+		http.ServeFile(w, r, filePath)
+		return
+	}
+
 	if snapID != "latest" {
 		for _, c := range snapID {
 			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
@@ -717,6 +1191,116 @@ func RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	snapID := body.SnapshotID
+
+	host, port, user, password, dbname := config.DBEnv()
+
+	if !resticAvailable() {
+		// Éviter les traversées de répertoire
+		if strings.Contains(snapID, "/") || strings.Contains(snapID, "..") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "snapshot_id invalide"})
+			return
+		}
+
+		filePath := filepath.Join("/backups/pgdump/", snapID)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Fichier pgdump introuvable: " + snapID})
+			return
+		}
+
+		shortID := snapID[:backupMin(8, len(snapID))]
+		logger.Security(fmt.Sprintf("Restauration DB depuis fichier pgdump %s déclenchée", shortID))
+
+		backupType := "full"
+		if strings.HasPrefix(snapID, "data_") {
+			backupType = "data"
+		} else if strings.HasPrefix(snapID, "logs_") {
+			backupType = "logs"
+		}
+
+		var truncateSQL string
+		switch backupType {
+		case "logs":
+			truncateSQL = "TRUNCATE TABLE api_logs RESTART IDENTITY CASCADE;\n"
+		case "data":
+			truncateSQL = `DO $$ DECLARE r RECORD;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables
+           WHERE schemaname='public' AND tablename <> 'api_logs'
+  LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+  END LOOP;
+END $$;
+`
+		default: // full
+			truncateSQL = `DO $$ DECLARE r RECORD;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+  END LOOP;
+END $$;
+`
+		}
+
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Erreur lecture fichier pgdump: " + err.Error()})
+			return
+		}
+
+		var cleanSQL strings.Builder
+		for _, line := range strings.Split(string(content), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, `\restrict`) ||
+				strings.HasPrefix(trimmed, `\connect`) ||
+				strings.HasPrefix(trimmed, "SET transaction_timeout") {
+				continue
+			}
+			cleanSQL.WriteString(line)
+			cleanSQL.WriteByte('\n')
+		}
+
+		fullSQL := "BEGIN;\n" +
+			"SET LOCAL session_replication_role = 'replica';\n" +
+			truncateSQL +
+			"\n" + cleanSQL.String() +
+			"\nCOMMIT;\n"
+
+		psqlCmd := exec.Command("psql",
+			"-h", host, "-p", port, "-U", user, "-d", dbname,
+			"--no-password",
+		)
+		psqlCmd.Env = append(os.Environ(), "PGPASSWORD="+password)
+		psqlCmd.Stdin = strings.NewReader(fullSQL)
+
+		var psqlOut bytes.Buffer
+		psqlCmd.Stdout = &psqlOut
+		psqlCmd.Stderr = &psqlOut
+
+		if err := psqlCmd.Run(); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("psql restore: %v\n%s", err, psqlOut.String())})
+			return
+		}
+
+		logger.Security(fmt.Sprintf("Restauration DB réussie depuis fichier pgdump %s (type: %s)", shortID, backupType))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":     true,
+			"snapshot_id": snapID,
+			"backup_type": backupType,
+			"message":     fmt.Sprintf("Base de données restaurée avec succès depuis le fichier pgdump %s (type: %s)", shortID, backupType),
+			"output":      psqlOut.String(),
+		})
+		return
+	}
+
 	if snapID != "latest" {
 		for _, c := range snapID {
 			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
@@ -728,7 +1312,6 @@ func RestoreBackup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	host, port, user, password, dbname := config.DBEnv()
 	shortID := snapID[:backupMin(8, len(snapID))]
 	logger.Security(fmt.Sprintf("Restauration DB depuis snapshot %s déclenchée", shortID))
 

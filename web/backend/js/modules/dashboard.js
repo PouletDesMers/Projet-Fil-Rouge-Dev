@@ -6,149 +6,254 @@ const AdminDashboard = {
   revenueChart: null,
   donutChart: null,
   activityChart: null,
+  isLoading: false, // Guard contre les chargements concurrents du dashboard
 
   async load() {
+    // ── Guard anti-flood : empêche les appels concurrents au dashboard ────────
+    if (this.isLoading) return;
+    this.isLoading = true;
+
     // Date courante
-    const el = document.getElementById('dash-date');
-    if (el) el.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const el = document.getElementById("dash-date");
+    if (el)
+      el.textContent = new Date().toLocaleDateString("fr-FR", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
     // Fetch users une seule fois, partagé entre loadStats et loadRecentUsers
     let usersData = null;
     try {
-      const res = await fetch('/admin/api/users', { credentials: 'include' });
+      const res = await fetch("/admin/api/users", { credentials: "include" });
       if (res.ok) usersData = await res.json();
-    } catch (e) { /* on continue sans users */ }
+    } catch (e) {
+      /* on continue sans users */
+    }
 
-    await Promise.all([
-      this.loadStats(usersData),
-      this.loadRecentUsers(usersData),
-      this.loadRecentProducts(),
-      this.loadSystemStats(),
-      this.loadTopProducts(),
-    ]);
-    this.renderRevenueChart();
+    try {
+      // ── Appels essentiels : chargés immédiatement (4 fetch max) ─────────────
+      await Promise.allSettled([
+        this.loadStats(usersData),
+        this.loadRecentUsers(usersData),
+        this.loadRecentProducts(),
+      ]);
+      this.renderRevenueChart();
+
+      // ── Appels secondaires : différés de 4s pour éviter le flood 429 ────────
+      setTimeout(() => this.loadTopProducts(), 4000);
+      setTimeout(() => this.loadSystemStats(), 6000);
+    } finally {
+      this.isLoading = false;
+    }
   },
 
   async loadStats(usersData) {
     try {
       const [categoriesRes, ordersRes] = await Promise.all([
-        fetch('/admin/api/categories', { credentials: 'include' }),
-        fetch('/admin/api/orders', { credentials: 'include' }).catch(() => null),
+        fetch("/admin/api/categories", { credentials: "include" }),
+        fetch("/admin/api/commandes", { credentials: "include" }).catch(
+          () => null,
+        ),
       ]);
 
-      const users      = Array.isArray(usersData) ? usersData : [];
+      const users = Array.isArray(usersData) ? usersData : [];
       const categories = categoriesRes.ok ? await categoriesRes.json() : [];
-      const orders     = (ordersRes && ordersRes.ok) ? await ordersRes.json() : [];
+      const orders = ordersRes && ordersRes.ok ? await ordersRes.json() : [];
 
-      const total    = Array.isArray(users) ? users.length : 0;
-      const active   = Array.isArray(users) ? users.filter(u => u.status === 'actif' || u.est_actif).length : 0;
-      const admins   = Array.isArray(users) ? users.filter(u => u.role === 'admin').length : 0;
-      const clients  = total - admins;
+      const total = Array.isArray(users) ? users.length : 0;
+      const active = Array.isArray(users)
+        ? users.filter((u) => u.status === "actif" || u.est_actif).length
+        : 0;
+      const admins = Array.isArray(users)
+        ? users.filter((u) => u.role === "admin").length
+        : 0;
+      const clients = total - admins;
       const inactive = total - active;
 
       const ordersArr = Array.isArray(orders) ? orders : [];
       const totalOrders = ordersArr.length;
-      const revenue = ordersArr.reduce((s, o) => s + (parseFloat(o.totalAmount) || 0), 0);
-      const pendingOrders = ordersArr.filter(o => o.status === 'pending' || o.status === 'en_attente').length;
+      const revenue = ordersArr.reduce(
+        (s, o) => s + (parseFloat(o.totalAmount) || 0),
+        0,
+      );
+      const pendingOrders = ordersArr.filter(
+        (o) => o.status === "pending" || o.status === "en_attente",
+      ).length;
 
-      // Stat cards
-      this._setText('dash-total-users', total.toLocaleString('fr-FR'));
-      this._setText('dash-active-users', active.toLocaleString('fr-FR'));
-      this._setText('dash-total-categories', Array.isArray(categories) ? categories.length : 0);
-      this._setText('dash-total-orders', totalOrders.toLocaleString('fr-FR'));
-      this._setText('dash-revenue', revenue.toLocaleString('fr-FR', { minimumFractionDigits: 0 }) + ' €');
-      this._setText('dash-pending-orders', pendingOrders > 0 ? `⚠️ ${pendingOrders} en attente` : '✅ À jour');
-      this._setText('dash-total-admins', admins);
+      // ── Stat cards ──────────────────────────────────────────────────────
+      this._setText("dash-total-users", total.toLocaleString("fr-FR"));
+      this._setText("dash-active-users", active.toLocaleString("fr-FR"));
+      this._setText(
+        "dash-total-categories",
+        Array.isArray(categories) ? categories.length : 0,
+      );
+      this._setText("dash-total-orders", totalOrders.toLocaleString("fr-FR"));
+      this._setText(
+        "dash-revenue",
+        revenue.toLocaleString("fr-FR", { minimumFractionDigits: 0 }) + " €",
+      );
 
+      // ── Tuile commandes : plus claire ───────────────────────────────────
+      this._setText("dash-total-admins", admins);
+      this._updateOrdersTile(pendingOrders, totalOrders);
+
+      // ── Chiffres sous le camembert ──────────────────────────────────────
+      this._setText("dash-total-admins2", admins.toLocaleString("fr-FR"));
       const pct = total > 0 ? Math.round((active / total) * 100) : 0;
-      this._setText('dash-active-pct', pct + '%');
-      this._setText('dash-active-users2', active.toLocaleString('fr-FR'));
-      this._setText('dash-total-users2', total.toLocaleString('fr-FR'));
+      this._setText("dash-active-pct", pct + "%");
+      this._setText("dash-active-users2", active.toLocaleString("fr-FR"));
+      this._setText("dash-total-users2", total.toLocaleString("fr-FR"));
 
+      // ── Graphiques ──────────────────────────────────────────────────────
       this.renderDonutChart(clients, admins, inactive);
-
-      // Graphique activité commandes par mois
       this.renderActivityChart(ordersArr);
-
     } catch (e) {
-      console.error('Dashboard stats error:', e);
+      console.error("Dashboard stats error:", e);
+    }
+  },
+
+  /**
+   * Met à jour la tuile des commandes avec un affichage plus clair
+   * des commandes en attente.
+   */
+  _updateOrdersTile(pending, total) {
+    const el = document.getElementById("dash-pending-orders");
+    if (!el) return;
+
+    if (total === 0) {
+      el.innerHTML =
+        '<span class="text-muted"><i class="bi bi-dash-circle me-1"></i>Aucune commande</span>';
+      return;
+    }
+
+    const pct = Math.round((pending / total) * 100);
+
+    if (pending === 0) {
+      el.innerHTML = `
+        <span class="text-success fw-semibold">
+          <i class="bi bi-check-circle-fill me-1"></i>Tout est à jour
+        </span>
+        <span class="text-muted ms-2">${total} commande${total > 1 ? "s" : ""}</span>`;
+    } else if (pct < 25) {
+      el.innerHTML = `
+        <span class="text-warning fw-semibold">
+          <i class="bi bi-hourglass-split me-1"></i>${pending} en attente
+        </span>
+        <span class="text-muted ms-2">(${pct}% des ${total})</span>`;
+    } else {
+      el.innerHTML = `
+        <span class="text-danger fw-bold">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>${pending} en attente
+        </span>
+        <span class="text-muted ms-2">(${pct}% des ${total})</span>
+        <div class="progress mt-1" style="height:4px;">
+          <div class="progress-bar bg-danger" role="progressbar"
+               style="width:${pct}%" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>`;
     }
   },
 
   async loadSystemStats() {
     try {
-      const [logsRes, backupRes] = await Promise.all([
-        fetch('/admin/api/logs/stats', { credentials: 'include' }).catch(() => null),
-        fetch('/admin/api/backup/stats', { credentials: 'include' }).catch(() => null),
-      ]);
+      const logsRes = await fetch("/admin/api/logs/stats", {
+        credentials: "include",
+      }).catch(() => null);
 
       if (logsRes && logsRes.ok) {
         const stats = await logsRes.json();
-        this._setText('dash-log-errors', (stats.ERROR || 0) + (stats.SECURITY ? ` / ${stats.SECURITY} sec.` : ''));
-        this._setText('dash-log-total', stats.total || 0);
+        this._setText(
+          "dash-log-errors",
+          (stats.ERROR || 0) +
+            (stats.SECURITY ? ` / ${stats.SECURITY} sec.` : ""),
+        );
+        this._setText("dash-log-total", stats.total || 0);
       }
-      if (backupRes && backupRes.ok) {
-        const b = await backupRes.json();
-        const snaps = b.snapshots_count || 0;
-        const size = this._humanSize(b.total_size || 0);
-        this._setText('dash-backup-snaps', snaps);
-        this._setText('dash-backup-size', size);
-      }
+      // Note : backup/stats désactivé car retourne 500 (Restic non installé)
     } catch (e) {
-      console.error('System stats error:', e);
+      console.error("System stats error:", e);
     }
   },
 
   async loadRecentUsers(usersData) {
     try {
       const users = Array.isArray(usersData) ? usersData : [];
-      const recent = users.length > 0
-        ? [...users].sort((a, b) => new Date(b.date_creation || b.createdAt || 0) - new Date(a.date_creation || a.createdAt || 0)).slice(0, 6)
-        : [];
-      const tbody = document.getElementById('dash-recent-users');
+      const recent =
+        users.length > 0
+          ? [...users]
+              .sort(
+                (a, b) =>
+                  new Date(b.date_creation || b.createdAt || 0) -
+                  new Date(a.date_creation || a.createdAt || 0),
+              )
+              .slice(0, 6)
+          : [];
+      const tbody = document.getElementById("dash-recent-users");
       if (!tbody) return;
-      tbody.innerHTML = recent.map(u => {
-        const nom = [u.prenom || u.firstName || '', u.nom || u.lastName || ''].filter(Boolean).join(' ') || u.email;
-        const date = u.date_creation || u.createdAt;
-        return `
+      tbody.innerHTML =
+        recent
+          .map((u) => {
+            const nom =
+              [u.prenom || u.firstName || "", u.nom || u.lastName || ""]
+                .filter(Boolean)
+                .join(" ") || u.email;
+            const date = u.date_creation || u.createdAt;
+            const roleLabel =
+              u.role === "admin"
+                ? "Admin"
+                : u.role === "moderator"
+                  ? "Modérateur"
+                  : "Client";
+            return `
         <tr>
           <td class="text-muted small ps-3">#${u.id_utilisateur || u.id}</td>
           <td class="fw-semibold small">${nom}</td>
           <td class="text-muted small d-none d-md-table-cell">${u.email}</td>
-          <td><span class="badge ${u.role === 'admin' ? 'bg-warning text-dark badge-admin' : 'bg-secondary'}">${u.role || '—'}</span></td>
-          <td class="text-muted small d-none d-lg-table-cell">${date ? new Date(date).toLocaleDateString('fr-FR') : '—'}</td>
-          <td><span class="badge ${(u.statut === 'actif' || u.status === 'actif' || u.est_actif) ? 'bg-success' : 'bg-danger'}">${(u.statut === 'actif' || u.status === 'actif' || u.est_actif) ? 'Actif' : 'Inactif'}</span></td>
+          <td><span class="badge ${u.role === "admin" ? "bg-warning text-dark" : "bg-secondary"}">${roleLabel}</span></td>
+          <td class="text-muted small d-none d-lg-table-cell">${date ? new Date(date).toLocaleDateString("fr-FR") : "—"}</td>
+          <td><span class="badge ${u.statut === "actif" || u.status === "actif" || u.est_actif ? "bg-success" : "bg-danger"}">${u.statut === "actif" || u.status === "actif" || u.est_actif ? "Actif" : "Inactif"}</span></td>
         </tr>`;
-      }).join('') || '<tr><td colspan="6" class="text-center text-muted ps-3">Aucun utilisateur</td></tr>';
+          })
+          .join("") ||
+        '<tr><td colspan="6" class="text-center text-muted ps-3">Aucun utilisateur</td></tr>';
     } catch (e) {
-      console.error('Recent users error:', e);
+      console.error("Recent users error:", e);
     }
   },
 
   async loadRecentProducts() {
     try {
-      const res = await fetch('/admin/api/products', { credentials: 'include' });
+      const res = await fetch("/admin/api/products", {
+        credentials: "include",
+      });
       if (!res.ok) return;
       const products = await res.json();
       const recent = Array.isArray(products) ? products.slice(0, 6) : [];
-      const tbody = document.getElementById('dash-recent-products');
+      const tbody = document.getElementById("dash-recent-products");
       if (!tbody) return;
-      tbody.innerHTML = recent.map(p => `
+      tbody.innerHTML =
+        recent
+          .map(
+            (p) => `
         <tr>
           <td class="text-muted small ps-3">#${p.id_produit || p.id}</td>
-          <td class="fw-semibold small">${p.nom || '—'}</td>
-          <td class="text-muted small d-none d-lg-table-cell">${p.id_categorie ? 'Cat. ' + p.id_categorie : '—'}</td>
-          <td class="fw-semibold small">${p.prix != null ? parseFloat(p.prix).toLocaleString('fr-FR') + ' €' : '—'}</td>
-          <td><span class="badge ${p.actif ? 'bg-success' : 'bg-secondary'}">${p.actif ? 'Actif' : 'Inactif'}</span></td>
+          <td class="fw-semibold small">${p.nom || "—"}</td>
+          <td class="text-muted small d-none d-lg-table-cell">${p.id_categorie ? "Cat. " + p.id_categorie : "—"}</td>
+          <td class="fw-semibold small">${p.prix != null ? parseFloat(p.prix).toLocaleString("fr-FR") + " €" : "—"}</td>
+          <td><span class="badge ${p.actif ? "bg-success" : "bg-secondary"}">${p.actif ? "Actif" : "Inactif"}</span></td>
         </tr>
-      `).join('') || '<tr><td colspan="5" class="text-center text-muted ps-3">Aucun produit</td></tr>';
+      `,
+          )
+          .join("") ||
+        '<tr><td colspan="5" class="text-center text-muted ps-3">Aucun produit</td></tr>';
     } catch (e) {
-      console.error('Recent products error:', e);
+      console.error("Recent products error:", e);
     }
   },
 
   async loadTopProducts() {
-    const container = document.getElementById('dash-top-products');
+    const container = document.getElementById("dash-top-products");
     if (!container) return;
     container.innerHTML = `
       <div class="d-flex justify-content-center py-4 text-muted">
@@ -156,31 +261,39 @@ const AdminDashboard = {
       </div>`;
 
     try {
-      const res = await fetch('/admin/api/stats/top-products', { credentials: 'include' });
+      const res = await fetch("/admin/api/stats/top-products", {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const items = Array.isArray(data.top_products) ? data.top_products : [];
-      const fromLabel = data.from ? new Date(data.from).toLocaleDateString('fr-FR') : '3 derniers mois';
+      const fromLabel = data.from
+        ? new Date(data.from).toLocaleDateString("fr-FR")
+        : "3 derniers mois";
 
       if (!items.length) {
         container.innerHTML = `<div class="text-center text-muted py-4">Aucune vente enregistrée depuis le ${fromLabel}</div>`;
         return;
       }
 
-      const rows = items.map((p, idx) => `
+      const rows = items
+        .map(
+          (p, idx) => `
         <tr>
           <td class="ps-3 text-muted fw-semibold">${idx + 1}</td>
-          <td class="fw-semibold">${p.nom || '—'}</td>
+          <td class="fw-semibold">${p.nom || "—"}</td>
           <td>${p.total_sales ?? 0}</td>
           <td>${p.total_quantity ?? p.total_sales ?? 0}</td>
-          <td class="fw-bold text-primary">${(p.total_amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</td>
+          <td class="fw-bold text-primary">${(p.total_amount || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</td>
         </tr>
-      `).join('');
+      `,
+        )
+        .join("");
 
       container.innerHTML = `
         <div class="d-flex justify-content-between align-items-center px-3 pt-2 pb-1 small text-muted">
           <span>Période depuis le ${fromLabel}</span>
-          <span>${items.length} produit${items.length > 1 ? 's' : ''}</span>
+          <span>${items.length} produit${items.length > 1 ? "s" : ""}</span>
         </div>
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
@@ -195,7 +308,7 @@ const AdminDashboard = {
           <tbody>${rows}</tbody>
         </table>`;
     } catch (e) {
-      console.error('Top products load error:', e);
+      console.error("Top products load error:", e);
       container.innerHTML = `
         <div class="alert alert-warning m-3 mb-4">
           <i class="bi bi-exclamation-triangle me-2"></i>
@@ -205,9 +318,11 @@ const AdminDashboard = {
   },
 
   renderActivityChart(orders) {
-    const ctx = document.getElementById('activityChart');
+    const ctx = document.getElementById("activityChart");
     if (!ctx) return;
-    if (this.activityChart) { this.activityChart.destroy(); }
+    if (this.activityChart) {
+      this.activityChart.destroy();
+    }
 
     // Compter les commandes par mois (12 derniers mois)
     const now = new Date();
@@ -215,114 +330,187 @@ const AdminDashboard = {
     const counts = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      labels.push(d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }));
-      counts.push(orders.filter(o => {
-        const od = new Date(o.orderDate || o.created_at || 0);
-        return od.getMonth() === d.getMonth() && od.getFullYear() === d.getFullYear();
-      }).length);
+      labels.push(
+        d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+      );
+      counts.push(
+        orders.filter((o) => {
+          const od = new Date(o.orderDate || o.created_at || 0);
+          return (
+            od.getMonth() === d.getMonth() &&
+            od.getFullYear() === d.getFullYear()
+          );
+        }).length,
+      );
     }
 
     this.activityChart = new Chart(ctx, {
-      type: 'line',
+      type: "line",
       data: {
         labels,
-        datasets: [{
-          label: 'Commandes',
-          data: counts,
-          borderColor: '#7602F9',
-          backgroundColor: 'rgba(118,2,249,0.1)',
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: '#7602F9',
-          pointRadius: 4,
-        }]
+        datasets: [
+          {
+            label: "Commandes",
+            data: counts,
+            borderColor: "#7602F9",
+            backgroundColor: "rgba(118,2,249,0.1)",
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: "#7602F9",
+            pointRadius: 4,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 10 } } },
-          y: { beginAtZero: true, ticks: { color: '#6b7280', font: { size: 10 }, stepSize: 1 } }
-        }
-      }
+          x: {
+            grid: { display: false },
+            ticks: { color: "#6b7280", font: { size: 10 } },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: "#6b7280", font: { size: 10 }, stepSize: 1 },
+          },
+        },
+      },
     });
   },
 
   renderRevenueChart() {
-    const ctx = document.getElementById('revenueChart');
+    const ctx = document.getElementById("revenueChart");
     if (!ctx) return;
-    if (this.revenueChart) { this.revenueChart.destroy(); }
+    if (this.revenueChart) {
+      this.revenueChart.destroy();
+    }
 
-    const months = ['Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc','Jan','Fév'];
-    const data   = [18400, 22100, 19800, 25300, 28700, 24500, 31200, 29800, 33400, 38100, 41200, 42800];
+    const months = [
+      "Mar",
+      "Avr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Aoû",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Déc",
+      "Jan",
+      "Fév",
+    ];
+    const data = [
+      18400, 22100, 19800, 25300, 28700, 24500, 31200, 29800, 33400, 38100,
+      41200, 42800,
+    ];
 
     this.revenueChart = new Chart(ctx, {
-      type: 'bar',
+      type: "bar",
       data: {
         labels: months,
-        datasets: [{
-          label: 'CA (€)',
-          data: data,
-          backgroundColor: 'rgba(118,2,249,0.75)',
-          hoverBackgroundColor: 'rgba(118,2,249,1)',
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
+        datasets: [
+          {
+            label: "CA (€)",
+            data: data,
+            backgroundColor: "rgba(118,2,249,0.75)",
+            hoverBackgroundColor: "rgba(118,2,249,1)",
+            borderRadius: 6,
+            borderSkipped: false,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y.toLocaleString('fr-FR') + ' €' } }
+          tooltip: {
+            callbacks: {
+              label: (ctx) => " " + ctx.parsed.y.toLocaleString("fr-FR") + " €",
+            },
+          },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+          x: {
+            grid: { display: false },
+            ticks: { color: "#6b7280", font: { size: 11 } },
+          },
           y: {
-            grid: { color: 'rgba(0,0,0,0.05)' },
-            ticks: { color: '#6b7280', font: { size: 11 }, callback: v => (v/1000).toFixed(0) + 'k' }
-          }
-        }
-      }
+            grid: { color: "rgba(0,0,0,0.05)" },
+            ticks: {
+              color: "#6b7280",
+              font: { size: 11 },
+              callback: (v) => (v / 1000).toFixed(0) + "k",
+            },
+          },
+        },
+      },
     });
   },
 
   renderDonutChart(clients, admins, inactive) {
-    const ctx = document.getElementById('donutChart');
+    const ctx = document.getElementById("donutChart");
     if (!ctx) return;
-    if (this.donutChart) { this.donutChart.destroy(); }
+    if (this.donutChart) {
+      this.donutChart.destroy();
+    }
     this.donutChart = new Chart(ctx, {
-      type: 'doughnut',
+      type: "doughnut",
       data: {
-        labels: ['Clients', 'Admins', 'Inactifs'],
-        datasets: [{
-          data: [clients || 0, admins || 0, inactive || 0],
-          backgroundColor: ['#5610C0', '#7602F9', '#e5e7eb'],
-          hoverBackgroundColor: ['#6d22d8', '#8e1cff', '#d1d5db'],
-          borderWidth: 0, hoverOffset: 6,
-        }]
+        labels: ["👤 Clients", "🛡️ Admins", "💤 Inactifs"],
+        datasets: [
+          {
+            data: [clients || 0, admins || 0, inactive || 0],
+            // Couleurs plus contrastées : vert clients, orange/rouge admins, gris inactifs
+            backgroundColor: ["#22c55e", "#f59e0b", "#e5e7eb"],
+            hoverBackgroundColor: ["#16a34a", "#d97706", "#d1d5db"],
+            borderWidth: 2,
+            borderColor: "#ffffff",
+            hoverOffset: 8,
+          },
+        ],
       },
       options: {
-        responsive: true, maintainAspectRatio: false, cutout: '70%',
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "65%",
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#374151', font: { size: 12 }, padding: 16, usePointStyle: true } }
-        }
-      }
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "#374151",
+              font: { size: 12, weight: "500" },
+              padding: 16,
+              usePointStyle: true,
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const val = ctx.parsed;
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${val} (${pct}%)`;
+              },
+            },
+          },
+        },
+      },
     });
   },
 
   _humanSize(b) {
-    if (b >= 1073741824) return (b / 1073741824).toFixed(1) + ' GB';
-    if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
-    if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
-    return b + ' B';
+    if (b >= 1073741824) return (b / 1073741824).toFixed(1) + " GB";
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + " MB";
+    if (b >= 1024) return (b / 1024).toFixed(0) + " KB";
+    return b + " B";
   },
 
   _setText(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
-  }
+  },
 };
 
 window.AdminDashboard = AdminDashboard;
