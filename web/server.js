@@ -1,4 +1,5 @@
 const express = require('express');
+const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 const { createProxyMiddleware } = require('http-proxy-middleware');
@@ -7,6 +8,8 @@ const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { parse } = require('csv-parse/sync');
+const { securityLogger, csrfOriginGuard } = require('./middleware/security');
+const { loginLimiter, apiLimiter, strictLimiter } = require('./middleware/rateLimiting');
 const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminNotification, sendNewsletterEmail } = require('./backend/js/modules/email');
 const { generateResetToken, saveResetToken, validateResetToken, markTokenAsUsed } = require('./backend/js/modules/reset-tokens');
 const app = express();
@@ -54,9 +57,26 @@ let DEMO_PROMO_CODES = [
 ];
 
 // Middleware
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(securityLogger);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(csrfOriginGuard({
+  allowedOrigins: [process.env.FRONTEND_URL, process.env.APP_ORIGIN, 'http://localhost:3000'],
+}));
+app.use('/api', apiLimiter);
+app.use('/admin/api', strictLimiter);
+
+function isRequestSecure(req) {
+  if (req.secure) return true;
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  return typeof forwardedProto === 'string' && forwardedProto.split(',')[0].trim() === 'https';
+}
 
 // Middleware to get auth token from header or cookie
 function getAuthToken(req) {
@@ -149,7 +169,7 @@ async function checkAuth(req, res, next) {
 }
 
 // Secure login endpoint - stores token in httpOnly cookie
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', loginLimiter, async (req, res) => {
   try {
     const response = await axios.post('http://api:8080/api/login', req.body);
     const data = response.data;
@@ -165,7 +185,7 @@ app.post('/auth/login', async (req, res) => {
       // tout en protégeant contre le CSRF
       res.cookie('authToken', data.token, {
         httpOnly: true,  // Cannot be read by JavaScript (XSS protection)
-        secure: false,   // false pour HTTP local (mettre true en prod HTTPS)
+        secure: process.env.NODE_ENV === 'production' || isRequestSecure(req),
         sameSite: 'lax', // lax = compatible réseau local, protège contre CSRF
         maxAge: 8 * 60 * 60 * 1000, // 8 heures
         path: '/' // Accessible sur tout le site
@@ -208,7 +228,11 @@ app.post('/auth/login', async (req, res) => {
 
 // Logout endpoint - clears httpOnly cookie
 app.post('/auth/logout', (req, res) => {
-  res.clearCookie('authToken');
+  res.clearCookie('authToken', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+  });
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
@@ -557,6 +581,134 @@ function proxyToApiWithAuth(endpoint) {
     }
   };
 }
+
+function makePentestCheck(name, passed, details) {
+  return { name, passed: Boolean(passed), details };
+}
+
+async function runSecurityPentest(req) {
+  const checks = [];
+  const webBase = process.env.WEB_INTERNAL_BASE || 'http://127.0.0.1:3000';
+  const apiBase = process.env.API_INTERNAL_BASE || 'http://api:8080';
+
+  const add = (name, passed, details) => checks.push(makePentestCheck(name, passed, details));
+
+  try {
+    const health = await axios.get(`${webBase}/health`, { timeout: 8000, validateStatus: () => true });
+    add('Web health endpoint', health.status === 200 && health.data && health.data.status === 'ok', `status=${health.status}`);
+  } catch (err) {
+    add('Web health endpoint', false, err.message);
+  }
+
+  try {
+    const home = await axios.get(`${webBase}/`, { timeout: 8000, validateStatus: () => true });
+    const requiredHeaders = ['x-content-type-options', 'x-frame-options', 'strict-transport-security', 'referrer-policy'];
+    for (const header of requiredHeaders) {
+      add(`Header ${header}`, Boolean(home.headers[header]), home.headers[header] || 'missing');
+    }
+  } catch (err) {
+    add('Security headers on /', false, err.message);
+  }
+
+  let swaggerJSON = null;
+  try {
+    const swagger = await axios.get(`${apiBase}/swagger`, { timeout: 8000, validateStatus: () => true });
+    add('Swagger endpoint /swagger', swagger.status === 200 && Boolean(swagger.data && swagger.data.openapi), `status=${swagger.status}`);
+  } catch (err) {
+    add('Swagger endpoint /swagger', false, err.message);
+  }
+
+  try {
+    const swaggerJsonResp = await axios.get(`${apiBase}/api/swagger.json`, { timeout: 8000, validateStatus: () => true });
+    swaggerJSON = swaggerJsonResp.data;
+    add('Swagger endpoint /api/swagger.json', swaggerJsonResp.status === 200 && Boolean(swaggerJSON && swaggerJSON.openapi), `status=${swaggerJsonResp.status}`);
+  } catch (err) {
+    add('Swagger endpoint /api/swagger.json', false, err.message);
+  }
+
+  if (swaggerJSON && swaggerJSON.components && swaggerJSON.components.securitySchemes && swaggerJSON.components.securitySchemes.BearerAuth) {
+    const bearerFormat = swaggerJSON.components.securitySchemes.BearerAuth.bearerFormat;
+    add('OpenAPI bearerFormat is OpaqueToken', bearerFormat === 'OpaqueToken', String(bearerFormat || 'missing'));
+  } else {
+    add('OpenAPI bearerFormat is OpaqueToken', false, 'BearerAuth scheme missing');
+  }
+
+  try {
+    const anonAdmin = await axios.get(`${webBase}/admin/api/users`, {
+      timeout: 8000,
+      maxRedirects: 0,
+      validateStatus: () => true,
+    });
+    add('Anonymous admin access blocked (web)', [401, 403].includes(anonAdmin.status), `status=${anonAdmin.status}`);
+  } catch (err) {
+    add('Anonymous admin access blocked (web)', false, err.message);
+  }
+
+  try {
+    const anonApiAdmin = await axios.get(`${apiBase}/api/admin/newsletter/subscribers`, {
+      timeout: 8000,
+      validateStatus: () => true,
+    });
+    add('Anonymous admin access blocked (api)', [401, 403].includes(anonApiAdmin.status), `status=${anonApiAdmin.status}`);
+  } catch (err) {
+    add('Anonymous admin access blocked (api)', false, err.message);
+  }
+
+  try {
+    const loginStatuses = [];
+    for (let i = 0; i < 7; i++) {
+      const loginResp = await axios.post(
+        `${webBase}/auth/login`,
+        { email: 'pentest@example.com', password: 'wrong-password' },
+        { timeout: 8000, validateStatus: () => true }
+      );
+      loginStatuses.push(loginResp.status);
+    }
+    const seen429 = loginStatuses.includes(429);
+    add('Rate limit login (429 observed)', seen429, loginStatuses.join(','));
+  } catch (err) {
+    add('Rate limit login (429 observed)', false, err.message);
+  }
+
+  try {
+    const csrfProbe = await axios.post(
+      `${webBase}/auth/logout`,
+      {},
+      {
+        timeout: 8000,
+        validateStatus: () => true,
+        headers: {
+          Origin: 'http://evil.example',
+          Cookie: 'authToken=fake-token',
+        },
+      }
+    );
+    add('CSRF guard blocks cross-origin authenticated write', csrfProbe.status === 403, `status=${csrfProbe.status}`);
+  } catch (err) {
+    add('CSRF guard blocks cross-origin authenticated write', false, err.message);
+  }
+
+  const passed = checks.filter((c) => c.passed).length;
+  const failed = checks.length - passed;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    webBase,
+    apiBase,
+    summary: { passed, failed, total: checks.length },
+    checks,
+  };
+}
+
+app.get('/admin/api/security/pentest', checkAdminAuth, async (req, res) => {
+  try {
+    const report = await runSecurityPentest(req);
+    res.json(report);
+  } catch (error) {
+    console.error('Pentest endpoint failed:', error.message);
+    res.status(500).json({ error: 'Failed to run pentest' });
+  }
+});
 
 // Routes admin protégées - Panel d'administration uniquement
 app.get('/admin/api/users', proxyToApiWithAuth('/users'));

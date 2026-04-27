@@ -27,21 +27,24 @@ const resticRepo = "/backups/restic-repo"
 
 // ===== ENV HELPERS =====
 
-func resticPassword() string {
+func resticPassword() (string, error) {
 	p := os.Getenv("RESTIC_PASSWORD")
 	if p == "" {
-		p = "cyna-restic-secret"
+		return "", fmt.Errorf("RESTIC_PASSWORD is required")
 	}
-	return p
+	return p, nil
 }
 
-func resticEnv() []string {
+func resticEnv() ([]string, error) {
 	env := os.Environ()
 	repo := resticRepo
 	if r := os.Getenv("RESTIC_REPOSITORY"); r != "" {
 		repo = r
 	}
-	pass := resticPassword()
+	pass, err := resticPassword()
+	if err != nil {
+		return nil, err
+	}
 	filtered := make([]string, 0, len(env)+2)
 	for _, e := range env {
 		if !strings.HasPrefix(e, "RESTIC_REPOSITORY=") && !strings.HasPrefix(e, "RESTIC_PASSWORD=") {
@@ -52,16 +55,20 @@ func resticEnv() []string {
 		"RESTIC_REPOSITORY="+repo,
 		"RESTIC_PASSWORD="+pass,
 	)
-	return filtered
+	return filtered, nil
 }
 
 func runRestic(args ...string) (string, error) {
 	cmd := exec.Command("restic", args...)
-	cmd.Env = resticEnv()
+	env, err := resticEnv()
+	if err != nil {
+		return "", err
+	}
+	cmd.Env = env
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	err := cmd.Run()
+	err = cmd.Run()
 	return out.String(), err
 }
 
@@ -149,7 +156,11 @@ func runResticBackup(tags ...string) (string, error) {
 	resticArgs = append(resticArgs, "--json")
 
 	resticCmd := exec.Command("restic", resticArgs...)
-	resticCmd.Env = resticEnv()
+	resticEnvVars, err := resticEnv()
+	if err != nil {
+		return "", err
+	}
+	resticCmd.Env = resticEnvVars
 
 	pipe, err := dumpCmd.StdoutPipe()
 	if err != nil {
@@ -660,7 +671,12 @@ func DownloadBackup(w http.ResponseWriter, r *http.Request) {
 	downloadName := fmt.Sprintf("restic-dump-%s-%s.sql", backupType, snapID[:backupMin(8, len(snapID))])
 
 	cmd := exec.Command("restic", "dump", snapID, filename)
-	cmd.Env = resticEnv()
+	resticEnvVars, err := resticEnv()
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	cmd.Env = resticEnvVars
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
@@ -757,7 +773,12 @@ END $$;
 	}
 
 	dumpCmd := exec.Command("restic", "dump", snapID, filename)
-	dumpCmd.Env = resticEnv()
+	resticEnvVars, err := resticEnv()
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	dumpCmd.Env = resticEnvVars
 	dumpOut, dumpErrBuf := new(bytes.Buffer), new(bytes.Buffer)
 	dumpCmd.Stdout = dumpOut
 	dumpCmd.Stderr = dumpErrBuf

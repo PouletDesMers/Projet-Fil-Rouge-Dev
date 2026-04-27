@@ -1,0 +1,132 @@
+# CYNA — Plateforme SaaS Cybersécurité
+
+:toc: macro
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: highlight.js
+
+image:[https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg)[CI]
+
+**Projet fil rouge — Spécialisation DEV / CPI | École INGETIS Paris**
+
+CYNA est une plateforme SaaS de cybersécurité permettant aux entreprises de souscrire à des solutions de protection (EDR, XDR, SOC). Le projet est architecturé autour de trois services conteneurisés communicants.
+
+toc::[]
+
+---
+
+## 🛠 Stack Technique
+
+[cols="1,3", options="header"]
+|===
+| Couche | Technologie
+| **API Backend** | Go 1.21 (Gorilla/Mux, bcrypt, OTP)
+| **Serveur Web / Proxy** | Node.js 20 (Express, http-proxy-middleware)
+| **Base de données** | PostgreSQL 16
+| **Infrastructure** | Docker & Docker Compose
+| **CI/CD** | GitHub Actions
+|===
+
+---
+
+## 🏗 Architecture du Projet
+
+### Structure des répertoires
+
+[source,text]
+----
+Projet-Fil-Rouge-Dev/
+├── api/                # API REST Go (Logique métier)
+├── web/                # Node.js (Proxy & Interface Admin)
+├── db/                 # Scripts d'initialisation SQL
+├── .github/            # Pipelines CI/CD
+└── docker-compose.yml  # Orchestration des services
+----
+
+### Architecture Logique (API Go)
+
+L'API suit un modèle de conception en couches pour une séparation stricte des préoccupations :
+
+`Routes` → `Handlers` → `Services` → `Repositories` → `PostgreSQL`
+
+NOTE: Un pipeline de middlewares intercepte les requêtes pour l'authentification, le rate limiting et la gestion des erreurs.
+
+---
+
+## 🚀 Démarrage Rapide
+
+### Prérequis
+
+* **Docker** & **Docker Compose** installés.
+* Aucune installation locale de Go ou Node.js n'est requise.
+
+### Installation
+
+1. **Cloner le dépôt**
+[source,bash]
+----
+git clone [https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git)
+cd Projet-Fil-Rouge-Dev
+----
+
+2. **Configuration**
+Créer un fichier `.env` à la racine :
+[source,env]
+----
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+----
+
+3. **Lancement**
+[source,bash]
+----
+docker-compose up --build
+----
+
+### Points d'accès (Endpoints)
+
+[cols="1,2", options="header"]
+|===
+| Service | URL
+| **Frontend** | http://localhost:3000
+| **API REST** | http://localhost:8080
+| **Swagger UI** | http://localhost:8080/swagger
+| **PostgreSQL** | localhost:5432
+|===
+
+---
+
+## 🔐 Sécurité
+
+La plateforme implémente les standards de sécurité suivants :
+
+* **Auth :** Tokens de session opaques via Header `Authorization`.
+* **2FA :** Authentification à deux facteurs via TOTP.
+* **Protection :** Rate limiting par adresse IP.
+* **Cryptographie :** Mots de passe hashés (Bcrypt) et sauvegardes chiffrées (AES-256 via Restic).
+
+---
+
+## 🧪 Tests & CI
+
+### Exécution locale
+
+* **Go :** `cd api && go test ./... -v` (13 tests unitaires couvrant `middleware` et `errors`).
+* **Node.js :** `cd web && npm test`.
+
+### Pipeline CI
+Le workflow GitHub Actions valide chaque modification :
+1.  **Linter :** `go vet`.
+2.  **Build :** Compilation des binaires.
+3.  **Test :** Exécution des suites de tests automatisées.
+
+---
+
+## 🎓 Contexte Pédagogique (INGETIS)
+
+Ce projet valide les compétences acquises durant les 4 séances du module "Node.js & API REST" :
+
+1.  **S1 :** Architecture logicielle et modules métiers.
+2.  **S2 :** Sécurisation et durcissement OWASP.
+3.  **S3 :** Intégration de services tiers (Stripe, SMTP).
+4.  **S4 :** Industrialisation (Docker, Swagger, Tests).

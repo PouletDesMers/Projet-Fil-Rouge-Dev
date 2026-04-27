@@ -27,6 +27,8 @@ func Register(r *mux.Router) {
 	r.Handle("/api/resend-verification-email", mw.RateLimitRegister(http.HandlerFunc(handlers.ResendVerificationEmail))).Methods("POST")
 	r.Handle("/api/users", mw.RateLimitRegister(http.HandlerFunc(handlers.CreateUser))).Methods("POST")
 	r.HandleFunc("/api/users/exists", handlers.GetUserExists).Methods("GET")
+	r.HandleFunc("/swagger", handlers.GetSwaggerSpec).Methods("GET")
+	r.HandleFunc("/swagger/", handlers.GetSwaggerSpec).Methods("GET")
 	r.HandleFunc("/api/swagger.json", handlers.GetSwaggerSpec).Methods("GET")
 	r.HandleFunc("/api/public/carousel-images", handlers.GetActiveCarouselImages).Methods("GET")
 	r.HandleFunc("/api/public/categories", handlers.GetActiveCategories).Methods("GET")
@@ -163,10 +165,10 @@ func Register(r *mux.Router) {
 	// ── Newsletter ──────────────────────────────────────────────────
 	r.HandleFunc("/api/newsletter/subscribe", handlers.SubscribeNewsletter).Methods("POST")
 	r.HandleFunc("/api/newsletter/unsubscribe", handlers.UnsubscribeNewsletter).Methods("POST")
-	r.Handle("/api/admin/newsletter/subscribers", auth(http.HandlerFunc(handlers.GetNewsletterSubscribers))).Methods("GET")
-	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
-	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
-	r.Handle("/api/admin/newsletter/campaigns/{id}/send", auth(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/subscribers", adminRaw(http.HandlerFunc(handlers.GetNewsletterSubscribers))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/campaigns/{id}/send", adminRaw(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
 
 	// ── Stats & Analytics ────────────────────────────────────────────
 	r.Handle("/api/admin/stats/top-products", adminRaw(http.HandlerFunc(handlers.GetTopProductsLast3Months))).Methods("GET")
@@ -180,8 +182,8 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.GetRolePermissions))).Methods("GET")
 	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.AssignPermissionToRole))).Methods("POST")
 	r.Handle("/api/admin/roles/{id}/permissions/{code}", adminRaw(http.HandlerFunc(handlers.RemovePermissionFromRole))).Methods("DELETE")
-	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.GetUserRoles))).Methods("GET")
-	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.AssignRoleToUser))).Methods("POST")
-	r.Handle("/api/admin/users/{id}/roles/{roleId}", auth(http.HandlerFunc(handlers.RemoveRoleFromUser))).Methods("DELETE")
-	r.Handle("/api/admin/users/{id}/permissions", auth(http.HandlerFunc(handlers.GetUserPermissions))).Methods("GET")
+	r.Handle("/api/admin/users/{id}/roles", adminRaw(http.HandlerFunc(handlers.GetUserRoles))).Methods("GET")
+	r.Handle("/api/admin/users/{id}/roles", adminRaw(http.HandlerFunc(handlers.AssignRoleToUser))).Methods("POST")
+	r.Handle("/api/admin/users/{id}/roles/{roleId}", adminRaw(http.HandlerFunc(handlers.RemoveRoleFromUser))).Methods("DELETE")
+	r.Handle("/api/admin/users/{id}/permissions", adminRaw(http.HandlerFunc(handlers.GetUserPermissions))).Methods("GET")
 }

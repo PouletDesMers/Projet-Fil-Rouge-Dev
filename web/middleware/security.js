@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 // Middleware de validation des entrées
 const validateInput = {
   email: (email) => {
@@ -121,9 +123,51 @@ const validateFileUpload = (req, res, next) => {
   next();
 };
 
+function requestOrigin(req) {
+  const origin = req.get('Origin');
+  if (origin) return origin.toLowerCase();
+
+  const referer = req.get('Referer');
+  if (!referer) return '';
+
+  try {
+    return new URL(referer).origin.toLowerCase();
+  } catch (_err) {
+    return '';
+  }
+}
+
+// Protect authenticated state-changing requests against CSRF by enforcing same-origin.
+const csrfOriginGuard = ({ allowedOrigins = [], pathPrefixes = ['/auth', '/api', '/admin/api'] } = {}) => {
+  const extraAllowed = allowedOrigins
+    .filter(Boolean)
+    .map((v) => v.toLowerCase());
+
+  return (req, res, next) => {
+    if (SAFE_METHODS.has(req.method)) return next();
+
+    const path = req.path || '';
+    if (!pathPrefixes.some((p) => path.startsWith(p))) return next();
+
+    const hasAuthCookie = Boolean(req.cookies && req.cookies.authToken);
+    if (!hasAuthCookie) return next();
+
+    const expectedOrigins = new Set(extraAllowed);
+    expectedOrigins.add(`${req.protocol}://${req.get('host')}`.toLowerCase());
+
+    const origin = requestOrigin(req);
+    if (!origin || !expectedOrigins.has(origin)) {
+      return res.status(403).json({ error: 'CSRF protection: invalid request origin' });
+    }
+
+    next();
+  };
+};
+
 module.exports = {
   validateInput,
   csrfToken,
+  csrfOriginGuard,
   securityLogger,
   validateFileUpload
 };
