@@ -56,26 +56,14 @@ func encodeHex(dst, src []byte) {
 }
 
 func userHasRole(userID int, roleName string) bool {
-	var exists bool
-	err := config.DB.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM user_roles ur
-			JOIN roles r ON ur.id_role = r.id_role
-			WHERE ur.id_utilisateur = $1 AND LOWER(r.nom) = LOWER($2)
-		)`, userID, roleName).Scan(&exists)
-	return err == nil && exists
+	var r string
+	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&r)
+	return err == nil && r == strings.ToLower(roleName)
 }
 
 func primaryRole(userID int) string {
 	var role string
-	err := config.DB.QueryRow(`
-		SELECT LOWER(r.nom)
-		FROM user_roles ur
-		JOIN roles r ON ur.id_role = r.id_role
-		WHERE ur.id_utilisateur = $1
-		ORDER BY r.id_role
-		LIMIT 1`, userID).Scan(&role)
+	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&role)
 	if err != nil {
 		return ""
 	}
@@ -378,14 +366,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		`SELECT u.id_utilisateur, u.email,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
-		        COALESCE(r.primary_role, '')
-		 FROM utilisateur u
-		 LEFT JOIN (
-		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		     FROM user_roles ur
-		     JOIN roles r ON ur.id_role = r.id_role
-		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur`)
+		        COALESCE(LOWER(u.role),'client')
+		 FROM utilisateur u`)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -427,14 +409,8 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		`SELECT u.id_utilisateur, u.email,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
-		        COALESCE(r.primary_role, '')
+		        COALESCE(LOWER(u.role),'client')
 		 FROM utilisateur u
-		 LEFT JOIN (
-		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		     FROM user_roles ur
-		     JOIN roles r ON ur.id_role = r.id_role
-		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
 		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role)
@@ -520,13 +496,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	if isAdminPanel && requestedRole == "admin" {
 		roleName = "admin"
 	}
-	_, _ = config.DB.Exec(`
-		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
-		SELECT $1, r.id_role, NOW()
-		FROM roles r
-		WHERE LOWER(r.nom) = $2
-		ON CONFLICT DO NOTHING`, u.ID, roleName)
-	u.Role = primaryRole(u.ID)
+	_, _ = config.DB.Exec(`UPDATE utilisateur SET role = $1 WHERE id_utilisateur = $2`, roleName, u.ID)
+	u.Role = roleName
 	u.MotDePasse = ""
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -555,15 +526,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err := config.DB.QueryRow(
 		`SELECT u.id_utilisateur, u.email, u.mot_de_passe,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
-		        u.id_entreprise,
-		        COALESCE(r.primary_role, '')
+		        u.id_entreprise, COALESCE(LOWER(u.role),'client')
 		 FROM utilisateur u
-		 LEFT JOIN (
-		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		     FROM user_roles ur
-		     JOIN roles r ON ur.id_role = r.id_role
-		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Statut, &cur.IDEntreprise, &cur.Role); err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
@@ -721,14 +685,8 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		       COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
 		       totp_secret, COALESCE(u.totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter,
-		       COALESCE(r.primary_role, '')
+		       COALESCE(LOWER(u.role),'client')
 		FROM utilisateur u
-		LEFT JOIN (
-		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		    FROM user_roles ur
-		    JOIN roles r ON ur.id_role = r.id_role
-		    GROUP BY ur.id_utilisateur
-		) r ON r.id_utilisateur = u.id_utilisateur
 		WHERE u.id_utilisateur = $1`, userID).Scan(
 		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise, &totpSecretPtr, &u.TotpEnabled,

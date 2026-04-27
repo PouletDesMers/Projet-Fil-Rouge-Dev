@@ -33,6 +33,7 @@ func Register(r *mux.Router) {
 	r.HandleFunc("/api/public/products/{slug}", handlers.GetActiveProduitsByCategory).Methods("GET")
 	r.HandleFunc("/api/public/search", handlers.SearchProduits).Methods("GET")
 	r.HandleFunc("/api/public/top-products", handlers.GetTopProductsLast3Months).Methods("GET")
+	r.HandleFunc("/api/public/contact", handlers.CreateTicketSupport).Methods("POST")
 
 	// ── Categories ─────────────────────────────────────────────────────────────
 	r.Handle("/api/categories", auth(http.HandlerFunc(handlers.GetCategories))).Methods("GET")

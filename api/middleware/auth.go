@@ -20,15 +20,7 @@ func Auth(next http.Handler) http.Handler {
 		var userID int
 		var role string
 		err := config.DB.QueryRow(`
-			SELECT u.id_utilisateur,
-				   COALESCE((
-					   SELECT LOWER(r.nom)
-					   FROM user_roles ur
-					   JOIN roles r ON ur.id_role = r.id_role
-					   WHERE ur.id_utilisateur = u.id_utilisateur
-					   ORDER BY r.id_role
-					   LIMIT 1
-				   ), '')
+			SELECT u.id_utilisateur, COALESCE(LOWER(u.role), 'client')
 			FROM session_utilisateur s
 			JOIN utilisateur u ON s.id_utilisateur = u.id_utilisateur
 			WHERE s.token_session = $1

@@ -37,8 +37,9 @@ export default function ContactScreen() {
     setIsLoading(true);
     try {
       const payload: Record<string, string> = { subject, message };
+      const endpoint = isAuthenticated ? '/api/tickets' : '/api/public/contact';
       if (!isAuthenticated) payload.email = email.trim();
-      await api.post('/api/tickets', payload);
+      await api.post(endpoint, payload);
       Alert.alert(
         'Message envoyé',
         'Notre équipe vous répondra dans les plus brefs délais.',
