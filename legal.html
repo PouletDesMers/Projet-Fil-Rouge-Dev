@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Mentions Légales</title>
+
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .legal-hero {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.95),
+          rgba(86, 16, 192, 0.85)
+        );
+        padding: 80px 20px;
+        color: white;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 60px;
+      }
+
+      .legal-hero h1 {
+        font-size: 2.8rem;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+
+      .legal-hero p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .legal-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      .legal-nav {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 12px rgba(17, 24, 39, 0.06);
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+      }
+
+      .legal-nav h3 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--cyna-dark);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .legal-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .legal-nav a {
+        color: var(--cyna-primary);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 12px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+      }
+
+      .legal-nav a:hover {
+        background: rgba(86, 16, 192, 0.1);
+        color: var(--cyna-accent);
+      }
+
+      .legal-section {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      }
+
+      .legal-section-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--cyna-dark);
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 3px solid var(--cyna-primary);
+        display: inline-block;
+      }
+
+      .legal-section h3 {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--cyna-dark);
+        margin-top: 24px;
+        margin-bottom: 12px;
+      }
+
+      .legal-section h3:first-of-type {
+        margin-top: 0;
+      }
+
+      .legal-section p {
+        color: var(--cyna-text-muted);
+        line-height: 1.8;
+        margin-bottom: 16px;
+        font-size: 0.95rem;
+      }
+
+      .legal-section ul {
+        color: var(--cyna-text-muted);
+        line-height: 1.8;
+        margin-bottom: 16px;
+        font-size: 0.95rem;
+        margin-left: 20px;
+      }
+
+      .legal-section li {
+        margin-bottom: 8px;
+      }
+
+      .legal-section strong {
+        color: var(--cyna-dark);
+      }
+
+      .legal-contact {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.05),
+          rgba(86, 16, 192, 0.05)
+        );
+        border-left: 4px solid var(--cyna-primary);
+        padding: 24px;
+        border-radius: 8px;
+        margin: 40px 0;
+      }
+
+      .legal-contact h3 {
+        margin-top: 0;
+      }
+
+      .legal-contact p {
+        margin: 8px 0;
+      }
+
+      .legal-contact a {
+        color: var(--cyna-primary);
+        text-decoration: none;
+      }
+
+      .legal-contact a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 768px) {
+        .legal-section {
+          padding: 20px;
+        }
+
+        .legal-hero h1 {
+          font-size: 2rem;
+        }
+
+        .legal-section-title {
+          font-size: 1.4rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- NAVBAR -->
+    <div id="navbar-container"></div>
+
+    <div id="appRoot" class="app-root">
+      <div class="legal-container">
+        <!-- Hero Section -->
+        <div class="legal-hero">
+          <h1 data-i18n="legal.title">Informations Légales</h1>
+          <p data-i18n="legal.subtitle">
+            Retrouvez ici l'ensemble des documents légaux et réglementaires relatifs à l'utilisation de CYNA.
+          </p>
+        </div>
+
+        <!-- Navigation Table of Contents -->
+        <div class="legal-nav">
+          <h3 data-i18n="legal.nav_title">Navigation Rapide</h3>
+          <ul>
+            <li><a href="#terms" data-i18n="legal.nav_terms">Conditions d'utilisation</a></li>
+            <li><a href="#privacy" data-i18n="legal.nav_privacy">Politique de confidentialité</a></li>
+            <li><a href="#cookies" data-i18n="legal.nav_cookies">Politique de cookies</a></li>
+            <li><a href="#notice" data-i18n="legal.nav_notice">Mentions légales</a></li>
+          </ul>
+        </div>
+
+        <!-- Conditions d'utilisation -->
+        <div class="legal-section" id="terms">
+          <h2 class="legal-section-title" data-i18n="legal.terms_title">Conditions d'utilisation</h2>
+
+          <h3 data-i18n="legal.terms_section1">1. Acceptation des conditions</h3>
+          <p data-i18n="legal.terms_content1">
+            En accédant et en utilisant la plateforme CYNA, vous acceptez pleinement les conditions d'utilisation présentes. Si vous n'acceptez pas ces conditions, veuillez cesser l'utilisation immédiatement.
+          </p>
+
+          <h3 data-i18n="legal.terms_section2">2. Utilisation acceptable</h3>
+          <p data-i18n="legal.terms_content2">
+            Vous acceptez d'utiliser CYNA uniquement à des fins légales et en conformité avec toutes les lois applicables. Vous vous engagez notamment à ne pas :
+          </p>
+          <ul>
+            <li data-i18n="legal.terms_item1">Harceler ou causer des préjudices à d'autres utilisateurs</li>
+            <li data-i18n="legal.terms_item2">Transmettre du contenu offensant, illégal ou contraire à l'ordre public</li>
+            <li data-i18n="legal.terms_item3">Tenter d'accéder à des données sans autorisation</li>
+            <li data-i18n="legal.terms_item4">Interférer avec le fonctionnement du service</li>
+          </ul>
+
+          <h3 data-i18n="legal.terms_section3">3. Propriété intellectuelle</h3>
+          <p data-i18n="legal.terms_content3">
+            Tous les contenus présents sur CYNA, incluant textes, images, logos et code, sont la propriété exclusive de CYNA ou de ses partenaires. Toute reproduction, distribution ou utilisation sans autorisation est interdite.
+          </p>
+
+          <h3 data-i18n="legal.terms_section4">4. Limitation de responsabilité</h3>
+          <p data-i18n="legal.terms_content4">
+            CYNA est fourni "en l'état". Bien que nous nous efforcions de maintenir un service de qualité, CYNA décline toute responsabilité en cas de dommages directs ou indirects résultant de l'utilisation ou de l'incapacité à utiliser le service.
+          </p>
+
+          <div class="legal-contact">
+            <h3 data-i18n="legal.contact_title">Des questions ?</h3>
+            <p>
+              <strong data-i18n="legal.email">Email :</strong> <a href="mailto:legal@cyna.com">legal@cyna.com</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Politique de confidentialité -->
+        <div class="legal-section" id="privacy">
+          <h2 class="legal-section-title" data-i18n="legal.privacy_title">Politique de Confidentialité</h2>
+
+          <h3 data-i18n="legal.privacy_section1">1. Données collectées</h3>
+          <p data-i18n="legal.privacy_content1">
+            CYNA collecte les données suivantes pour améliorer ses services :
+          </p>
+          <ul>
+            <li data-i18n="legal.privacy_item1">Informations de compte (nom, email, adresse)</li>
+            <li data-i18n="legal.privacy_item2">Données de navigation (adresse IP, cookies, pages visitées)</li>
+            <li data-i18n="legal.privacy_item3">Informations de sécurité (logs d'accès, tentatives de connexion)</li>
+          </ul>
+
+          <h3 data-i18n="legal.privacy_section2">2. Utilisation des données</h3>
+          <p data-i18n="legal.privacy_content2">
+            Vos données sont utilisées pour :
+          </p>
+          <ul>
+            <li data-i18n="legal.privacy_item4">Fournir et améliorer nos services</li>
+            <li data-i18n="legal.privacy_item5">Assurer la sécurité de votre compte</li>
+            <li data-i18n="legal.privacy_item6">Vous envoyer des communications importantes</li>
+            <li data-i18n="legal.privacy_item7">Respecter les obligations légales</li>
+          </ul>
+
+          <h3 data-i18n="legal.privacy_section3">3. Protection des données</h3>
+          <p data-i18n="legal.privacy_content3">
+            CYNA emploie les mesures de sécurité les plus avancées pour protéger vos données personnelles contre l'accès non autorisé, l'altération ou la destruction. Nous utilisons le chiffrement SSL/TLS et respectons les normes de sécurité internationales.
+          </p>
+
+          <h3 data-i18n="legal.privacy_section4">4. Partage des données</h3>
+          <p data-i18n="legal.privacy_content4">
+            CYNA ne partage vos données avec des tiers que si nécessaire pour fournir nos services ou si requis par la loi. Nous n'effectuons jamais de vente de données personnelles.
+          </p>
+
+          <h3 data-i18n="legal.privacy_section5">5. Vos droits</h3>
+          <p data-i18n="legal.privacy_content5">
+            Vous avez le droit d'accéder, corriger ou supprimer vos données personnelles. Pour exercer ces droits, contactez-nous à l'adresse mentionnée ci-dessous.
+          </p>
+
+          <div class="legal-contact">
+            <h3 data-i18n="legal.contact_title">Des questions sur vos données ?</h3>
+            <p>
+              <strong data-i18n="legal.email">Email :</strong> <a href="mailto:privacy@cyna.com">privacy@cyna.com</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Politique de cookies -->
+        <div class="legal-section" id="cookies">
+          <h2 class="legal-section-title" data-i18n="legal.cookies_title">Politique de Cookies</h2>
+
+          <h3 data-i18n="legal.cookies_section1">1. Qu'est-ce qu'un cookie ?</h3>
+          <p data-i18n="legal.cookies_content1">
+            Un cookie est un petit fichier texte stocké sur votre appareil et utilisé pour mémoriser vos préférences et améliorer votre expérience utilisateur.
+          </p>
+
+          <h3 data-i18n="legal.cookies_section2">2. Types de cookies utilisés</h3>
+          <p data-i18n="legal.cookies_content2">
+            CYNA utilise les types de cookies suivants :
+          </p>
+          <ul>
+            <li data-i18n="legal.cookies_item1"><strong>Cookies essentiels</strong> : Nécessaires au fonctionnement du site</li>
+            <li data-i18n="legal.cookies_item2"><strong>Cookies de performance</strong> : Analysent l'utilisation du site</li>
+            <li data-i18n="legal.cookies_item3"><strong>Cookies de préférence</strong> : Mémorisent vos choix (langue, thème)</li>
+            <li data-i18n="legal.cookies_item4"><strong>Cookies marketing</strong> : Utilisés pour les annonces personnalisées</li>
+          </ul>
+
+          <h3 data-i18n="legal.cookies_section3">3. Gestion des cookies</h3>
+          <p data-i18n="legal.cookies_content3">
+            Vous pouvez contrôler et supprimer les cookies via les paramètres de votre navigateur. Notez que désactiver certains cookies peut affecter le fonctionnement de CYNA.
+          </p>
+
+          <h3 data-i18n="legal.cookies_section4">4. Cookies de tiers</h3>
+          <p data-i18n="legal.cookies_content4">
+            CYNA peut utiliser des services de tiers (Google Analytics, etc.) qui placent leurs propres cookies. Consultez la politique de confidentialité de ces services pour plus d'informations.
+          </p>
+
+          <div class="legal-contact">
+            <h3 data-i18n="legal.contact_title">Questions sur les cookies ?</h3>
+            <p>
+              <strong data-i18n="legal.email">Email :</strong> <a href="mailto:privacy@cyna.com">privacy@cyna.com</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Mentions légales -->
+        <div class="legal-section" id="notice">
+          <h2 class="legal-section-title" data-i18n="legal.notice_title">Mentions Légales</h2>
+
+          <h3 data-i18n="legal.notice_section1">1. Éditeur du site</h3>
+          <p>
+            <strong>Nom :</strong> CYNA<br>
+            <strong data-i18n="legal.notice_siret">SIRET :</strong> À compléter<br>
+            <strong data-i18n="legal.notice_address">Adresse :</strong> 123 Rue de la Cybersécurité, 75000 Paris, France<br>
+            <strong data-i18n="legal.notice_phone">Téléphone :</strong> +33 1 23 45 67 89<br>
+            <strong data-i18n="legal.notice_email_contact">Email :</strong> <a href="mailto:contact@cyna.com">contact@cyna.com</a>
+          </p>
+
+          <h3 data-i18n="legal.notice_section2">2. Directeur de publication</h3>
+          <p data-i18n="legal.notice_content2">
+            Riantsoa RAMANAMPAMONJY
+          </p>
+
+          <h3 data-i18n="legal.notice_section3">3. Hébergement</h3>
+          <p>
+            <strong data-i18n="legal.notice_hoster">Hébergeur :</strong> Docker/Kubernetes<br>
+            <strong data-i18n="legal.notice_hoster_address">Adresse :</strong> À compléter
+          </p>
+
+          <h3 data-i18n="legal.notice_section4">4. Création du site</h3>
+          <p data-i18n="legal.notice_content4">
+            Développement et design par :
+          </p>
+          <ul>
+            <li>Riantsoa RAMANAMPAMONJY</li>
+            <li>Clément DROUAL</li>
+            <li>William DA SILVA FERREIRA BATISTA</li>
+            <li>Emmanouil STAVRAKAKIS</li>
+          </ul>
+
+          <h3 data-i18n="legal.notice_section5">5. Propriété intellectuelle</h3>
+          <p data-i18n="legal.notice_content5">
+            L'ensemble du contenu du site, incluant textes, images et code, sont la propriété de CYNA. Toute reproduction sans autorisation est interdite.
+          </p>
+
+          <h3 data-i18n="legal.notice_section6">6. Liens externes</h3>
+          <p data-i18n="legal.notice_content6">
+            CYNA ne peut être tenue responsable du contenu des sites externes auxquels renvoient les liens présents sur ce site.
+          </p>
+
+          <div class="legal-contact">
+            <h3 data-i18n="legal.contact_title">Nous contacter</h3>
+            <p>
+              <strong data-i18n="legal.notice_address">Adresse :</strong> 123 Rue de la Cybersécurité, 75000 Paris, France
+            </p>
+            <p>
+              <strong data-i18n="legal.notice_phone">Téléphone :</strong> <a href="tel:+33123456789">+33 1 23 45 67 89</a>
+            </p>
+            <p>
+              <strong data-i18n="legal.email">Email :</strong> <a href="mailto:contact@cyna.com">contact@cyna.com</a>
+            </p>
+          </div>
+        </div>
+
+        <div style="margin: 60px 0 0 0; padding-top: 40px; border-top: 1px solid var(--cyna-border); text-align: center; color: var(--cyna-text-muted); font-size: 0.9rem;">
+          <p data-i18n="legal.last_update">Dernière mise à jour : avril 2026</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer mt-5">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3 data-i18n="footer.about_title">À propos</h3>
+          <ul>
+            <li><a href="#" data-i18n="footer.about_cyna">À propos de CYNA</a></li>
+            <li><a href="/equipe.html" data-i18n="footer.team">Notre équipe</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.products_title">Produits</h3>
+          <ul>
+            <li><a href="/categories.html" data-i18n="footer.categories">Catégories</a></li>
+            <li><a href="#" data-i18n="footer.pricing">Tarification</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.support_title">Support</h3>
+          <ul>
+            <li><a href="/contact.html" data-i18n="footer.contact">Contactez-nous</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.legal_title">Légal</h3>
+          <ul>
+            <li><a href="/legal.html" data-i18n="footer.terms">Conditions d'utilisation</a></li>
+            <li><a href="/legal.html#privacy" data-i18n="footer.privacy">Politique de confidentialité</a></li>
+            <li><a href="/legal.html#cookies" data-i18n="footer.cookies">Politique de cookies</a></li>
+            <li><a href="/legal.html#notice" data-i18n="footer.legal_notice">Mentions légales</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p data-i18n="footer.copyright">
+          © 2026 CYNA. Tous droits réservés.
+        </p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- i18n d'abord -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- Scripts existants -->
+    <script src="js/navbar.js"></script>
+  </body>
+</html>
