@@ -22,10 +22,22 @@
 
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/auth.css" />
+    <link rel="stylesheet" href="/css/cookie-consent.css" />
   </head>
 
   <body>
     <div class="auth-container">
+      <div class="auth-lang-row">
+        <label for="languageSwitcher" class="visually-hidden">Language</label>
+        <select id="languageSwitcher" class="form-select w-auto lang-switcher auth-lang-switcher" aria-label="Language selector">
+          <option value="fr">FR</option>
+          <option value="en">EN</option>
+          <option value="es">ES</option>
+          <option value="ar">AR</option>
+          <option value="zh">ZH</option>
+        </select>
+      </div>
+
       <a href="/index.html" class="auth-logo">
         <img src="/img/cyna-logo.png" alt="Logo CYNA" height="32" />
         CYNA
@@ -43,22 +55,26 @@
       </div>
 
       <div class="auth-card">
-        <h1 class="auth-title" id="authTitle">Sign in</h1>
+        <h1 class="auth-title" id="authTitle" data-i18n="auth.sign_in">Sign in</h1>
+        <div class="small text-muted mb-3 text-center">
+          Les administrateurs disposent d'une <a href="/backend/login.html">connexion dédiée</a>.
+        </div>
 
         <!-- STEP 1: Email -->
         <form id="emailForm" class="step-fade">
           <div class="mb-3">
-            <label class="auth-label">Email or mobile phone number</label>
+            <label class="auth-label" data-i18n="auth.email_label">Email or mobile phone number</label>
             <input
               id="email"
               name="email"
               type="email"
               class="form-control"
               placeholder="Enter your email"
+              data-i18n-placeholder="auth.email_placeholder"
               required
             />
           </div>
-          <button class="btn btn-auth-primary" type="submit">Continue</button>
+          <button class="btn btn-auth-primary" type="submit" data-i18n="auth.continue">Continue</button>
           
           <div class="auth-legal">
             By continuing, you agree to CYNA's <a href="#" class="text-decoration-none">Conditions of Use</a> and <a href="#" class="text-decoration-none">Privacy Notice</a>.
@@ -83,7 +99,7 @@
           <div class="mb-3">
             <div class="d-flex justify-content-between">
               <label class="auth-label">Password</label>
-              <a href="/reset-password.html" class="small text-decoration-none">Forgot your password?</a>
+              <a href="/reset-password.html" class="small text-decoration-none" data-i18n="auth.forgot_password">Forgot your password?</a>
             </div>
             <div class="password-container">
               <input
@@ -99,21 +115,21 @@
             </div>
           </div>
 
-          <button class="btn btn-auth-primary mb-3" type="submit">Sign in</button>
+          <button class="btn btn-auth-primary mb-3" type="submit" data-i18n="auth.sign_in">Sign in</button>
           
           <div class="form-check">
             <input type="checkbox" class="form-check-input" id="rememberMe">
-            <label class="form-check-label small" for="rememberMe">Keep me signed in.</label>
+            <label class="form-check-label small" for="rememberMe" data-i18n="auth.keep_signed_in">Keep me signed in.</label>
           </div>
         </form>
 
         <!-- STEP 2C: 2FA (TOTP Step) -->
         <form id="twoFAForm" class="d-none step-fade">
-          <h1 class="auth-title">Two-Step Verification</h1>
-          <p class="small">Enter the 6-digit code from your authenticator app.</p>
+          <h1 class="auth-title" data-i18n="auth.two_step_title">Two-Step Verification</h1>
+          <p class="small" data-i18n="auth.two_step_desc">Enter the 6-digit code from your authenticator app.</p>
           
           <div class="mb-3">
-            <label class="auth-label">Enter code</label>
+            <label class="auth-label" data-i18n="auth.enter_code">Enter code</label>
             <input
               id="totpCodeInput"
               name="totpCode"
@@ -127,26 +143,26 @@
             />
           </div>
           
-          <button class="btn btn-auth-primary mb-3" type="submit">Verify and Sign in</button>
+          <button class="btn btn-auth-primary mb-3" type="submit" data-i18n="auth.verify_sign_in">Verify and Sign in</button>
           
           <div class="form-check mb-2">
             <input type="checkbox" class="form-check-input" id="trustDevice">
             <label class="form-check-label small" for="trustDevice">Don't ask for codes on this device</label>
           </div>
           
-          <a href="#" id="backToLogin" class="small text-decoration-none">Back to password</a>
+          <a href="#" id="backToLogin" class="small text-decoration-none" data-i18n="auth.back_to_password">Back to password</a>
         </form>
 
         <!-- STEP 2B: Inscription (Register) -->
         <form id="registerForm" class="d-none step-fade">
-          <div class="auth-title">Create account</div>
+          <div class="auth-title" data-i18n="auth.create_account">Create account</div>
           
           <div class="mb-2">
-            <label class="auth-label">First name</label>
+            <label class="auth-label" data-i18n="auth.first_name">First name</label>
             <input name="firstName" class="form-control" required />
           </div>
           <div class="mb-2">
-            <label class="auth-label">Last name</label>
+            <label class="auth-label" data-i18n="auth.last_name">Last name</label>
             <input name="lastName" class="form-control" required />
           </div>
           <div class="mb-2">
@@ -155,7 +171,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="auth-label">Password</label>
+            <label class="auth-label" data-i18n="auth.password">Password</label>
             <div class="password-container">
               <input
                 id="regPassword"
@@ -174,7 +190,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="auth-label">Re-enter password</label>
+            <label class="auth-label" data-i18n="auth.reenter_password">Re-enter password</label>
             <div class="password-container">
               <input
                 id="regPassword2"
@@ -188,7 +204,7 @@
             </div>
           </div>
 
-          <button class="btn btn-auth-primary" type="submit">Create your CYNA account</button>
+          <button class="btn btn-auth-primary" type="submit" data-i18n="auth.create_account_btn">Create your CYNA account</button>
           
           <div class="auth-legal">
             By creating an account, you agree to CYNA's <a href="#">Conditions of Use & Sale</a> and <a href="#">Privacy Notice</a>.
@@ -203,12 +219,14 @@
 
       <!-- New to Amazon (New to CYNA)? -->
       <div id="newToCyna" class="text-center">
-        <div class="auth-divider">New to CYNA?</div>
-        <a href="#" id="createAccountBtn" class="btn btn-auth-secondary">Create your CYNA account</a>
+        <div class="auth-divider" data-i18n="auth.new_to_cyna">New to CYNA?</div>
+        <a href="#" id="createAccountBtn" class="btn btn-auth-secondary" data-i18n="auth.create_account_btn">Create your CYNA account</a>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/main.js"></script>
     <script src="js/auth.js"></script>
+    <script src="/js/cookie-consent.js"></script>
   </body>
 </html>

@@ -5,6 +5,8 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios = require('axios');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
+const XLSX = require('xlsx');
+const { parse } = require('csv-parse/sync');
 const { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminNotification, sendNewsletterEmail } = require('./backend/js/modules/email');
 const { generateResetToken, saveResetToken, validateResetToken, markTokenAsUsed } = require('./backend/js/modules/reset-tokens');
 const app = express();
@@ -26,8 +28,13 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Seules les images sont acceptées'), false);
+    else cb(new Error('Seules les images sont acceptees'), false);
   }
+});
+
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB max for CSV/XLSX
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,9 +75,13 @@ async function checkAdminAuth(req, res, next) {
     const token = getAuthToken(req);
     
     if (!token) {
-      // For HTML pages, redirect to auth page
+      // Allow the dedicated backend login page without authentication
+      if (req.path === '/login.html' || req.path === '/login') {
+        return next();
+      }
+      // For HTML pages, redirect to the backend login page
       if (req.path.endsWith('.html') || req.path === '/backend' || req.path === '/backend/') {
-        return res.redirect('/auth.html?redirect=/backend/');
+        return res.redirect('/backend/login.html?redirect=/backend/');
       }
       // For API/JSON requests, return JSON error
       return res.status(401).json({ error: 'No authorization token provided' });
@@ -87,9 +98,9 @@ async function checkAdminAuth(req, res, next) {
     
     // Check if user is admin
     if (!userProfile || userProfile.role !== 'admin') {
-      // For HTML pages, redirect to auth page with error
+      // For HTML pages, redirect to the backend login page with error
       if (req.path.endsWith('.html') || req.path === '/backend' || req.path === '/backend/') {
-        return res.redirect('/auth.html?error=admin_required');
+        return res.redirect('/backend/login.html?error=admin_required');
       }
       return res.status(403).json({ error: 'Admin access required' });
     }
@@ -101,7 +112,7 @@ async function checkAdminAuth(req, res, next) {
     console.error('Auth check failed:', error.message);
     // For HTML pages, redirect to auth page
     if (req.path.endsWith('.html') || req.path === '/backend' || req.path === '/backend/') {
-      return res.redirect('/auth.html?error=unauthorized');
+      return res.redirect('/backend/login.html?error=unauthorized');
     }
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -180,6 +191,7 @@ app.post('/auth/login', async (req, res) => {
       return res.json({
         success: true,
         user: userProfile,
+        password_needs_change: !!data.password_needs_change,
         message: data.message || 'Login successful'
       });
     }
@@ -503,7 +515,7 @@ function proxyToApiWithAuth(endpoint) {
       
       // Construire l'URL et les headers pour l'API
       let url = `http://api:8080/api${endpoint}`;
-      const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { 'Authorization': `Bearer ${token}`, 'X-Admin-Panel': 'true' };
       
       // Remplacer les paramètres dans l'URL
       Object.keys(req.params).forEach(param => {
@@ -548,6 +560,7 @@ function proxyToApiWithAuth(endpoint) {
 
 // Routes admin protégées - Panel d'administration uniquement
 app.get('/admin/api/users', proxyToApiWithAuth('/users'));
+app.post('/admin/api/users', proxyToApiWithAuth('/users'));
 app.get('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.put('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
 app.delete('/admin/api/users/:id', proxyToApiWithAuth('/users/:id'));
@@ -566,6 +579,191 @@ app.get('/admin/api/products', proxyToApiWithAuth('/web-products'));
 app.post('/admin/api/products', proxyToApiWithAuth('/web-products'));
 app.put('/admin/api/products/:id', proxyToApiWithAuth('/web-products/:id'));
 app.delete('/admin/api/products/:id', proxyToApiWithAuth('/web-products/:id'));
+
+function normalizeBool(value) {
+  if (typeof value === 'boolean') return value;
+  if (value == null || value === '') return true;
+  const v = String(value).trim().toLowerCase();
+  return ['1', 'true', 'oui', 'yes', 'y'].includes(v);
+}
+
+function normalizeImages(value) {
+  if (!value) return '[]';
+
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.filter(Boolean));
+  }
+
+  const str = String(value).trim();
+  if (!str) return '[]';
+
+  if (str.startsWith('[')) {
+    try {
+      const arr = JSON.parse(str);
+      return JSON.stringify(Array.isArray(arr) ? arr.filter(Boolean) : []);
+    } catch (_err) {
+      return '[]';
+    }
+  }
+
+  const arr = str.split('|').map((s) => s.trim()).filter(Boolean);
+  return JSON.stringify(arr);
+}
+
+function normalizeDecimal(value) {
+  if (value === '' || value == null) return null;
+  const n = Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeInt(value) {
+  if (value === '' || value == null) return null;
+  const n = parseInt(value, 10);
+  return Number.isInteger(n) ? n : null;
+}
+
+function parseImportFile(file) {
+  const ext = (file.originalname || '').toLowerCase();
+
+  if (ext.endsWith('.csv')) {
+    const content = file.buffer.toString('utf8');
+    return parse(content, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true
+    });
+  }
+
+  if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) return [];
+    return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+  }
+
+  throw new Error('Format non supporte. Utilisez CSV, XLSX ou XLS.');
+}
+
+app.post('/admin/api/products/import', checkAdminAuth, importUpload.single('file'), async (req, res) => {
+  const token = getAuthToken(req);
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier recu.' });
+    }
+
+    const rows = parseImportFile(req.file);
+    const mode = req.body.mode || 'upsert';
+    const categoryMode = req.body.categoryMode || 'file';
+    const forcedCategoryId = normalizeInt(req.body.forcedCategoryId);
+
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const listResponse = await axios.get('http://api:8080/api/web-products', { headers });
+    const existingProducts = Array.isArray(listResponse.data) ? listResponse.data : [];
+
+    const keyFor = (slug, idCategorie) => `${String(slug).trim().toLowerCase()}::${idCategorie}`;
+    const bySlugAndCategory = new Map();
+    existingProducts.forEach((p) => {
+      if (p && p.slug && p.id_categorie) {
+        bySlugAndCategory.set(keyFor(p.slug, p.id_categorie), p);
+      }
+    });
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] || {};
+      const line = i + 2;
+
+      const nom = String(row.nom || '').trim();
+      const slug = String(row.slug || '').trim();
+
+      if (!nom || !slug) {
+        skipped++;
+        errors.push(`Ligne ${line}: nom ou slug manquant.`);
+        continue;
+      }
+
+      const rowCategory = normalizeInt(row.id_categorie);
+      const idCategorie = categoryMode === 'current' ? forcedCategoryId : rowCategory;
+
+      if (!idCategorie) {
+        skipped++;
+        errors.push(`Ligne ${line}: id_categorie manquant.`);
+        continue;
+      }
+
+      const payload = {
+        nom,
+        slug,
+        description_courte: row.description_courte || null,
+        description_longue: row.description_longue || null,
+        description_html: row.description_html || null,
+        images: normalizeImages(row.images),
+        prix: normalizeDecimal(row.prix),
+        devise: (row.devise || 'EUR').toString().trim().toUpperCase(),
+        duree: row.duree || 'mois',
+        id_categorie: idCategorie,
+        tag: row.tag || 'Standard',
+        statut: row.statut || 'Disponible',
+        type_achat: row.type_achat || 'panier',
+        ordre_affichage: normalizeInt(row.ordre_affichage) ?? 0,
+        actif: normalizeBool(row.actif)
+      };
+
+      const key = keyFor(payload.slug, payload.id_categorie);
+      const existing = bySlugAndCategory.get(key);
+
+      try {
+        if (mode === 'insert') {
+          if (existing) {
+            skipped++;
+            errors.push(`Ligne ${line}: produit deja existant pour ce slug/categorie.`);
+            continue;
+          }
+
+          const createResp = await axios.post('http://api:8080/api/web-products', payload, { headers });
+          created++;
+          bySlugAndCategory.set(key, createResp.data || payload);
+          continue;
+        }
+
+        if (existing && existing.id_produit) {
+          await axios.put(`http://api:8080/api/web-products/${existing.id_produit}`, {
+            ...existing,
+            ...payload
+          }, { headers });
+          updated++;
+          bySlugAndCategory.set(key, { ...existing, ...payload });
+        } else {
+          const createResp = await axios.post('http://api:8080/api/web-products', payload, { headers });
+          created++;
+          bySlugAndCategory.set(key, createResp.data || payload);
+        }
+      } catch (err) {
+        skipped++;
+        const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+        errors.push(`Ligne ${line}: ${detail}`);
+      }
+    }
+
+    return res.json({
+      success: true,
+      created,
+      updated,
+      skipped,
+      errors
+    });
+  } catch (err) {
+    console.error('Erreur import produits:', err);
+    return res.status(500).json({
+      message: err.message || 'Erreur serveur pendant l\'import.'
+    });
+  }
+});
 
 app.get('/admin/api/carousel-images', proxyToApiWithAuth('/carousel-images'));
 app.post('/admin/api/carousel-images', proxyToApiWithAuth('/carousel-images'));
@@ -1367,6 +1565,14 @@ app.get('/health', (req, res) => {
 // OpenAPI spec endpoint - admin only, but served separately for Swagger UI
 app.get('/backend/openapi.json', checkAdminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'backend', 'openapi.json'));
+});
+
+// Dedicated admin login page
+app.get('/backend/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'backend', 'login.html'));
+});
+app.get('/backend/login', (req, res) => {
+  res.redirect('/backend/login.html');
 });
 
 // Backend route - admin only

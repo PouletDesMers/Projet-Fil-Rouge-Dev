@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  applySavedTheme();
   const navbarContainer = document.getElementById("navbar-container");
   if (!navbarContainer) return;
 
@@ -12,6 +13,95 @@ document.addEventListener("DOMContentLoaded", () => {
       document.dispatchEvent(new CustomEvent("navbarLoaded"));
     })
     .catch((err) => console.error("Error loading navbar:", err));
+});
+
+function applyTheme(theme) {
+  const normalizedTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = normalizedTheme;
+  localStorage.setItem("theme", normalizedTheme);
+  updateThemeToggle(normalizedTheme);
+}
+
+function applySavedTheme() {
+  const savedTheme = localStorage.getItem("theme") || "light";
+  document.documentElement.dataset.theme = savedTheme;
+  updateThemeToggle(savedTheme);
+}
+
+function syncLanguageButtons(language) {
+  const languageMap = {
+    fr: { flag: "🇫🇷", code: "FR" },
+    en: { flag: "🇬🇧", code: "EN" },
+    es: { flag: "🇪🇸", code: "ES" },
+    ar: { flag: "🇸🇦", code: "AR" },
+    zh: { flag: "🇨🇳", code: "ZH" },
+  };
+
+  const current = languageMap[language] || languageMap.fr;
+  const flag = document.getElementById("currentLangFlag");
+  const code = document.getElementById("currentLangCode");
+
+  if (flag) flag.textContent = current.flag;
+  if (code) code.textContent = current.code;
+
+  document.querySelectorAll(".language-option").forEach((button) => {
+    const isActive = button.getAttribute("data-language") === language;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function bindLanguageMenu() {
+  const languageButtons = document.querySelectorAll(".language-option");
+  if (!languageButtons.length) return;
+
+  const savedLanguage = localStorage.getItem("language") || "fr";
+  syncLanguageButtons(savedLanguage);
+
+  languageButtons.forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      const language = button.getAttribute("data-language") || "fr";
+      syncLanguageButtons(language);
+      document.dispatchEvent(new CustomEvent("app:set-language", { detail: { language } }));
+    });
+  });
+}
+
+function updateThemeToggle(theme) {
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+  if (!themeToggleBtn) return;
+
+  const icon = themeToggleBtn.querySelector("i");
+  const text = themeToggleBtn.querySelector(".theme-toggle-text");
+
+  if (theme === "dark") {
+    themeToggleBtn.setAttribute("aria-label", "Activer le mode clair");
+    if (icon) icon.className = "bi bi-sun-fill";
+    if (text) text.textContent = "Light";
+  } else {
+    themeToggleBtn.setAttribute("aria-label", "Activer le mode sombre");
+    if (icon) icon.className = "bi bi-moon-stars";
+    if (text) text.textContent = "Dark";
+  }
+}
+
+document.addEventListener("navbarLoaded", () => {
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+  if (!themeToggleBtn || themeToggleBtn.dataset.bound === "true") {
+    bindLanguageMenu();
+    return;
+  }
+
+  themeToggleBtn.dataset.bound = "true";
+  themeToggleBtn.addEventListener("click", () => {
+    const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    applyTheme(currentTheme === "dark" ? "light" : "dark");
+  });
+
+  updateThemeToggle(document.documentElement.dataset.theme || "light");
+  bindLanguageMenu();
 });
 
 // Helper functions for cookies
@@ -117,3 +207,20 @@ function initializeCartBadge() {
     updateCartBadge();
   }
 }
+
+function ensureCookieConsentAssets() {
+  if (!document.querySelector('link[href="/css/cookie-consent.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/css/cookie-consent.css';
+    document.head.appendChild(link);
+  }
+
+  if (!document.querySelector('script[src="/js/cookie-consent.js"]')) {
+    const script = document.createElement('script');
+    script.src = '/js/cookie-consent.js';
+    document.body.appendChild(script);
+  }
+}
+
+ensureCookieConsentAssets();

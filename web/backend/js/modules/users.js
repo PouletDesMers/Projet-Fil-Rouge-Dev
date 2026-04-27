@@ -17,96 +17,122 @@ function apiFetch(url, options = {}) {
   return fetch(url, { credentials: 'include', headers: { ...getAuthHeaders(withJson), ...options.headers }, ...options });
 }
 
+function normalizeUserRole(user) {
+  return String(user?.role || '').toLowerCase();
+}
+
+function filterUsersByCurrentTab(users) {
+  if (currentUserFilter === 'admins') {
+    return users.filter(user => normalizeUserRole(user) === 'admin');
+  }
+  if (currentUserFilter === 'users') {
+    return users.filter(user => normalizeUserRole(user) !== 'admin');
+  }
+  return users;
+}
+
 let availableRolesCache = null;
 let lastRolesFetch = 0;
 const ROLES_CACHE_TTL = 60 * 1000; // 1 minute
+let allUsersCache = [];
+let currentUserFilter = 'all';
 
 // Load users from API
 async function loadUsers() {
   try {
-
     const usersContainer = document.getElementById('usersContainer');
-
     usersContainer.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
 
     const response = await apiFetch('/admin/api/users');
-
     if (!response.ok) throw new Error('Erreur lors de la récupération des utilisateurs');
 
-    const users = await response.json();
+    allUsersCache = await response.json();
+    const filteredUsers = filterUsersByCurrentTab(allUsersCache);
 
-    if (!users || users.length === 0) {
-      usersContainer.innerHTML = '<div class="alert alert-info">Aucun utilisateur trouvé</div>';
-      return;
+    if (!filteredUsers || filteredUsers.length === 0) {
+      usersContainer.innerHTML = currentUserFilter === 'all'
+        ? '<div class="alert alert-info">Aucun utilisateur trouvé</div>'
+        : '<div class="alert alert-info">Aucun utilisateur dans cet onglet</div>';
+    } else {
+      const tableHTML = `
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Nom complet</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>2FA</th>
+                <th>Dernière connexion</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredUsers.map(user => `
+                <tr>
+                  <td><code>${user.id_utilisateur}</code></td>
+                  <td>
+                    <strong>${user.lastName} ${user.firstName || ''}</strong><br>
+                    <small class="text-muted">${user.status === 'actif' ? '<span class="badge bg-success">Vérifié</span>' : '<span class="badge bg-warning">Non vérifié</span>'}</small>
+                  </td>
+                  <td>${user.email}</td>
+                  <td>
+                    <span class="badge ${normalizeUserRole(user) === 'admin' ? 'bg-danger' : 'bg-primary'}">
+                      ${normalizeUserRole(user) === 'admin' ? 'Admin' : 'Utilisateur'}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge ${user.est_actif ? 'bg-success' : 'bg-secondary'}">
+                      ${user.est_actif ? 'Actif' : 'Inactif'}
+                    </span>
+                  </td>
+                  <td>
+                    ${user.totp_enabled ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-shield-x text-secondary"></i>'}
+                  </td>
+                  <td>
+                    <small>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('fr-FR') : 'Jamais'}</small>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button class="btn btn-outline-primary" onclick="AdminUsers.editUser(${user.id_utilisateur})">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-outline-secondary" onclick="AdminUsers.openUserAccessModal(${user.id_utilisateur})" title="Rôles & permissions">
+                        <i class="bi bi-shield-lock"></i>
+                      </button>
+                      <button class="btn btn-outline-${user.est_actif ? 'danger' : 'success'}" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, ${!user.est_actif})">
+                        <i class="bi bi-${user.est_actif ? 'pause' : 'play'}"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      usersContainer.innerHTML = tableHTML;
     }
 
-    // Build table
-    const tableHTML = `
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead class="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nom complet</th>
-              <th>Email</th>
-              <th>Rôle</th>
-              <th>Statut</th>
-              <th>2FA</th>
-              <th>Dernière connexion</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${users.map(user => `
-              <tr>
-                <td><code>${user.id_utilisateur}</code></td>
-                <td>
-                  <strong>${user.lastName} ${user.firstName || ''}</strong><br>
-                  <small class="text-muted">${user.status === 'actif' ? '<span class="badge bg-success">Vérifié</span>' : '<span class="badge bg-warning">Non vérifié</span>'}</small>
-                </td>
-                <td>${user.email}</td>
-                <td>
-                  <span class="badge ${user.role === 'admin' ? 'bg-danger' : 'bg-primary'}">
-                    ${user.role === 'admin' ? 'Admin' : 'User'}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge ${user.est_actif ? 'bg-success' : 'bg-secondary'}">
-                    ${user.est_actif ? 'Actif' : 'Inactif'}
-                  </span>
-                </td>
-                <td>
-                  ${user.totp_enabled ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-shield-x text-secondary"></i>'}
-                </td>
-                <td>
-                  <small>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('fr-FR') : 'Jamais'}</small>
-                </td>
-                <td>
-                  <div class="btn-group btn-group-sm" role="group">
-                    <button class="btn btn-outline-primary" onclick="AdminUsers.editUser(${user.id_utilisateur})">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="AdminUsers.openUserAccessModal(${user.id_utilisateur})" title="Rôles & permissions">
-                      <i class="bi bi-shield-lock"></i>
-                    </button>
-                    <button class="btn btn-outline-${user.est_actif ? 'danger' : 'success'}" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, ${!user.est_actif})">
-                      <i class="bi bi-${user.est_actif ? 'pause' : 'play'}"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
+    document.querySelectorAll('[data-user-filter]').forEach(button => {
+      button.classList.toggle('active', button.getAttribute('data-user-filter') === currentUserFilter);
+    });
 
-    usersContainer.innerHTML = tableHTML;
+    const totalUsers = allUsersCache.length;
+    const totalAdmins = allUsersCache.filter(user => normalizeUserRole(user) === 'admin').length;
+    const totalNormalUsers = totalUsers - totalAdmins;
 
-    // Update stats
-    document.getElementById('totalUsersCount').textContent = users.length;
-    document.getElementById('totalAdminsCount').textContent = users.filter(u => u.role === 'admin').length;
-
+    if (document.getElementById('totalUsersCount')) {
+      document.getElementById('totalUsersCount').textContent = totalUsers;
+    }
+    if (document.getElementById('totalAdminsCount')) {
+      document.getElementById('totalAdminsCount').textContent = totalAdmins;
+    }
+    if (document.getElementById('totalNormalUsersCount')) {
+      document.getElementById('totalNormalUsersCount').textContent = totalNormalUsers;
+    }
   } catch (error) {
     console.error('Erreur loadUsers:', error);
     document.getElementById('usersContainer').innerHTML = '<div class="alert alert-danger">Erreur de chargement</div>';
@@ -488,7 +514,84 @@ function setupRoleEventHandlers() {
   if (rolesList) rolesList.onclick = handleRoleRemovalClick;
 }
 
+function setupUserFilterHandlers() {
+  document.querySelectorAll('[data-user-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      currentUserFilter = button.getAttribute('data-user-filter') || 'all';
+      loadUsers();
+    });
+  });
+}
+
+function openCreateUserModal() {
+  const modalEl = document.getElementById('createUserModal');
+  if (!modalEl) return;
+
+  const firstName = document.getElementById('createUserFirstName');
+  const lastName = document.getElementById('createUserLastName');
+  const email = document.getElementById('createUserEmail');
+  const password = document.getElementById('createUserPassword');
+  const role = document.getElementById('createUserRole');
+  const status = document.getElementById('createUserStatus');
+
+  if (firstName) firstName.value = '';
+  if (lastName) lastName.value = '';
+  if (email) email.value = '';
+  if (password) password.value = '';
+  if (role) role.value = 'client';
+  if (status) status.checked = true;
+
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+async function createUser() {
+  try {
+    const payload = {
+      firstName: document.getElementById('createUserFirstName')?.value.trim() || '',
+      lastName: document.getElementById('createUserLastName')?.value.trim() || '',
+      email: document.getElementById('createUserEmail')?.value.trim() || '',
+      password: document.getElementById('createUserPassword')?.value || '',
+      role: 'admin',
+      status: 'actif',
+      password_needs_change: true
+    };
+
+    if (!payload.lastName || !payload.email || !payload.password) {
+      throw new Error('Nom, email et mot de passe provisoire sont requis');
+    }
+
+    const response = await apiFetch('/admin/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Panel': 'true' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Erreur ${response.status}`);
+    }
+
+    AdminUtils.showAlert('Compte créé avec succès', 'success');
+
+    const modalEl = document.getElementById('createUserModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    loadUsers();
+  } catch (error) {
+    console.error('Erreur createUser:', error);
+    AdminUtils.showAlert('Erreur: ' + error.message, 'danger');
+  }
+}
+
+function setupCreateUserHandlers() {
+  document.getElementById('createUserBtn')?.addEventListener('click', openCreateUserModal);
+  document.getElementById('saveCreateUserBtn')?.addEventListener('click', createUser);
+}
+
 setupRoleEventHandlers();
+setupUserFilterHandlers();
+setupCreateUserHandlers();
 
 // ── Rôles & Permissions (nouvelle expérience) ───────────────────────────────
 async function loadUserPermissions(userId) {

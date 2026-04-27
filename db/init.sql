@@ -151,6 +151,22 @@ CREATE INDEX IF NOT EXISTS idx_produits_slug              ON produits(slug);
 CREATE INDEX IF NOT EXISTS idx_produits_categorie         ON produits(id_categorie);
 CREATE INDEX IF NOT EXISTS idx_produits_categorie_actif   ON produits(id_categorie, actif, ordre_affichage);
 
+-- Keep date_modification in sync on every UPDATE.
+CREATE OR REPLACE FUNCTION update_date_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.date_modification = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_produits_date_modification ON produits;
+
+CREATE TRIGGER trg_produits_date_modification
+BEFORE UPDATE ON produits
+FOR EACH ROW
+EXECUTE FUNCTION update_date_modification();
+
 
 -- ============================================================
 -- 8. CATALOGUE — Tables legacy (compatibilité API existante)

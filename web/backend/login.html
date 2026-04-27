@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Connexion Admin</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at top left, rgba(118, 2, 249, 0.28), transparent 36%),
+          radial-gradient(circle at bottom right, rgba(53, 30, 144, 0.28), transparent 30%),
+          linear-gradient(135deg, #0f1020, #1a0e3d 45%, #120a2e);
+        color: #fff;
+      }
+      .admin-login-card {
+        width: min(100%, 460px);
+        background: rgba(255,255,255,0.96);
+        color: #111827;
+        border-radius: 20px;
+        box-shadow: 0 28px 80px rgba(0,0,0,0.45);
+        padding: 2rem;
+      }
+      .admin-login-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .35rem .8rem;
+        border-radius: 999px;
+        background: rgba(118, 2, 249, 0.12);
+        color: #7602F9;
+        font-weight: 700;
+        font-size: .82rem;
+        margin-bottom: 1rem;
+      }
+      .btn-admin {
+        background: linear-gradient(135deg, #5610C0, #7602F9);
+        color: #fff;
+        border: none;
+        font-weight: 700;
+      }
+      .btn-admin:hover { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <main class="admin-login-card">
+      <div class="admin-login-badge"><i class="bi bi-shield-lock-fill"></i> Accès administrateur</div>
+      <h1 class="h3 fw-bold mb-2">Connexion Back-office</h1>
+      <p class="text-muted mb-4">Connectez-vous avec un compte administrateur pour accéder au panneau d'administration.</p>
+
+      <div id="loginAlert" class="alert d-none" role="alert"></div>
+
+      <form id="adminLoginForm">
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input id="email" type="email" class="form-control" placeholder="admin@cyna.fr" required />
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">Mot de passe</label>
+          <input id="password" type="password" class="form-control" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-admin w-100">Se connecter</button>
+      </form>
+
+      <form id="forcePasswordForm" class="d-none">
+        <h2 class="h5 fw-bold mb-2">Nouveau mot de passe requis</h2>
+        <p class="text-muted mb-3">Première connexion détectée. Définissez un nouveau mot de passe pour continuer.</p>
+
+        <div class="mb-3">
+          <label for="newPassword" class="form-label">Nouveau mot de passe</label>
+          <input id="newPassword" type="password" class="form-control" minlength="8" required />
+        </div>
+        <div class="mb-3">
+          <label for="confirmNewPassword" class="form-label">Confirmer le mot de passe</label>
+          <input id="confirmNewPassword" type="password" class="form-control" minlength="8" required />
+        </div>
+
+        <button type="submit" class="btn btn-admin w-100">Mettre à jour le mot de passe</button>
+      </form>
+
+      <div class="small text-muted mt-3">
+        Les cookies de consentement sont désactivés sur le back-office.
+      </div>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get('redirect') || '/backend/';
+      const alertBox = document.getElementById('loginAlert');
+      const form = document.getElementById('adminLoginForm');
+      const forcePasswordForm = document.getElementById('forcePasswordForm');
+      const newPasswordInput = document.getElementById('newPassword');
+      const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+
+      let lastLoginPassword = '';
+
+      function showAlert(message, type = 'danger') {
+        alertBox.className = `alert alert-${type}`;
+        alertBox.textContent = message;
+        alertBox.classList.remove('d-none');
+      }
+
+      async function ensureAdmin() {
+        try {
+          const response = await fetch('/auth/profile', { credentials: 'include' });
+          if (!response.ok) return;
+          const user = await response.json();
+          if (user.role === 'admin') {
+            window.location.href = redirectTo;
+          }
+        } catch (_) {}
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        lastLoginPassword = password;
+
+        try {
+          const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || 'Connexion impossible');
+          }
+
+          const profileResponse = await fetch('/auth/profile', { credentials: 'include' });
+          if (!profileResponse.ok) {
+            throw new Error('Session invalide après connexion');
+          }
+
+          const user = await profileResponse.json();
+          if (user.role !== 'admin') {
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            throw new Error('Accès refusé : compte administrateur requis');
+          }
+
+          if (payload.password_needs_change) {
+            form.classList.add('d-none');
+            forcePasswordForm.classList.remove('d-none');
+            showAlert('Première connexion: vous devez définir un nouveau mot de passe.', 'warning');
+            return;
+          }
+
+          window.location.href = redirectTo;
+        } catch (error) {
+          showAlert(error.message || 'Erreur de connexion');
+        }
+      });
+
+      forcePasswordForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const nextPassword = (newPasswordInput.value || '').trim();
+        const nextPasswordConfirm = (confirmNewPasswordInput.value || '').trim();
+
+        if (nextPassword.length < 8) {
+          showAlert('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+          return;
+        }
+
+        if (nextPassword !== nextPasswordConfirm) {
+          showAlert('La confirmation du mot de passe ne correspond pas.');
+          return;
+        }
+
+        if (nextPassword === lastLoginPassword) {
+          showAlert('Le nouveau mot de passe doit être différent de l\'ancien.');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/user/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              ancienMotDePasse: lastLoginPassword,
+              motDePasse: nextPassword,
+            }),
+          });
+
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.error || payload.message || 'Impossible de mettre à jour le mot de passe');
+          }
+
+          showAlert('Mot de passe mis à jour. Redirection...', 'success');
+          setTimeout(() => {
+            window.location.href = redirectTo;
+          }, 700);
+        } catch (error) {
+          showAlert(error.message || 'Erreur lors de la mise à jour du mot de passe');
+        }
+      });
+
+      ensureAdmin();
+    </script>
+  </body>
+</html>

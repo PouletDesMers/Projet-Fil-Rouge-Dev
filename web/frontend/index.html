@@ -4,23 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CYNA — Accueil</title>
-    
-    <!-- Favicon -->
+
     <link rel="icon" type="image/png" href="img/favicon.png" />
     <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
-    <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <!-- Bootstrap Icons (loupe + panier) -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
 
-    <!-- Charte graphique -->
     <link rel="stylesheet" href="css/style.css" />
   </head>
 
@@ -36,13 +32,9 @@
           class="carousel slide"
           data-bs-ride="carousel"
         >
-          <div class="carousel-indicators" id="carouselIndicators">
-            <!-- Indicators will be loaded dynamically -->
-          </div>
+          <div class="carousel-indicators" id="carouselIndicators"></div>
 
-          <div class="carousel-inner shadow-sm" id="carouselInner">
-            <!-- Slides will be loaded dynamically -->
-          </div>
+          <div class="carousel-inner shadow-sm" id="carouselInner"></div>
 
           <button
             class="carousel-control-prev"
@@ -51,8 +43,9 @@
             data-bs-slide="prev"
           >
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
+            <span class="visually-hidden" data-i18n="common.previous">Previous</span>
           </button>
+
           <button
             class="carousel-control-next"
             type="button"
@@ -60,7 +53,7 @@
             data-bs-slide="next"
           >
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
+            <span class="visually-hidden" data-i18n="common.next">Next</span>
           </button>
         </div>
       </div>
@@ -68,8 +61,19 @@
       <div class="container my-4">
         <div class="card shadow-sm border-0" id="fixedTextCard">
           <div class="card-body">
-            <h2 class="h5 mb-2" id="fixedTextTitle">Bienvenue sur CYNA</h2>
-            <p class="mb-0 text-muted" id="fixedTextContent">
+            <h2
+              class="h5 mb-2"
+              id="fixedTextTitle"
+              data-i18n="home.welcome_title"
+            >
+              Bienvenue sur CYNA
+            </h2>
+
+            <p
+              class="mb-0 text-muted"
+              id="fixedTextContent"
+              data-i18n="home.welcome_content"
+            >
               Chargement...
             </p>
           </div>
@@ -78,7 +82,13 @@
 
       <!-- GRILLE DE CATÉGORIES -->
       <div class="container my-5">
-        <h2 class="mb-4 text-center" style="color: var(--cyna-dark);">Nos Catégories</h2>
+        <h2
+          class="mb-4 text-center"
+          style="color: var(--cyna-dark)"
+          data-i18n="home.categories_title"
+        >
+          Nos Catégories
+        </h2>
         <div class="categories-grid" id="categoriesGrid">
           <!-- Catégories chargées dynamiquement -->
         </div>
@@ -86,7 +96,13 @@
 
       <!-- TOP PRODUITS DU MOMENT -->
       <div class="container my-5">
-        <h2 class="mb-4 text-center" style="color: var(--cyna-dark);">Les Top Produits du Moment</h2>
+        <h2
+          class="mb-4 text-center"
+          style="color: var(--cyna-dark)"
+          data-i18n="home.top_products_title"
+        >
+          Les Top Produits du Moment
+        </h2>
         <div class="products-grid" id="topProductsGrid">
           <!-- Top produits chargés dynamiquement -->
         </div>
@@ -97,49 +113,59 @@
     <footer class="footer mt-5">
       <div class="footer-content">
         <div class="footer-section">
-          <h3>À propos</h3>
+          <h3 data-i18n="footer.about_title">À propos</h3>
           <ul>
-            <li><a href="#">À propos de CYNA</a></li>
-            <li><a href="#">Notre équipe</a></li>
-            <li><a href="#">Carrières</a></li>
-            <li><a href="#">Blog</a></li>
+            <li><a href="#" data-i18n="footer.about_cyna">À propos de CYNA</a></li>
+            <li><a href="#" data-i18n="footer.team">Notre équipe</a></li>
+            <li><a href="#" data-i18n="footer.careers">Carrières</a></li>
+            <li><a href="#" data-i18n="footer.blog">Blog</a></li>
           </ul>
         </div>
+
         <div class="footer-section">
-          <h3>Produits</h3>
+          <h3 data-i18n="footer.products_title">Produits</h3>
           <ul>
-            <li><a href="/categories.html">Catégories</a></li>
-            <li><a href="#">Tarification</a></li>
-            <li><a href="#">Comparaison</a></li>
-            <li><a href="#">Roadmap</a></li>
+            <li><a href="/categories.html" data-i18n="footer.categories">Catégories</a></li>
+            <li><a href="#" data-i18n="footer.pricing">Tarification</a></li>
+            <li><a href="#" data-i18n="footer.comparison">Comparaison</a></li>
+            <li><a href="#" data-i18n="footer.roadmap">Roadmap</a></li>
           </ul>
         </div>
+
         <div class="footer-section">
-          <h3>Support</h3>
+          <h3 data-i18n="footer.support_title">Support</h3>
           <ul>
-            <li><a href="#">Centre d'aide</a></li>
-            <li><a href="#">Documentation</a></li>
-            <li><a href="#">Contactez-nous</a></li>
-            <li><a href="#">Statut du service</a></li>
+            <li><a href="#" data-i18n="footer.help_center">Centre d'aide</a></li>
+            <li><a href="#" data-i18n="footer.documentation">Documentation</a></li>
+            <li><a href="#" data-i18n="footer.contact">Contactez-nous</a></li>
+            <li><a href="#" data-i18n="footer.status">Statut du service</a></li>
           </ul>
         </div>
+
         <div class="footer-section">
-          <h3>Légal</h3>
+          <h3 data-i18n="footer.legal_title">Légal</h3>
           <ul>
-            <li><a href="#">Conditions d'utilisation</a></li>
-            <li><a href="#">Politique de confidentialité</a></li>
-            <li><a href="#">Politique de cookies</a></li>
-            <li><a href="#">Mentions légales</a></li>
+            <li><a href="#" data-i18n="footer.terms">Conditions d'utilisation</a></li>
+            <li><a href="#" data-i18n="footer.privacy">Politique de confidentialité</a></li>
+            <li><a href="#" data-i18n="footer.cookies">Politique de cookies</a></li>
+            <li><a href="#" data-i18n="footer.legal_notice">Mentions légales</a></li>
           </ul>
         </div>
       </div>
+
       <div class="footer-bottom">
-        <p>&copy; 2026 CYNA. Tous droits réservés.</p>
+        <p data-i18n="footer.copyright">
+          © 2026 CYNA. Tous droits réservés.
+        </p>
       </div>
     </footer>
 
-    <!-- Bootstrap JS (dropdown + carousel) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- i18n d'abord -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- tes scripts existants -->
     <script src="js/navbar.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/carousel.js"></script>

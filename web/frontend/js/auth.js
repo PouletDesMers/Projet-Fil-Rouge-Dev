@@ -5,6 +5,14 @@ const DEBUG = true;
 
 const REMEMBER_KEY = "cyna_remember_email";
 
+function t(key, fallback) {
+  try {
+    return window.i18next ? window.i18next.t(key) : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 // Helper function to set cookie
 function setCookie(name, value, days = 30) {
   const date = new Date();
@@ -153,7 +161,7 @@ function showStep(step) {
 
   // Amazon specific: Title changes or disappears
   if (step === "email" || step === "login") {
-    authTitle.textContent = "Sign in";
+    authTitle.textContent = t("auth.sign_in", "Sign in");
     authTitle.classList.remove("d-none");
     newToCyna.classList.toggle("d-none", step === "login");
   } else if (step === "twofa") {
@@ -272,12 +280,12 @@ loginForm.addEventListener("submit", async (e) => {
 
   // Validation: ensure email is not empty
   if (!currentEmail || currentEmail.trim() === "") {
-    showMsg("danger", "Please enter your email address first.");
+    showMsg("danger", t("auth.email_required", "Please enter your email address first."));
     return;
   }
 
   if (!loginPassword.value || loginPassword.value.trim() === "") {
-    showMsg("danger", "Please enter your password.");
+    showMsg("danger", t("auth.password_required", "Please enter your password."));
     return;
   }
 
@@ -301,6 +309,22 @@ loginForm.addEventListener("submit", async (e) => {
     }
 
     if (result?.success) {
+      // Check if user is admin - block admin login on public page
+      try {
+        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include' });
+        if (profileRes.ok) {
+          const prof = await profileRes.json();
+          if (prof.role === 'admin') {
+            await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
+            showMsg("danger", "Les administrateurs doivent utiliser /backend/login.html");
+            setTimeout(() => { window.location.href = "/backend/login.html"; }, 1500);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Profile check error:", err);
+      }
+
       // Token is now stored in httpOnly cookie automatically by server
       // No need to store in localStorage anymore for security
       if (rememberMe?.checked) {
@@ -327,7 +351,7 @@ twoFAForm.addEventListener("submit", async (e) => {
   
   const code = totpCodeInput.value.trim();
   if (code.length !== 6) {
-    showMsg("danger", "Please enter a valid 6-digit code.");
+    showMsg("danger", t("auth.code_invalid", "Please enter a valid 6-digit code."));
     return;
   }
 
@@ -339,6 +363,22 @@ twoFAForm.addEventListener("submit", async (e) => {
     });
 
     if (result?.success) {
+      // Check if user is admin - block admin login on public page
+      try {
+        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include' });
+        if (profileRes.ok) {
+          const prof = await profileRes.json();
+          if (prof.role === 'admin') {
+            await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
+            showMsg("danger", "Les administrateurs doivent utiliser /backend/login.html");
+            setTimeout(() => { window.location.href = "/backend/login.html"; }, 1500);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Profile check error:", err);
+      }
+
       // Token stored in httpOnly cookie by server
       showMsg("success", "Connected ✅", "Success");
       setTimeout(() => (window.location.href = "/index.html"), 500);

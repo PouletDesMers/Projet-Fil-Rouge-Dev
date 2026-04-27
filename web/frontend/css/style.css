@@ -3,17 +3,41 @@
   --cyna-primary: #5610C0;
   --cyna-accent: #7602F9;
   --cyna-light: #EEEEEE;
+  --cyna-page-bg: #EEEEEE;
+  --cyna-surface: #FFFFFF;
+  --cyna-surface-alt: #F8FAFC;
+  --cyna-text: #111827;
+  --cyna-text-muted: #6B7280;
+  --cyna-border: rgba(17, 24, 39, 0.12);
+  --cyna-navbar-bg: #351E90;
+  --cyna-card-bg: #FFFFFF;
+  --cyna-link: #351E90;
+  --cyna-footer-bg: #1f2937;
+}
+
+html[data-theme="dark"] {
+  --cyna-page-bg: #111827;
+  --cyna-surface: #EEEEEE;
+  --cyna-surface-alt: #e5e7eb;
+  --cyna-text: #FFFFFF;
+  --cyna-text-muted: #6B7280;
+  --cyna-border: rgba(255, 255, 255, 0.10);
+  --cyna-navbar-bg: #351E90;
+  --cyna-card-bg: #EEEEEE;
+  --cyna-link: #7602F9;
+  --cyna-footer-bg: #0f172a;
 }
 
 body {
-  background: var(--cyna-light);
+  background: var(--cyna-page-bg);
+  color: var(--cyna-text);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow-x: hidden;
 }
 
 /* Navbar */
 .navbar-cyna {
-  background: var(--cyna-dark);
+  background: var(--cyna-navbar-bg);
 }
 
 .navbar-cyna .navbar-brand,
@@ -58,7 +82,71 @@ body {
   border-color: rgba(255, 255, 255, .85);
 }
 
+/* Language selector */
+.lang-switcher {
+  min-width: 92px;
+  border-radius: 999px;
+  border: 1px solid rgba(86, 16, 192, 0.25);
+  background: linear-gradient(180deg, #ffffff 0%, #f7f3ff 100%);
+  color: var(--cyna-dark);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 6px 18px rgba(53, 30, 144, 0.08);
+  padding-right: 2.25rem;
+}
+
+.lang-switcher:focus {
+  border-color: var(--cyna-primary);
+  box-shadow: 0 0 0 0.2rem rgba(86, 16, 192, 0.18);
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.theme-toggle-btn i {
+  font-size: 1rem;
+}
+
+.navbar-actions {
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+html[dir="rtl"] .navbar-actions {
+  flex-direction: row-reverse;
+}
+
+.language-dropdown .dropdown-menu {
+  min-width: 12rem;
+}
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lang-flag {
+  font-size: 1rem;
+}
+
+.lang-code {
+  font-weight: 700;
+}
+
+.language-option.active {
+  background: rgba(86, 16, 192, 0.10);
+}
+
 /* Barre de recherche */
+.search-wrap {
+  direction: ltr;
+}
+
 .search-wrap .form-control {
   border-radius: 999px 0 0 999px;
   border: 0;
@@ -68,6 +156,10 @@ body {
   border-radius: 0 999px 999px 0;
   border: 0;
   width: 44px;
+}
+
+.bg-cyna {
+  background: var(--cyna-dark) !important;
 }
 
 /* Carousel */
@@ -86,6 +178,99 @@ body {
 .card {
   border-radius: 12px;
   overflow: hidden;
+  background: var(--cyna-card-bg);
+  color: #111827;
+  border-color: var(--cyna-border);
+}
+
+.card-header {
+  border-bottom: 1px solid var(--cyna-border);
+}
+
+.card-body,
+.dropdown-menu,
+.form-control,
+.form-select {
+  background-color: var(--cyna-surface);
+  color: #111827;
+}
+
+.form-control,
+.form-select {
+  border-color: var(--cyna-border);
+}
+
+.dropdown-menu {
+  border-color: var(--cyna-border);
+}
+
+.dropdown-item {
+  color: #111827;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: rgba(86, 16, 192, 0.08);
+}
+
+.navbar-cyna .dropdown-menu {
+  background: var(--cyna-surface);
+}
+
+.navbar-cyna .dropdown-item {
+  color: #111827;
+}
+
+.navbar-cyna .dropdown-item:hover,
+.navbar-cyna .dropdown-item:focus {
+  color: var(--cyna-text);
+}
+
+.footer {
+  background: var(--cyna-footer-bg);
+  color: #fff;
+}
+
+.footer a {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.text-muted {
+  color: var(--cyna-text-muted) !important;
+}
+
+.category-card,
+.product-card,
+.solution-card {
+  background: var(--cyna-surface);
+  color: #111827;
+  border-color: var(--cyna-border);
+}
+
+.form-label {
+  color: var(--cyna-text);
+}
+
+.btn-primary {
+  background-color: var(--cyna-accent);
+  border-color: var(--cyna-accent);
+}
+
+.btn-primary:hover {
+  background-color: var(--cyna-primary);
+  border-color: var(--cyna-primary);
+}
+
+.btn-outline-danger,
+.btn-outline-secondary,
+.btn-outline {
+  border-color: var(--cyna-border);
+}
+
+.btn-outline-danger:hover,
+.btn-outline-secondary:hover,
+.btn-outline:hover {
+  color: #fff;
 }
 
 .form-label {

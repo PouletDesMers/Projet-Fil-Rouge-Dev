@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  const t = (key, fallback) => {
+    try {
+      return window.i18next ? window.i18next.t(key) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+
   const form = document.getElementById('passwordForm');
   const currentPasswordInput = document.getElementById('currentPassword');
   const newPasswordInput = document.getElementById('newPassword');
@@ -30,17 +38,17 @@
     const confirm = confirmPasswordInput.value.trim();
 
     if (!ancienMotDePasse || !motDePasse || !confirm) {
-      showMessage('Veuillez remplir tous les champs.', 'error');
+      showMessage(t('settings.fill_all_fields', 'Veuillez remplir tous les champs.'), 'error');
       return;
     }
 
     if (motDePasse.length < 8) {
-      showMessage('Le nouveau mot de passe doit contenir au moins 8 caractères.', 'error');
+      showMessage(t('settings.min_chars', 'Le nouveau mot de passe doit contenir au moins 8 caractères.'), 'error');
       return;
     }
 
     if (motDePasse !== confirm) {
-      showMessage('La confirmation ne correspond pas au nouveau mot de passe.', 'error');
+      showMessage(t('settings.mismatch', 'La confirmation ne correspond pas au nouveau mot de passe.'), 'error');
       return;
     }
 
@@ -58,12 +66,12 @@
         throw new Error(text || `Erreur ${res.status}`);
       }
 
-      showMessage('Mot de passe mis à jour avec succès.', 'success');
+      showMessage(t('settings.update_success', 'Mot de passe mis à jour avec succès.'), 'success');
       form.reset();
 
     } catch (error) {
       console.error('Erreur mise à jour mot de passe:', error);
-      showMessage(error.message || 'Erreur lors de la mise à jour du mot de passe.', 'error');
+      showMessage(error.message || t('settings.update_error', 'Erreur lors de la mise à jour du mot de passe.'), 'error');
     }
   });
 })();

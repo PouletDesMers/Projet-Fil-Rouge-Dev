@@ -20,6 +20,10 @@ async function initializeAdmin() {
   // Setup event listeners
   setupEventListeners();
 
+  if (window.AdminProducts && typeof AdminProducts.initBulkImport === 'function') {
+    AdminProducts.initBulkImport();
+  }
+
   // Restore last visited section or default to dashboard
   const savedSection = localStorage.getItem(SECTION_STORAGE_KEY) || 'dashboard';
   navigateToSection(savedSection);
@@ -175,6 +179,9 @@ function navigateToSection(sectionBase) {
 function showCategoryProducts(categoryId, categoryName) {
   currentCategoryId = categoryId;
   currentCategoryName = categoryName;
+  if (window.AdminProducts) {
+    AdminProducts.currentCategoryId = categoryId;
+  }
   
   // Update titles
   document.getElementById('categoryProductsTitle').textContent = `Produits de ${categoryName}`;
@@ -198,6 +205,9 @@ function showCategoryProducts(categoryId, categoryName) {
 function backToCategories() {
   currentCategoryId = null;
   currentCategoryName = '';
+  if (window.AdminProducts) {
+    AdminProducts.currentCategoryId = null;
+  }
   
   // Hide category products section and show categories
   document.querySelectorAll('.section-content').forEach(section => {

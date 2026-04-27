@@ -4,6 +4,9 @@
  */
 
 // ── Module-level state ───────────────────────────────────────────────────────
+window.AdminProducts = window.AdminProducts || {};
+AdminProducts.currentCategoryId = null;
+
 let quillEditor = null;
 let productImagesList = [];
 
@@ -91,6 +94,168 @@ function removeImage(index) {
   renderImagesPreview();
 }
 
+AdminProducts.initBulkImport = function () {
+  const importBtn = document.getElementById('importProductsBtn');
+  const confirmBtn = document.getElementById('confirmImportProductsBtn');
+  const templateBtn = document.getElementById('downloadImportTemplateBtn');
+
+  if (importBtn && !importBtn.dataset.bound) {
+    importBtn.dataset.bound = '1';
+    importBtn.addEventListener('click', () => {
+      const modalEl = document.getElementById('importProductsModal');
+      if (!modalEl) return;
+      const modal = new bootstrap.Modal(modalEl);
+      AdminProducts.hideImportAlert();
+      const fileInput = document.getElementById('importProductsFile');
+      if (fileInput) fileInput.value = '';
+      modal.show();
+    });
+  }
+
+  if (confirmBtn && !confirmBtn.dataset.bound) {
+    confirmBtn.dataset.bound = '1';
+    confirmBtn.addEventListener('click', AdminProducts.importProductsFile);
+  }
+
+  if (templateBtn && !templateBtn.dataset.bound) {
+    templateBtn.dataset.bound = '1';
+    templateBtn.addEventListener('click', AdminProducts.downloadImportTemplate);
+  }
+};
+
+AdminProducts.showImportAlert = function (message, type = 'info') {
+  const el = document.getElementById('importProductsAlert');
+  if (!el) return;
+  el.className = `alert alert-${type}`;
+  el.innerHTML = message;
+  el.classList.remove('d-none');
+};
+
+AdminProducts.hideImportAlert = function () {
+  const el = document.getElementById('importProductsAlert');
+  if (!el) return;
+  el.classList.add('d-none');
+  el.innerHTML = '';
+};
+
+AdminProducts.downloadImportTemplate = function () {
+  const rows = [
+    [
+      'nom',
+      'slug',
+      'description_courte',
+      'description_longue',
+      'description_html',
+      'images',
+      'prix',
+      'devise',
+      'duree',
+      'id_categorie',
+      'tag',
+      'statut',
+      'type_achat',
+      'ordre_affichage',
+      'actif'
+    ],
+    [
+      'SOC Basic',
+      'soc-basic',
+      'Protection SOC managee',
+      'Description longue du produit',
+      '<p>Description HTML</p>',
+      'https://site.com/img1.jpg|https://site.com/img2.jpg',
+      '49.99',
+      'EUR',
+      'mois',
+      '1',
+      'Standard',
+      'Disponible',
+      'panier',
+      '1',
+      'true'
+    ]
+  ];
+
+  const csv = rows.map((row) =>
+    row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modele-import-produits.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+AdminProducts.importProductsFile = async function () {
+  const fileInput = document.getElementById('importProductsFile');
+  const mode = document.getElementById('importProductsMode')?.value || 'upsert';
+  const categoryMode = document.getElementById('importProductsCategoryMode')?.value || 'file';
+  const btn = document.getElementById('confirmImportProductsBtn');
+
+  if (!fileInput || !fileInput.files.length) {
+    AdminProducts.showImportAlert('Veuillez selectionner un fichier.', 'warning');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('mode', mode);
+  formData.append('categoryMode', categoryMode);
+
+  if (categoryMode === 'current' && AdminProducts.currentCategoryId) {
+    formData.append('forcedCategoryId', String(AdminProducts.currentCategoryId));
+  }
+
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Import...';
+  AdminProducts.hideImportAlert();
+
+  try {
+    const token = localStorage.getItem('token') || AdminAuth?.getAuthToken?.();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch('/admin/api/products/import', {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || data.error || 'Erreur lors de l\'import');
+    }
+
+    let html = `
+      <strong>Import termine.</strong><br>
+      Crees : <strong>${data.created || 0}</strong><br>
+      Mis a jour : <strong>${data.updated || 0}</strong><br>
+      Ignores : <strong>${data.skipped || 0}</strong>
+    `;
+
+    if (data.errors && data.errors.length) {
+      html += '<hr><strong>Erreurs :</strong><ul class="mb-0">';
+      html += data.errors.slice(0, 20).map((e) => `<li>${e}</li>`).join('');
+      html += '</ul>';
+    }
+
+    AdminProducts.showImportAlert(html, 'success');
+
+    if (typeof AdminProducts.loadCategoryProducts === 'function' && AdminProducts.currentCategoryId) {
+      await AdminProducts.loadCategoryProducts(AdminProducts.currentCategoryId);
+    }
+  } catch (err) {
+    AdminProducts.showImportAlert(err.message || 'Erreur inconnue', 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-upload me-1"></i>Importer';
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Fix duplicate orders in products
@@ -159,9 +324,10 @@ async function fixDuplicateOrders(products) {
 }
 
 // Load products for current category
-async function loadCategoryProducts() {
-  const currentCategoryId = AdminMain.currentCategoryId();
+async function loadCategoryProducts(categoryId = null) {
+  const currentCategoryId = categoryId || AdminMain.currentCategoryId();
   if (!currentCategoryId) return;
+  AdminProducts.currentCategoryId = currentCategoryId;
 
   try {
 
@@ -735,7 +901,7 @@ async function updateItemOrder(type, itemId, newOrder) {
 }
 
 // Export functions
-window.AdminProducts = {
+Object.assign(window.AdminProducts, {
   loadCategoryProducts,
   openProductModal,
   saveProduct,
@@ -745,8 +911,7 @@ window.AdminProducts = {
   autoGenerateSlug,
   setNextOrderForCategory,
   fixDuplicateOrders,
-  // Rich editor & image helpers
   addImageUrl,
   uploadImage,
   removeImage
-};
+});

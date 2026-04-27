@@ -9,6 +9,19 @@ body {
   margin: 40px auto;
   padding: 12px;
 }
+
+.auth-lang-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.auth-lang-switcher {
+  min-width: 86px;
+  font-size: 0.82rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
 .auth-logo {
   display: block;
   margin: 0 auto 20px;

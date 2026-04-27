@@ -1,4 +1,12 @@
 // Dynamic categories loading
+function t(key, fallback) {
+  try {
+    return window.i18next ? window.i18next.t(key) : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 async function loadCategories() {
   try {
     const response = await fetch('/api/public/categories');
@@ -17,7 +25,7 @@ function renderCategories(categories) {
   if (categories.length === 0) {
     grid.innerHTML = `
       <div class="col-12 text-center">
-        <p class="text-muted">Aucune catégorie disponible pour le moment.</p>
+        <p class="text-muted">${t('categories_page.no_data', 'Aucune catégorie disponible pour le moment.')}</p>
       </div>
     `;
     return;
@@ -31,7 +39,7 @@ function renderCategories(categories) {
         radial-gradient(420px 140px at 80% 20%, ${category.couleur}55, transparent 55%),
         linear-gradient(135deg, ${category.couleur}92, ${category.couleur}80);">
         <i class="${category.icone} cat-icon"></i>
-        <div class="badge">Actif</div>
+        <div class="badge">${t('categories_page.active_badge', 'Actif')}</div>
       </div>
       <div class="cat-body">
         <h3 class="cat-title">${category.nom}</h3>
@@ -56,10 +64,10 @@ function renderErrorState() {
     <div class="col-12 text-center">
       <div class="alert alert-warning" role="alert">
         <i class="bi bi-exclamation-triangle"></i>
-        Une erreur s'est produite lors du chargement des catégories.
+        ${t('categories_page.load_error', "Une erreur s'est produite lors du chargement des catégories.")}
       </div>
       <button class="btn btn-outline-primary" onclick="loadCategories()">
-        <i class="bi bi-arrow-clockwise"></i> Réessayer
+        <i class="bi bi-arrow-clockwise"></i> ${t('categories_page.retry', 'Réessayer')}
       </button>
     </div>
   `;
