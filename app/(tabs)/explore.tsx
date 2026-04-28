@@ -95,7 +95,7 @@ export default function CatalogueScreen() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedCat, minPrice, maxPrice, onlyAvailable]);
+  }, [search, selectedCat, minPrice, maxPrice, onlyAvailable, sortKey]);
 
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity

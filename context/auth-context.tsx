@@ -17,7 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -63,10 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreSession();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, totpCode?: string) => {
     setIsLoading(true);
     try {
-      const data = await api.post<LoginResponse>('/api/login', { email, password });
+      const body: Record<string, string> = { email, password };
+      if (totpCode) body.totpCode = totpCode;
+      const data = await api.post<LoginResponse>('/api/login', body);
 
       if (data.requires_2fa) {
         throw new Error('2FA_REQUIRED');

@@ -18,6 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
 import { api } from '@/services/api';
+import { createStripeToken } from '@/services/stripe';
 
 type Step = 'recap' | 'address' | 'payment' | 'confirm';
 
@@ -113,16 +114,25 @@ export default function CheckoutScreen() {
     if (!validatePayment()) return;
     setSubmitting(true);
     try {
-      // Payload aligné sur le modèle backend Commande
-      // { totalAmount, status, promoCode? }
-      const orderPayload = {
-        totalAmount: Math.round(total * 1.2 * 100) / 100, // TTC
-        status:      'pending',
-      };
-      const created = await api.post<{ id: number }>('/api/commandes', orderPayload);
+      const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
+      const [expMonth, expYear] = cardExpiry.split('/');
+
+      // 1. Tokenisation de la carte via Stripe
+      const tokenId = await createStripeToken(
+        { number: cardNumber, expMonth: expMonth ?? '', expYear: expYear ?? '', cvc: cardCvc, name: cardName },
+        publishableKey,
+      );
+
+      // 2. Débit via le backend
+      const amountCents = Math.round(total * 1.2 * 100);
+      await api.post('/api/payments/charge', { tokenId, amount: amountCents, currency: 'eur' });
+
+      // 3. Création de la commande + enregistrement du paiement
+      const created = await api.post<{ id: number }>('/api/commandes', {
+        totalAmount: Math.round(total * 1.2 * 100) / 100,
+        status: 'confirmed',
+      });
       if (created?.id) {
-        // Payload aligné sur le modèle backend Paiement
-        // { orderId, method, status, externalReference? }
         await api.post('/api/paiements', {
           orderId: created.id,
           method:  'card',
@@ -133,8 +143,8 @@ export default function CheckoutScreen() {
       clearCart();
       setStep('confirm');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la commande';
-      Alert.alert('Erreur', msg);
+      const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
+      Alert.alert('Paiement refusé', msg);
     } finally {
       setSubmitting(false);
     }
@@ -277,7 +287,7 @@ export default function CheckoutScreen() {
 
               <View style={styles.secureNote}>
                 <Ionicons name="lock-closed" size={14} color="#27ae60" />
-                <ThemedText style={styles.secureNoteText}>Paiement 100% sécurisé SSL</ThemedText>
+                <ThemedText style={styles.secureNoteText}>Paiement sécurisé par Stripe</ThemedText>
               </View>
 
               <View style={styles.form}>

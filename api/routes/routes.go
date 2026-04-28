@@ -161,6 +161,9 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/backup/restore", adminLim(http.HandlerFunc(handlers.RestoreBackup))).Methods("POST")
 	r.Handle("/api/admin/backup", adminRaw(http.HandlerFunc(handlers.DeleteBackup))).Methods("DELETE")
 
+	// ── Stripe ─────────────────────────────────────────────────────────
+	r.Handle("/api/payments/charge", auth(http.HandlerFunc(handlers.CreateStripeCharge))).Methods("POST")
+
 	// ── Newsletter ──────────────────────────────────────────────────
 	r.HandleFunc("/api/newsletter/subscribe", handlers.SubscribeNewsletter).Methods("POST")
 	r.HandleFunc("/api/newsletter/unsubscribe", handlers.UnsubscribeNewsletter).Methods("POST")
