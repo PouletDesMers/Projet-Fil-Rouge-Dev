@@ -178,29 +178,37 @@ export default function ProductScreen() {
           )}
 
           {/* Durée abonnement */}
-          <View style={styles.durationSection}>
-            <ThemedText style={styles.durationTitle}>Durée de l'abonnement</ThemedText>
-            <View style={styles.durationRow}>
-              {(Object.keys(DURATION_LABELS) as Duration[]).map((d) => (
-                <TouchableOpacity
-                  key={d}
-                  style={[styles.durationChip, selectedDuration === d && styles.durationChipActive]}
-                  onPress={() => setSelectedDuration(d)}
-                >
-                  <ThemedText style={[styles.durationText, selectedDuration === d && styles.durationTextActive]}>
-                    {DURATION_LABELS[d]}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+          {product.prix > 0 && (
+            <View style={styles.durationSection}>
+              <ThemedText style={styles.durationTitle}>Durée de l'abonnement</ThemedText>
+              <View style={styles.durationRow}>
+                {(Object.keys(DURATION_LABELS) as Duration[]).map((d) => (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.durationChip, selectedDuration === d && styles.durationChipActive]}
+                    onPress={() => setSelectedDuration(d)}
+                  >
+                    <ThemedText style={[styles.durationText, selectedDuration === d && styles.durationTextActive]}>
+                      {DURATION_LABELS[d]}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Prix */}
           <View style={styles.priceBox}>
             <ThemedText style={styles.priceLabel}>Prix</ThemedText>
-            <ThemedText style={styles.price}>{finalPrice.toFixed(2)} €/mois</ThemedText>
-            {selectedDuration !== '1_month' && (
-              <ThemedText style={styles.originalPrice}>{product.prix.toFixed(2)} €/mois</ThemedText>
+            {product.prix === 0 ? (
+              <ThemedText style={styles.price}>Sur devis</ThemedText>
+            ) : (
+              <>
+                <ThemedText style={styles.price}>{finalPrice.toFixed(2)} €/mois</ThemedText>
+                {selectedDuration !== '1_month' && (
+                  <ThemedText style={styles.originalPrice}>{product.prix.toFixed(2)} €/mois</ThemedText>
+                )}
+              </>
             )}
           </View>
 
@@ -225,7 +233,9 @@ export default function ProductScreen() {
                     )}
                     <View style={styles.similarInfo}>
                       <ThemedText style={styles.similarName} numberOfLines={2}>{p.nom}</ThemedText>
-                      <ThemedText style={styles.similarPrice}>{p.prix.toFixed(2)} €/mois</ThemedText>
+                      <ThemedText style={styles.similarPrice}>
+                        {p.prix === 0 ? 'Sur devis' : `${p.prix.toFixed(2)} €/mois`}
+                      </ThemedText>
                       {!p.disponible && (
                         <View style={styles.similarBadge}>
                           <ThemedText style={styles.similarBadgeText}>Indisponible</ThemedText>
@@ -242,17 +252,28 @@ export default function ProductScreen() {
 
       {/* CTA */}
       <View style={styles.ctaContainer}>
-        <TouchableOpacity
-          style={[styles.ctaButton, (!product.disponible || added) && styles.ctaDisabled]}
-          disabled={!product.disponible}
-          activeOpacity={0.8}
-          onPress={handleAddToCart}
-        >
-          <Ionicons name={added ? 'checkmark-circle' : 'cart'} size={20} color="#fff" />
-          <ThemedText style={styles.ctaText}>
-            {!product.disponible ? 'Indisponible' : added ? 'Ajouté au panier !' : "S'abonner"}
-          </ThemedText>
-        </TouchableOpacity>
+        {product.prix === 0 ? (
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.8}
+            onPress={() => router.push('/contact' as never)}
+          >
+            <Ionicons name="mail-outline" size={20} color="#fff" />
+            <ThemedText style={styles.ctaText}>Demander un devis</ThemedText>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.ctaButton, (!product.disponible || added) && styles.ctaDisabled]}
+            disabled={!product.disponible}
+            activeOpacity={0.8}
+            onPress={handleAddToCart}
+          >
+            <Ionicons name={added ? 'checkmark-circle' : 'cart'} size={20} color="#fff" />
+            <ThemedText style={styles.ctaText}>
+              {!product.disponible ? 'Indisponible' : added ? 'Ajouté au panier !' : "S'abonner"}
+            </ThemedText>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -304,14 +325,14 @@ const styles = StyleSheet.create({
   similarSection: { marginBottom: 16 },
   similarTitle:   { fontSize: 17, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
   similarCard: {
-    width: 140, marginRight: 12, backgroundColor: '#fff', borderRadius: 12,
+    width: 160, marginRight: 12, backgroundColor: '#fff', borderRadius: 12,
     overflow: 'hidden', elevation: 2,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4,
   },
-  similarImage:            { width: '100%', height: 90 },
-  similarImagePlaceholder: { width: '100%', height: 90, backgroundColor: '#f0ecff', alignItems: 'center', justifyContent: 'center' },
-  similarInfo:      { padding: 8 },
-  similarName:      { fontSize: 12, fontWeight: '600', color: '#1a1a1a', marginBottom: 4 },
+  similarImage:            { width: '100%', height: 100 },
+  similarImagePlaceholder: { width: '100%', height: 100, backgroundColor: '#f0ecff', alignItems: 'center', justifyContent: 'center' },
+  similarInfo:      { padding: 10 },
+  similarName:      { fontSize: 13, fontWeight: '600', color: '#1a1a1a', marginBottom: 4, lineHeight: 18 },
   similarPrice:     { fontSize: 13, fontWeight: '700', color: '#3b12a3' },
   similarBadge:     { marginTop: 4, backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, alignSelf: 'flex-start' },
   similarBadgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },

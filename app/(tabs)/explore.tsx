@@ -116,7 +116,9 @@ export default function CatalogueScreen() {
           <ThemedText style={styles.productDesc} numberOfLines={2}>{item.description}</ThemedText>
         )}
         <View style={styles.productFooter}>
-          <ThemedText style={styles.productPrice}>{item.prix.toFixed(2)} €/mois</ThemedText>
+          <ThemedText style={styles.productPrice}>
+            {item.prix === 0 ? 'Sur devis' : `${item.prix.toFixed(2)} €/mois`}
+          </ThemedText>
           {!item.disponible && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Épuisé</Text>
@@ -287,13 +289,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden', elevation: 2,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4,
   },
-  productImage:            { width: 110, height: 110 },
-  productImagePlaceholder: { width: 110, height: 110, backgroundColor: '#f0ecff', alignItems: 'center', justifyContent: 'center' },
-  productInfo:   { flex: 1, padding: 12, justifyContent: 'space-between' },
-  productName:   { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  productDesc:   { fontSize: 13, color: '#666', marginTop: 4, lineHeight: 18 },
-  productFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  productPrice:  { fontSize: 16, fontWeight: '700', color: '#3b12a3' },
+  productImage:            { width: 120, height: 120 },
+  productImagePlaceholder: { width: 120, height: 120, backgroundColor: '#f0ecff', alignItems: 'center', justifyContent: 'center' },
+  productInfo:   { flex: 1, padding: 12, justifyContent: 'space-between', minHeight: 120 },
+  productName:   { fontSize: 14, fontWeight: '700', color: '#1a1a1a', lineHeight: 20 },
+  productDesc:   { fontSize: 12, color: '#666', marginTop: 4, lineHeight: 17 },
+  productFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  productPrice:  { fontSize: 14, fontWeight: '700', color: '#3b12a3', flexShrink: 1 },
   badge:         { backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   badgeText:     { color: '#fff', fontSize: 11, fontWeight: '700' },
 
