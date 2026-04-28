@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   container:  { flexGrow: 1, paddingHorizontal: 30, paddingVertical: 30 },
   backBtn:    { marginBottom: 10 },
   backText:   { color: '#3b12a3', fontSize: 15 },
-  logo:       { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 20 },
+  logo:       { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 20, lineHeight: 46 },
   title:      { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 6 },
   subtitle:   { fontSize: 15, textAlign: 'center', color: '#666', marginBottom: 28 },
   form:       { gap: 12 },

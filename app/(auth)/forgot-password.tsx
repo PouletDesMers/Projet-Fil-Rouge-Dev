@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#3b12a3', fontSize: 15 },
 
-  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 24 },
+  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 24, lineHeight: 46 },
   title:    { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 10 },
   subtitle: { fontSize: 15, textAlign: 'center', color: '#666', lineHeight: 22, marginBottom: 28 },
   emailHighlight: { fontWeight: '700', color: '#3b12a3' },

@@ -192,12 +192,12 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: '#fff' },
   flex:      { flex: 1 },
-  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 30, paddingVertical: 40 },
+  container: { flexGrow: 1, paddingHorizontal: 30, paddingTop: 60, paddingBottom: 40 },
 
   backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#3b12a3', fontSize: 15 },
 
-  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 30 },
+  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 30, lineHeight: 46 },
   title:    { fontSize: 28, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 8 },
   subtitle: { fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 36, lineHeight: 22 },
 
