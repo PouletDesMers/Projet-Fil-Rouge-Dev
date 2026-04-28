@@ -1,0 +1,950 @@
+= Guide d'Installation — CYNA Plateforme SaaS Cybersécurité
+:author: Projet Fil Rouge — INGETIS Paris
+:revdate: 2026-04-27
+:toc: left
+:toc-title: Table des matières
+:icons: font
+:source-highlighter: highlight.js
+:numbered:
+:toclevels: 4
+
+== Introduction
+
+CYNA est une plateforme SaaS de cybersécurité complète, composée de quatre composants :
+
+* **API Go** — Backend REST (port 8080)
+* **Node.js** — Serveur web + proxy + interface admin (port 3000)
+* **PostgreSQL** — Base de données (port 5432)
+* **Application mobile** — React Native / Expo (Android & iOS)
+
+Ce guide vous accompagne pas à pas dans l'installation et la configuration complète de la plateforme, y compris l'application mobile.
+
+=== Prérequis matériels
+
+[cols="1,1", options="header"]
+|===
+| Composant | Minimum Recommandé
+| **RAM** | 4 Go (8 Go recommandé)
+| **CPU** | 2 cœurs (4 cœurs recommandé)
+| **Espace disque** | 10 Go (20 Go avec backups)
+| **OS** | Linux (Ubuntu 22.04+, Debian 12+, ou WSL2 sur Windows)
+|===
+
+=== Logiciels requis
+
+[source,bash]
+----
+# Installation des dépendances
+sudo apt update && sudo apt install -y \
+    docker.io \
+    docker-compose-v2 \
+    git \
+    curl
+
+# Vérification
+docker --version          # Docker 24+
+docker compose version    # Docker Compose v2
+git --version
+----
+
+== Étape 1 : Récupération du projet
+
+=== Cloner le dépôt
+
+[source,bash]
+----
+cd /opt
+sudo git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
+sudo chown -R $USER:$USER Projet-Fil-Rouge-Dev
+cd Projet-Fil-Rouge-Dev
+----
+
+=== Structure des fichiers
+
+[source,text]
+----
+Projet-Fil-Rouge-Dev/
+├── api/                    # API Go (backend)
+│   ├── handlers/           # Points d'entrée HTTP
+│   ├── logger/             # Système de logs
+│   ├── middleware/          # Sécurité, rate limiting
+│   ├── models/             # Modèles de données
+│   ├── repositories/       # Accès base de données
+│   ├── services/           # Logique métier
+│   ├── routes/             # Définition des routes API
+│   ├── cache/              # Cache in-memory
+│   ├── config/             # Configuration
+│   └── rbac/               # Gestion des rôles
+├── web/                    # Serveur web Node.js
+│   ├── backend/            # Interface d'administration
+│   │   ├── index.html      # Panel admin complet
+│   │   ├── login.html      # Page de connexion
+│   │   └── js/modules/     # Modules JavaScript
+│   ├── frontend/           # Site public
+│   ├── middleware/          # Rate limiting Node.js
+│   └── server.js           # Serveur Express
+├── db/                     # Scripts SQL
+│   ├── 01_schema.sql       # Schéma de base
+│   └── 02_seed.sql         # Données de démonstration
+├── app/                    # Application mobile (Expo Router)
+│   ├── (auth)/             # Écrans d'authentification
+│   ├── (tabs)/             # Onglets principaux
+│   ├── product/[id].tsx    # Fiche produit
+│   ├── category/[id].tsx   # Produits d'une catégorie
+│   ├── checkout/           # Tunnel d'achat
+│   ├── orders/             # Historique commandes
+│   └── account/            # Sous-pages compte
+├── components/             # Composants React Native réutilisables
+├── context/                # Contextes React (auth, panier)
+├── services/               # Client API + Stripe
+├── docker-compose.yml      # Orchestration
+├── app.json                # Configuration Expo
+├── package.json            # Dépendances Node.js / mobile
+└── .env.example            # Configuration (plateforme + mobile)
+----
+
+== Étape 2 : Configuration
+
+=== Créer le fichier `.env`
+
+[source,bash]
+----
+cp .env.example .env
+nano .env
+----
+
+=== Variables essentielles
+
+[source,env]
+----
+# ── Base de données (ne pas modifier si utilisation Docker) ──
+DB_HOST=db
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=mydb
+
+# ── Stripe (paiement en ligne — optionnel mais recommandé) ──
+STRIPE_SECRET_KEY=sk_test_votre_cle_privee
+STRIPE_PUBLISHABLE_KEY=pk_test_votre_cle_publique
+
+# ── API Security ──
+API_SECRET=une_chaine_aleatoire_tres_longue_32_caracteres_min
+
+# ── Email (Resend) ──
+RESEND_API_KEY=re_votre_cle_api_resend
+
+# ── Sauvegardes automatiques (optionnel) ──
+BACKUP_INTERVAL_MINUTES=1440  # Toutes les 24h
+----
+
+TIP: Pour générer une clé API_SECRET aléatoire : `openssl rand -hex 32`
+
+=== Configuration des emails (Resend)
+
+[source,bash]
+----
+# 1. Créer un compte sur https://resend.com
+# 2. Aller dans API Keys → créer une nouvelle clé
+# 3. Copier la clé dans .env : RESEND_API_KEY=re_...
+
+# 4. Vérifier le domaine d'envoi dans Resend DNS Records
+# 5. Ajouter les enregistrements MX/SPF/DKIM chez votre registrar
+
+# Test d'envoi d'email
+curl -X POST http://localhost:3000/api/test/send-email \
+  -H "Content-Type: application/json" \
+  -d '{"type":"welcome", "email":"test@example.com", "firstName":"Test"}'
+----
+
+=== Configuration Stripe
+
+[source,bash]
+----
+# 1. Créer un compte Stripe (https://dashboard.stripe.com)
+# 2. Activer le mode test dans le dashboard
+# 3. Récupérer les clés API :
+#    - Publiable : pk_test_xxxxxxxxxx
+#    - Secrète   : sk_test_xxxxxxxxxx
+# 4. Les mettre dans .env
+# 5. Optionnel : configurer un webhook
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+----
+
+== Étape 3 : Lancement
+
+=== Démarrer les services
+
+[source,bash]
+----
+docker compose up --build -d
+----
+
+Cette commande :
+. Construit les images Docker (Go, Node.js, PostgreSQL)
+. Initialise la base de données avec les schémas SQL
+. Démarre les 3 conteneurs
+
+=== Vérifier le bon fonctionnement
+
+[source,bash]
+----
+# État des conteneurs
+docker compose ps
+
+# Logs en direct
+docker compose logs -f
+
+# Vérification santé API
+curl http://localhost:8080/health
+
+# Vérification site web
+curl -I http://localhost:3000
+
+# Vérification base de données
+docker compose exec db pg_isready -U postgres
+----
+
+Résultat attendu :
+
+[source,text]
+----
+NAME                    STATUS          PORTS
+api-1                   Up              :8080->8080/tcp
+db-1                    Up (healthy)    :5432->5432/tcp
+web-1                   Up              :3000->3000/tcp
+----
+
+=== Première connexion
+
+[cols="1,2", options="header"]
+|===
+| Service | URL
+| **Site public** | http://localhost:3000
+| **Panel admin** | http://localhost:3000/backend/
+| **API** | http://localhost:8080
+| **Swagger** | http://localhost:3000/backend/#api-docs
+|===
+
+Pour le panel admin, les identifiants par défaut sont ceux créés par le script `02_seed.sql`.
+
+== Étape 4 : Sauvegardes
+
+=== Principe
+
+Les sauvegardes utilisent `pg_dump` pour créer des fichiers `.sql` dans le volume Docker `backups_data`. Aucune configuration supplémentaire n'est nécessaire.
+
+=== Types de sauvegarde
+
+[cols="1,2,2", options="header"]
+|===
+| Type | Contenu | Usage
+| `full` | Toutes les tables | Sauvegarde complète
+| `data` | Toutes les tables sauf `api_logs` | Données métier
+| `logs` | Uniquement `api_logs` | Audit et conformité
+|===
+
+=== Sauvegarde manuelle
+
+. Ouvrir le panel admin : http://localhost:3000/backend/
+. Aller dans **Sauvegardes**
+. Cliquer sur **"Lancer la sauvegarde"**
+. Le fichier `.sql` apparaît dans la liste
+
+=== Sauvegarde automatique (planification)
+
+==== Via l'interface
+
+. Dans la section **Planification automatique**
+. Choisir le type (Complète / Données / Logs)
+. Définir l'intervalle (ex: `60` + `min` pour toutes les heures)
+. Cliquer **"Ajouter"**
+
+==== Via variable d'environnement
+
+[source,env]
+----
+# Dans le fichier .env
+BACKUP_INTERVAL_MINUTES=1440  # Toutes les 24h
+----
+
+Puis redémarrer :
+
+[source,bash]
+----
+docker compose down && docker compose up -d
+----
+
+=== Restauration
+
+. Dans la liste des sauvegardes, cliquer sur l'icône **restaurer** ↻
+. Confirmer la restauration
+. Le fichier SQL est injecté dans PostgreSQL via `psql`
+
+[TIP]
+====
+La restauration écrase les données existantes. Faites une sauvegarde avant de restaurer.
+====
+
+=== Commandes manuelles (avancé)
+
+[source,bash]
+----
+# Lister les fichiers de sauvegarde
+docker compose exec api ls -lh /backups/pgdump/
+
+# Restaurer manuellement
+docker compose exec -T db psql -U postgres -d mydb < backup.sql
+
+# Créer une sauvegarde manuelle via pg_dump
+docker compose exec db pg_dump -U postgres -d mydb \
+  --data-only --inserts --no-owner --no-acl \
+  -f /tmp/backup_manuelle.sql
+
+# Télécharger une sauvegarde
+docker compose cp api:/backups/pgdump/full_20260427_123456.sql .
+----
+
+== Étape 5 : Logs
+
+=== Triple stockage
+
+Les logs API sont écrits simultanément dans 3 supports :
+
+[cols="1,2,2", options="header"]
+|===
+| Stockage | Durée | Commande d'accès
+| **RAM** (500 entrées) | Perdu au redémarrage | Interface admin
+| **PostgreSQL** | 90 jours (purge auto) | Interface admin ou SQL
+| **Fichier** (JSONL) | Illimitée | `docker compose exec api tail -f /var/log/api/api.log`
+|==|
+
+=== Consultation des logs fichier
+
+[source,bash]
+----
+# En temps réel
+docker compose logs -f api
+
+# Dernières 50 lignes du fichier
+docker compose exec api tail -50 /var/log/api/api.log
+
+# Filtrer les erreurs
+docker compose exec api grep ERROR /var/log/api/api.log
+
+# Compter le nombre de logs
+docker compose exec api wc -l /var/log/api/api.log
+----
+
+=== Purge des logs
+
+[source,bash]
+----
+# Depuis l'interface : Sauvegardes → Logs API → "Vider"
+# Ou en SQL directement :
+docker compose exec db psql -U postgres -d mydb \
+  -c "DELETE FROM api_logs;"
+----
+
+== Étape 6 : Administration
+
+=== Accès au panel admin
+
+URL : http://localhost:3000/backend/
+
+=== Sections disponibles
+
+[cols="1,3", options="header"]
+|===
+| Section | Description
+| **Dashboard** | Vue d'ensemble, statistiques, graphiques
+| **Utilisateurs** | Gestion des comptes, rôles, statuts
+| **Catégories** | Organisation des produits/services
+| **Images Carrousel** | Gestion des images de la page d'accueil
+| **Commandes** | Suivi et gestion des commandes
+| **Devis** | Demande et envoi de devis (via Stripe Quotes)
+| **Remises** | Codes promo (locaux + Stripe)
+| **Newsletter** | Campagnes emails et abonnés
+| **Rôles & Permissions** | Contrôle d'accès RBAC
+| **Logs API** | Surveillance en temps réel
+| **Sauvegardes** | Backup et planification
+| **API Docs** | Documentation Swagger interactive
+|==|
+
+== Étape 7 : Application Mobile
+
+L'application mobile CYNA est développée avec React Native et Expo. Elle communique directement avec l'API Go via HTTP REST et fonctionne sur Android et iOS sans aucune dépendance native à compiler.
+
+=== Prérequis
+
+==== Logiciels requis
+
+[source,bash]
+----
+# Node.js 20+ (https://nodejs.org)
+node --version    # 20+
+npm --version     # 10+
+
+# Vérification Expo
+npx expo --version  # 0.22+
+----
+
+==== Appareil de test
+
+Choisissez l'une des options suivantes :
+
+[cols="1,2,2", options="header"]
+|===
+| Option | Avantages | Configuration nécessaire
+| **Expo Go (téléphone réel)** | Aucune installation lourde, test immédiat | Application Expo Go sur Play Store / App Store
+| **Émulateur Android** | Test offline, snapshots, débogage | Android Studio + AVD Manager
+| **Simulateur iOS** | Rendu iOS fidèle | Xcode (macOS uniquement)
+|===
+
+TIP: Pour un test rapide, **Expo Go sur téléphone réel** est la solution la plus simple. Le téléphone doit être sur le même réseau Wi-Fi que le PC.
+
+==== Installer Expo Go
+
+[cols="1,2", options="header"]
+|===
+| Plateforme | Accès
+| **Android** | Google Play Store → rechercher _Expo Go_
+| **iOS** | Apple App Store → rechercher _Expo Go_
+|===
+
+=== Installation
+
+[source,bash]
+----
+# Se placer à la racine du projet (même dossier que docker-compose.yml)
+cd Projet-Fil-Rouge-Dev
+
+# Installer les dépendances
+npm install
+
+# Vérifier l'environnement Expo
+npx expo doctor
+----
+
+=== Configuration
+
+==== Variables d'environnement mobile
+
+Le fichier `.env` à la racine contient les variables de l'application mobile. Celles préfixées `EXPO_PUBLIC_` sont accessibles côté client.
+
+[source,env]
+----
+# ── URL de l'API Go ──
+# Émulateur Android       → http://10.0.2.2:8080/api
+# Simulateur iOS          → http://localhost:8080/api
+# Téléphone réel (Wi-Fi)  → http://<IP_LAN_DE_VOTRE_PC>:8080/api
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8080/api
+
+# ── Stripe — clé publique uniquement ──
+# Ne jamais mettre STRIPE_SECRET_KEY dans ce fichier
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_votre_cle_publique
+----
+
+WARNING: N'utilisez jamais `STRIPE_SECRET_KEY` côté mobile. La clé secrète ne doit exister que dans le `.env` côté serveur.
+
+==== Trouver l'adresse IP de votre machine
+
+[source,bash]
+----
+# Linux / macOS
+ip a | grep "inet " | grep -v 127.0.0.1
+
+# Windows (PowerShell)
+ipconfig | findstr "IPv4"
+
+# Exemple de résultat : 192.168.1.42
+# → définir EXPO_PUBLIC_API_URL=http://192.168.1.42:8080/api
+----
+
+=== Lancement
+
+==== Démarrer le serveur Metro
+
+[source,bash]
+----
+# Mode standard — affiche un QR code
+npx expo start
+
+# Vider le cache au démarrage (recommandé après modification du .env)
+npx expo start --clear
+
+# Mode tunnel (si réseau local bloqué)
+npx expo start --tunnel
+----
+
+==== Se connecter via Expo Go
+
+. Lancer `npx expo start` — un QR code apparaît dans le terminal
+. **Android** : ouvrir Expo Go → _Scan QR code_
+. **iOS** : ouvrir l'appareil photo natif → pointer vers le QR code
+
+==== Lancer sur émulateur Android
+
+[source,bash]
+----
+# 1. Démarrer un AVD depuis Android Studio → Virtual Device Manager
+# 2. Lancer l'app :
+npx expo start --android
+
+# L'émulateur utilise 10.0.2.2 pour accéder à localhost de la machine hôte
+# → EXPO_PUBLIC_API_URL=http://10.0.2.2:8080/api
+----
+
+==== Lancer sur simulateur iOS (macOS uniquement)
+
+[source,bash]
+----
+# Xcode et les outils de ligne de commande doivent être installés
+xcode-select --install
+
+npx expo start --ios
+# → EXPO_PUBLIC_API_URL=http://localhost:8080/api
+----
+
+=== Structure de l'application
+
+[source,text]
+----
+Projet-Fil-Rouge-Dev/
+├── app/                            # Routage Expo Router (file-based)
+│   ├── _layout.tsx                 # Layout racine + AuthProvider
+│   ├── (auth)/                     # Écrans hors navigation principale
+│   │   ├── _layout.tsx
+│   │   ├── login.tsx               # Connexion + 2FA TOTP inline
+│   │   ├── register.tsx            # Inscription avec validation live
+│   │   └── forgot-password.tsx     # Réinitialisation mot de passe
+│   ├── (tabs)/                     # Barre de navigation (5 onglets)
+│   │   ├── _layout.tsx
+│   │   ├── index.tsx               # Accueil : carrousel + catégories
+│   │   ├── explore.tsx             # Catalogue : recherche + filtres
+│   │   ├── cart.tsx                # Panier
+│   │   ├── dashboard.tsx           # Tableau de bord utilisateur
+│   │   └── account.tsx             # Mon compte
+│   ├── product/[id].tsx            # Fiche produit
+│   ├── category/[id].tsx           # Liste produits d'une catégorie
+│   ├── checkout/index.tsx          # Paiement Stripe (3 étapes)
+│   ├── orders/index.tsx            # Historique commandes
+│   ├── orders/[id].tsx             # Détail d'une commande
+│   ├── account/profile.tsx         # Modification du profil
+│   ├── account/subscriptions.tsx   # Abonnements actifs
+│   ├── account/invoices.tsx        # Factures
+│   ├── account/payment-methods.tsx # Méthodes de paiement
+│   └── contact.tsx                 # Formulaire support / ticket
+├── components/
+│   ├── form-error.tsx              # Bannière erreur inline (formulaires)
+│   └── themed-text.tsx             # Texte avec thème
+├── context/
+│   └── auth-context.tsx            # Session JWT (expo-secure-store)
+├── services/
+│   ├── api.ts                      # Client HTTP + types TypeScript
+│   └── stripe.ts                   # Tokenisation carte (fetch direct)
+├── app.json                        # Configuration Expo (SDK, nom, icône)
+├── package.json
+└── .env                            # Variables EXPO_PUBLIC_*
+----
+
+=== Fonctionnalités
+
+[cols="1,3,1", options="header"]
+|===
+| Écran | Description | Auth requise
+| **Accueil** | Carrousel promotionnel, catégories, top produits | Non
+| **Catalogue** | Recherche textuelle, filtres catégorie / prix / statut, tri | Non
+| **Fiche produit** | Détail, sélection durée (1m/1a/2a), ajout panier ou devis | Non
+| **Panier** | Récapitulatif, modification quantité et durée | Oui
+| **Checkout** | Adresse, paiement carte Stripe, confirmation | Oui
+| **Dashboard** | Compteurs abonnements et commandes, accès rapides | Oui
+| **Mon compte** | Profil, abonnements, factures, méthodes de paiement | Oui
+| **Connexion** | Email + mot de passe + 2FA TOTP (si activé) | —
+| **Inscription** | Création compte avec checklist critères mot de passe | —
+| **Mot de passe oublié** | Réinitialisation directe sans email (2 étapes) | —
+| **Support** | Envoi ticket (auth) ou message public | Non
+|===
+
+=== Comptes de test
+
+[cols="1,2,1", options="header"]
+|===
+| Rôle | Email | Mot de passe
+| **Utilisateur** | user@cyna.com | Voir `db/02_seed.sql`
+| **Admin** | admin@cyna.com | Voir `db/02_seed.sql`
+|===
+
+TIP: Les mots de passe de test sont définis dans `db/02_seed.sql`. Vérifiez ce fichier pour les identifiants exacts.
+
+=== Vérifier la connexion entre l'app et l'API
+
+[source,bash]
+----
+# Tester que l'API répond (remplacer l'IP par EXPO_PUBLIC_API_URL sans /api)
+curl http://192.168.1.42:8080/health
+# Résultat attendu : {"status":"ok"}
+
+# Tester le login
+curl -X POST http://192.168.1.42:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@cyna.com","password":"VotreMotDePasse!"}'
+# Résultat attendu : {"token":"eyJ..."}
+----
+
+== Dépannage
+
+=== Problème : les conteneurs ne démarrent pas
+
+[source,bash]
+----
+# Voir les logs détaillés
+docker compose logs
+
+# Vérifier les permissions
+sudo chown -R $USER:$USER /opt/Projet-Fil-Rouge-Dev
+
+# Redémarrer Docker
+sudo systemctl restart docker
+docker compose up -d
+----
+
+=== Problème : "port already allocated"
+
+[source,bash]
+----
+# Vérifier quel processus utilise le port
+sudo lsof -i :3000
+sudo lsof -i :8080
+sudo lsof -i :5432
+
+# Modifier les ports dans docker-compose.yml si nécessaire
+# Remplacer "3000:3000" par "3001:3000"
+----
+
+=== Problème : erreur 429 (Too Many Requests)
+
+Le rate limiting est atteint. Attendre 60 secondes que le quota se réinitialise.
+
+[source,bash]
+----
+# Réinitialiser le rate limiting en redémarrant l'API
+docker compose restart api
+----
+
+=== Problème : base de données corrompue
+
+[source,bash]
+----
+# Réinitialiser complètement (⚠️ perd toutes les données)
+docker compose down -v
+docker compose up -d
+----
+
+=== Problème : "Network request failed" sur l'application mobile
+
+L'application ne peut pas contacter l'API.
+
+[source,bash]
+----
+# 1. Vérifier que l'API tourne
+curl http://localhost:8080/health
+
+# 2. Vérifier EXPO_PUBLIC_API_URL dans .env
+#    Téléphone réel    → IP LAN du PC (ex: 192.168.1.42)
+#    Émulateur Android → 10.0.2.2
+#    Simulateur iOS    → localhost
+
+# 3. Vérifier que téléphone et PC sont sur le même Wi-Fi
+
+# 4. Autoriser le port 8080 dans le pare-feu
+sudo ufw allow 8080      # Linux
+# Windows : Pare-feu Windows → Règles entrantes → Autoriser 8080
+----
+
+=== Problème : QR code Expo Go ne fonctionne pas
+
+[source,bash]
+----
+# Utiliser le mode tunnel (passe par les serveurs Expo)
+npx expo start --tunnel
+
+# Ou saisir l'URL manuellement dans Expo Go :
+# exp://<IP_LAN>:8081
+----
+
+=== Problème : version SDK incompatible dans Expo Go
+
+[source,bash]
+----
+# Vérifier la version SDK attendue
+cat app.json | grep sdkVersion
+
+# Mettre à jour Expo Go depuis le store (Android ou iOS)
+# Puis réinstaller les dépendances :
+rm -rf node_modules
+npm install
+----
+
+=== Problème : erreur Metro bundler au démarrage
+
+[source,bash]
+----
+# Vider le cache Metro
+npx expo start --clear
+
+# Supprimer le cache complet
+rm -rf .expo node_modules
+npm install
+npx expo start
+----
+
+=== Problème : les emails ne partent pas
+
+[source,bash]
+----
+# Vérifier la clé Resend
+docker compose exec web env | grep RESEND
+
+# Tester l'envoi
+curl -X POST http://localhost:3000/api/test/send-email \
+  -H "Content-Type: application/json" \
+  -d '{"type":"welcome", "email":"test@example.com", "firstName":"Test"}'
+
+# Vérifier les logs Node.js
+docker compose logs web | grep -i email
+----
+
+== Commandes de référence
+
+=== Docker
+
+[source,bash]
+----
+# Démarrer
+docker compose up -d
+
+# Arrêter
+docker compose down
+
+# Redémarrer un service
+docker compose restart api
+
+# Voir les logs
+docker compose logs -f api
+
+# Reconstruire un service
+docker compose build api && docker compose up -d
+
+# Réinitialiser complètement (⚠️ perte données)
+docker compose down -v
+
+# Exécuter une commande dans un conteneur
+docker compose exec db psql -U postgres -d mydb
+----
+
+=== API
+
+[source,bash]
+----
+# Santé
+curl http://localhost:8080/health
+
+# Swagger
+curl http://localhost:8080/api/swagger.json | jq '.openapi'
+
+# Statistiques logs
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/logs/stats
+
+# Liste backups
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/admin/api/backup/list
+----
+
+=== Mobile (Expo)
+
+[source,bash]
+----
+# Démarrer le serveur de développement
+npx expo start
+
+# Démarrer avec cache vidé (après modification .env)
+npx expo start --clear
+
+# Ouvrir sur émulateur Android
+npx expo start --android
+
+# Ouvrir sur simulateur iOS (macOS)
+npx expo start --ios
+
+# Mode tunnel (réseau restreint)
+npx expo start --tunnel
+
+# Vérifier l'environnement Expo
+npx expo doctor
+
+# Installer un package compatible avec la version SDK
+npx expo install <package>
+
+# Mettre à jour les dépendances Expo vers la bonne version SDK
+npx expo install --fix
+----
+
+=== PostgreSQL
+
+[source,sql]
+----
+-- Connexion
+\c mydb
+
+-- Lister les tables
+\dt
+
+-- Voir les logs récents
+SELECT timestamp, level, method, path, status
+FROM api_logs
+ORDER BY timestamp DESC
+LIMIT 20;
+
+-- Statistiques logs par niveau
+SELECT level, COUNT(*)
+FROM api_logs
+GROUP BY level
+ORDER BY COUNT(*) DESC;
+
+-- Taille de la base
+SELECT pg_size_pretty(pg_database_size('mydb'));
+----
+
+== Annexes
+
+=== Annexe A : Architecture réseau
+
+[source,text]
+----
+ INTERNET / Réseau Wi-Fi local
+    │
+    ├────────────────────────────────────────────────┐
+    │                                                │ :8080 (HTTP REST direct)
+    ▼ :3000                                          │
+┌──────────┐    :3000      ┌──────────┐    :8080   ┌──────────┐
+│ Client   │──────────────▶│  WEB     │──────────▶│  API     │
+| Browser  |               |  Node.js │            │  Go      │
+└──────────┘               └──────────┘            └────┬─────┘
+                                                        │
+┌──────────┐                                            │:5432
+│  Mobile  │────────────── HTTP REST ─────────────────▶│
+│iOS/Android│  (EXPO_PUBLIC_API_URL)                    ▼
+└──────────┘                                     ┌──────────┐
+                                                 │  DB      │
+                                                 │PostgreSQL│
+                                                 └──────────┘
+
+Volumes Docker :
+  postgres_data  → /var/lib/postgresql/data
+  uploads_data   → /app/uploads
+  backups_data   → /backups/pgdump/
+  api_logs       → /var/log/api/
+
+Accès API selon le client :
+  Navigateur (Docker)  → http://web:8080  (réseau interne)
+  Téléphone réel       → http://<IP_LAN>:8080/api
+  Émulateur Android    → http://10.0.2.2:8080/api
+  Simulateur iOS       → http://localhost:8080/api
+----
+
+=== Annexe B : Sécurité — Rate Limiting
+
+[cols="1,2,2", options="header"]
+|===
+| Couche | Limiteur | Limite
+| Node.js | `strictLimiter` | 120 req/min sur `/admin/api`
+| Node.js | `apiLimiter` | 100 req/min sur `/api`
+| Node.js | `loginLimiter` | 5 req/15min sur login
+| Go API | `RateLimitAPI` | 100 req/min (global)
+| Go API | `RateLimitAdmin` | 600 req/min (admin)
+| Frontend | Circuit breaker | Attente 60s après un 429
+|===
+
+=== Annexe C : Dépendances
+
+==== Plateforme serveur
+
+[cols="1,3", options="header"]
+|===
+| Technologie | Version
+| Go | 1.21+
+| Node.js | 20+
+| PostgreSQL | 16+
+| Docker | 24+
+| Docker Compose | v2
+| Alpine Linux | Latest (conteneurs)
+| Stripe SDK | Dernière version
+| Resend SDK | Dernière version
+|===
+
+==== Application mobile
+
+[cols="1,3", options="header"]
+|===
+| Technologie | Version
+| React Native | 0.81.5+
+| Expo SDK | 54+
+| Expo Router | 4+
+| TypeScript | 5+
+| expo-secure-store | 14+ (stockage JWT)
+| @expo/vector-icons | 14+ (icônes Ionicons)
+| react-native-safe-area-context | 4+ (gestion notch)
+|===
+
+=== Annexe D : Variables d'environnement complètes
+
+==== Serveur (API Go + Node.js)
+
+[cols="1,2,2", options="header"]
+|===
+| Variable | Description | Valeur par défaut
+| `DB_HOST` | Hôte PostgreSQL | `localhost`
+| `DB_PORT` | Port PostgreSQL | `5432`
+| `DB_USER` | Utilisateur DB | `postgres`
+| `DB_PASSWORD` | Mot de passe DB | `password`
+| `DB_NAME` | Nom de la base | `mydb`
+| `DB_SSLMODE` | SSL PostgreSQL | `disable`
+| `API_SECRET` | Secret JWT | `""`
+| `API_PORT` | Port API Go | `8080`
+| `PORT` | Port web Node.js | `3000`
+| `STRIPE_SECRET_KEY` | Clé secrète Stripe (serveur uniquement) | `""`
+| `STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe (Node.js) | `""`
+| `RESEND_API_KEY` | Clé API Resend (emails) | `""`
+| `LOG_FILE_PATH` | Chemin fichier logs | `/var/log/api/api.log`
+| `BACKUP_INTERVAL_MINUTES` | Intervalle backup auto | `""`
+| `RESTIC_PASSWORD` | Mot de passe Restic (obsolète) | `""`
+| `RESTIC_REPOSITORY` | Chemin repo Restic (obsolète) | `/backups/restic-repo`
+| `UPLOADS_DIR` | Dossier uploads | `/app/uploads`
+| `FRONTEND_URL` | URL du frontend | `http://localhost:3000`
+|===
+
+=== Annexe E : Variables d'environnement — Application Mobile
+
+Ces variables sont définies dans le fichier `.env` à la racine du projet. Le préfixe `EXPO_PUBLIC_` est obligatoire pour qu'elles soient accessibles depuis le code React Native.
+
+[cols="1,2,2", options="header"]
+|===
+| Variable | Description | Exemple
+| `EXPO_PUBLIC_API_URL` | URL complète de l'API Go, avec `/api` | `http://192.168.1.42:8080/api`
+| `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe (pk_test_...) | `pk_test_abc123`
+|===
+
+[NOTE]
+====
+Les valeurs de `EXPO_PUBLIC_API_URL` varient selon l'environnement :
+
+* **Téléphone réel** → `http://<IP_LAN_DU_PC>:8080/api`
+* **Émulateur Android** → `http://10.0.2.2:8080/api`
+* **Simulateur iOS** → `http://localhost:8080/api`
+
+Après toute modification du `.env`, relancez avec `npx expo start --clear`.
+====
+
+WARNING: Ne jamais ajouter `STRIPE_SECRET_KEY` dans le `.env` mobile. Cette clé ne doit exister que côté serveur.

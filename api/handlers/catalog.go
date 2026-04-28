@@ -366,7 +366,8 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
 		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
 		       COALESCE(p.ordre_affichage,0),
-		       COALESCE(c.nom,''), COALESCE(c.slug,'')
+		       COALESCE(c.nom,''), COALESCE(c.slug,''),
+		       COALESCE(p.images::text,'[]')
 		FROM produits p JOIN categories c ON p.id_categorie = c.id_categorie
 		WHERE p.actif=TRUE AND c.actif=TRUE
 		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
@@ -393,13 +394,15 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		CategorieNom      string  `json:"categorie_nom"`
 		CategorieSlug     string  `json:"categorie_slug"`
 		NomCategorie      string  `json:"nom_categorie"`
+		Images            string  `json:"images"`
 	}
 	results := []SearchResult{}
 	for rows.Next() {
 		var p SearchResult
 		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
 			&p.Prix, &p.Devise, &p.Duree, &p.Tag,
-			&p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.CategorieNom, &p.CategorieSlug); err != nil {
+			&p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.CategorieNom, &p.CategorieSlug,
+			&p.Images); err != nil {
 			continue
 		}
 		p.NomCategorie = p.CategorieNom
