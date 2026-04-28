@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,13 +12,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
 import { api } from '@/services/api';
 
 type Step = 'email' | 'password' | 'done';
 
-const validatePassword = (pwd: string) =>
-  pwd.length >= 8 && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && /[^a-zA-Z0-9]/.test(pwd);
+const PWD_RULES = [
+  { test: (p: string) => p.length >= 8,           label: '8 caractères minimum' },
+  { test: (p: string) => /[A-Z]/.test(p),         label: '1 lettre majuscule'   },
+  { test: (p: string) => /[0-9]/.test(p),         label: '1 chiffre'            },
+  { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: '1 caractère spécial'  },
+];
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -29,38 +33,55 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [confirmError, setConfirmError] = useState(false);
+
+  const goBack = () => {
+    if (step === 'password') { setStep('email'); setError(null); setPasswordError(false); setConfirmError(false); }
+    else router.back();
+  };
 
   const handleEmailNext = () => {
-    if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Erreur', 'Veuillez saisir une adresse e-mail valide');
-      return;
+    setError(null);
+    setEmailError(false);
+    if (!email.trim()) {
+      setEmailError(true); setError('Veuillez saisir votre adresse e-mail'); return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+      setEmailError(true); setError('Adresse e-mail invalide'); return;
     }
     setStep('password');
   };
 
   const handleReset = async () => {
-    if (!validatePassword(password)) {
-      Alert.alert(
-        'Mot de passe trop faible',
-        'Au moins 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial'
-      );
-      return;
+    setError(null);
+    setPasswordError(false);
+    setConfirmError(false);
+
+    if (!password) {
+      setPasswordError(true); setError('Veuillez saisir un nouveau mot de passe'); return;
+    }
+    if (!PWD_RULES.every(r => r.test(password))) {
+      setPasswordError(true); setError('Votre mot de passe ne respecte pas tous les critères'); return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-      return;
+      setConfirmError(true); setError('Les mots de passe ne correspondent pas'); return;
     }
+
     setIsLoading(true);
     try {
       await api.post('/api/password-reset', { email: email.trim().toLowerCase(), password });
       setStep('done');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur est survenue';
-      if (msg.toLowerCase().includes('not found')) {
-        Alert.alert('Compte introuvable', 'Aucun compte associé à cette adresse e-mail.');
+      if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('introuvable')) {
         setStep('email');
+        setEmailError(true);
+        setError('Aucun compte associé à cette adresse e-mail');
       } else {
-        Alert.alert('Erreur', msg);
+        setError(msg);
       }
     } finally {
       setIsLoading(false);
@@ -72,11 +93,12 @@ export default function ForgotPasswordScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-          {/* Header */}
-          <TouchableOpacity onPress={() => step === 'password' ? setStep('email') : router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-            <ThemedText style={styles.backText}>Retour</ThemedText>
-          </TouchableOpacity>
+          {step !== 'done' && (
+            <TouchableOpacity onPress={goBack} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={22} color="#3b12a3" />
+              <ThemedText style={styles.backText}>Retour</ThemedText>
+            </TouchableOpacity>
+          )}
 
           <ThemedText style={styles.logo}>CYNA</ThemedText>
 
@@ -89,17 +111,18 @@ export default function ForgotPasswordScreen() {
               </ThemedText>
               <View style={styles.form}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, emailError && styles.inputError]}
                   placeholder="Adresse e-mail"
                   placeholderTextColor="#888"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={v => { setEmail(v); setError(null); setEmailError(false); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoCorrect={false}
                   returnKeyType="next"
                   onSubmitEditing={handleEmailNext}
                 />
+                <FormError message={error} />
                 <TouchableOpacity style={styles.button} onPress={handleEmailNext} activeOpacity={0.8}>
                   <ThemedText style={styles.buttonText}>Continuer</ThemedText>
                 </TouchableOpacity>
@@ -121,11 +144,11 @@ export default function ForgotPasswordScreen() {
               <View style={styles.form}>
                 <View style={styles.passwordRow}>
                   <TextInput
-                    style={[styles.input, styles.passwordInput]}
+                    style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
                     placeholder="Nouveau mot de passe"
                     placeholderTextColor="#888"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={v => { setPassword(v); setError(null); setPasswordError(false); }}
                     secureTextEntry={!showPassword}
                     returnKeyType="next"
                   />
@@ -133,17 +156,39 @@ export default function ForgotPasswordScreen() {
                     <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
                   </TouchableOpacity>
                 </View>
-                <ThemedText style={styles.hint}>8+ car. · 1 majuscule · 1 chiffre · 1 spécial</ThemedText>
+
+                {/* Critères mot de passe */}
+                {password.length > 0 && (
+                  <View style={styles.requirements}>
+                    {PWD_RULES.map(({ test, label }) => {
+                      const ok = test(password);
+                      return (
+                        <View key={label} style={styles.reqRow}>
+                          <Ionicons
+                            name={ok ? 'checkmark-circle' : 'ellipse-outline'}
+                            size={14}
+                            color={ok ? '#16a34a' : '#9ca3af'}
+                          />
+                          <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, confirmError && styles.inputError]}
                   placeholder="Confirmer le mot de passe"
                   placeholderTextColor="#888"
                   value={confirmPassword}
-                  onChangeText={setConfirmPassword}
+                  onChangeText={v => { setConfirmPassword(v); setError(null); setConfirmError(false); }}
                   secureTextEntry={!showPassword}
                   returnKeyType="done"
                   onSubmitEditing={handleReset}
                 />
+
+                <FormError message={error} />
+
                 <TouchableOpacity
                   style={[styles.button, isLoading && styles.buttonDisabled]}
                   onPress={handleReset}
@@ -162,7 +207,7 @@ export default function ForgotPasswordScreen() {
           {step === 'done' && (
             <View style={styles.successBox}>
               <View style={styles.successIcon}>
-                <Ionicons name="checkmark-circle" size={64} color="#27ae60" />
+                <Ionicons name="checkmark-circle" size={64} color="#16a34a" />
               </View>
               <ThemedText style={styles.successTitle}>Mot de passe mis à jour !</ThemedText>
               <ThemedText style={styles.successText}>
@@ -192,22 +237,27 @@ const styles = StyleSheet.create({
   backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#3b12a3', fontSize: 15 },
 
-  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 24, lineHeight: 46 },
-  title:    { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 10 },
-  subtitle: { fontSize: 15, textAlign: 'center', color: '#666', lineHeight: 22, marginBottom: 28 },
+  logo:           { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 24, lineHeight: 46 },
+  title:          { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 10 },
+  subtitle:       { fontSize: 15, textAlign: 'center', color: '#666', lineHeight: 22, marginBottom: 28 },
   emailHighlight: { fontWeight: '700', color: '#3b12a3' },
 
   form: { gap: 12 },
-  hint: { fontSize: 12, color: '#888', marginTop: -4 },
 
   input: {
-    backgroundColor: '#f8f8f8', borderWidth: 1, borderColor: '#e0e0e0',
+    backgroundColor: '#f8f8f8', borderWidth: 1.5, borderColor: '#e0e0e0',
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 16, color: '#1a1a1a',
   },
-  passwordRow:  { position: 'relative' },
-  passwordInput:{ paddingRight: 48 },
-  eyeBtn:       { position: 'absolute', right: 14, top: 14 },
+  inputError:    { borderColor: '#ef4444', backgroundColor: '#FEF2F2' },
+  passwordRow:   { position: 'relative' },
+  passwordInput: { paddingRight: 48 },
+  eyeBtn:        { position: 'absolute', right: 14, top: 14 },
+
+  requirements: { gap: 5, paddingHorizontal: 4, marginTop: -4 },
+  reqRow:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reqText:      { fontSize: 12, color: '#9ca3af' },
+  reqOk:        { color: '#16a34a' },
 
   button:         { backgroundColor: '#3b12a3', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   buttonDisabled: { opacity: 0.6 },
@@ -217,7 +267,7 @@ const styles = StyleSheet.create({
   linkText: { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
 
   successBox:   { alignItems: 'center', paddingTop: 20, gap: 16 },
-  successIcon:  { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0fff4', alignItems: 'center', justifyContent: 'center' },
+  successIcon:  { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
   successTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' },
   successText:  { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
 });
