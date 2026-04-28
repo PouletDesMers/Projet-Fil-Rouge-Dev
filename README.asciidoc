@@ -5,7 +5,7 @@
 :icons: font
 :source-highlighter: highlight.js
 
-image:[https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg)[CI]
+image:https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg[CI]
 
 **Projet fil rouge — Spécialisation DEV / CPI | École INGETIS Paris**
 
@@ -21,8 +21,11 @@ toc::[]
 |===
 | Couche | Technologie
 | **API Backend** | Go 1.21 (Gorilla/Mux, bcrypt, OTP)
-| **Serveur Web / Proxy** | Node.js 20 (Express, http-proxy-middleware)
+| **Serveur Web / Proxy** | Node.js 20 (Express, http-proxy-middleware, express-rate-limit)
 | **Base de données** | PostgreSQL 16
+| **Frontend** | Vanilla JS + Bootstrap 5 + Chart.js + Swagger UI + Quill
+| **Paiement** | Stripe (Checkout, Quotes, Promotion Codes)
+| **Email** | Resend API
 | **Infrastructure** | Docker & Docker Compose
 | **CI/CD** | GitHub Actions
 |===
@@ -36,20 +39,53 @@ toc::[]
 [source,text]
 ----
 Projet-Fil-Rouge-Dev/
-├── api/                # API REST Go (Logique métier)
-├── web/                # Node.js (Proxy & Interface Admin)
-├── db/                 # Scripts d'initialisation SQL
-├── .github/            # Pipelines CI/CD
-└── docker-compose.yml  # Orchestration des services
+├── api/                    # API REST Go (Logique métier)
+│   ├── handlers/           # Handlers HTTP (auth, backup, catalog, etc.)
+│   ├── logger/             # Logger DB + fichier (JSONL)
+│   ├── middleware/          # Rate limiting, auth, CORS, sécurité
+│   ├── models/             # Modèles de données
+│   ├── repositories/       # Accès aux données (couche DAO)
+│   ├── services/           # Logique métier
+│   ├── routes/             # Définition des routes
+│   ├── cache/              # Cache in-memory
+│   ├── config/             # Configuration DB
+│   └── rbac/               # Contrôle d'accès basé sur les rôles
+├── web/                    # Node.js (Proxy & Interface Admin & Frontend)
+│   ├── backend/            # Interface d'administration
+│   │   ├── index.html      # Panel admin complet
+│   │   ├── login.html      # Page de connexion admin
+│   │   ├── js/modules/     # Modules JS (dashboard, users, backup, logs...)
+│   │   └── css/            # Styles CSS
+│   ├── frontend/           # Site public (catalogue, auth, profil...)
+│   ├── middleware/          # Rate limiting, sécurité Node.js
+│   └── server.js           # Serveur Express principal
+├── db/                     # Scripts d'initialisation SQL
+│   ├── 01_schema.sql       # Schéma de base de données
+│   └── 02_seed.sql         # Données de démonstration
+├── .github/                # Pipelines CI/CD
+├── docker-compose.yml      # Orchestration des services
+└── .env.example            # Exemple de configuration
 ----
 
 ### Architecture Logique (API Go)
 
-L'API suit un modèle de conception en couches pour une séparation stricte des préoccupations :
+L'API suit un modèle de conception en couches :
 
-`Routes` → `Handlers` → `Services` → `Repositories` → `PostgreSQL`
+`Routes` → `Middlewares` → `Handlers` → `Services` → `Repositories` → `PostgreSQL`
 
-NOTE: Un pipeline de middlewares intercepte les requêtes pour l'authentification, le rate limiting et la gestion des erreurs.
+Les middlewares s'exécutent dans cet ordre :
+1. SecurityHeaders (CSP, CORS, XSS)
+2. MaxBodySize (limite à 10MB)
+3. CORS
+4. RateLimitAPI (100 requêtes/min par session)
+5. RequestLogger (enregistrement en DB + fichier)
+
+### Architecture des middlewares Node.js
+
+Pour les routes admin, le proxy Node.js applique :
+1. `checkAdminAuth` → vérifie l'admin (avec cache 30s)
+2. `strictLimiter` → 120 requêtes/min sur `/admin/api`
+3. `apiLimiter` → 100 requêtes/min sur `/api`
 
 ---
 
@@ -57,15 +93,15 @@ NOTE: Un pipeline de middlewares intercepte les requêtes pour l'authentificatio
 
 ### Prérequis
 
-* **Docker** & **Docker Compose** installés.
-* Aucune installation locale de Go ou Node.js n'est requise.
+* **Docker** & **Docker Compose** installés
+* Aucune installation locale de Go ou Node.js n'est requise
 
 ### Installation
 
 1. **Cloner le dépôt**
 [source,bash]
 ----
-git clone [https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git)
+git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
 cd Projet-Fil-Rouge-Dev
 ----
 
@@ -73,8 +109,18 @@ cd Projet-Fil-Rouge-Dev
 Créer un fichier `.env` à la racine :
 [source,env]
 ----
+# Stripe (paiement)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# API (optionnel - secret pour JWT)
+API_SECRET=your-secret-key
+
+# Email (Resend)
+RESEND_API_KEY=re_...
+
+# Backup
+BACKUP_INTERVAL_MINUTES=60
 ----
 
 3. **Lancement**
@@ -83,27 +129,193 @@ STRIPE_PUBLISHABLE_KEY=pk_test_...
 docker-compose up --build
 ----
 
-### Points d'accès (Endpoints)
+### Points d'accès
 
 [cols="1,2", options="header"]
 |===
 | Service | URL
-| **Frontend** | http://localhost:3000
+| **Site public** | http://localhost:3000
+| **Panel admin** | http://localhost:3000/backend/
 | **API REST** | http://localhost:8080
-| **Swagger UI** | http://localhost:8080/swagger
+| **Swagger** | http://localhost:3000/backend/#api-docs
 | **PostgreSQL** | localhost:5432
 |===
 
 ---
 
+## 📊 Panel d'Administration
+
+Le panel admin est accessible sur `/backend/` et propose les sections suivantes :
+
+[cols="1,2,2", options="header"]
+|===
+| Section | Fonctionnalités | Endpoint API
+| **Dashboard** | Statistiques, camembert répartition, top ventes | `/admin/api/*`
+| **Utilisateurs** | CRUD, filtres, rôles, statuts | `/admin/api/users`
+| **Catégories** | CRUD, ordre d'affichage | `/admin/api/categories`
+| **Images Carrousel** | CRUD, ordre, aperçu live | `/admin/api/carousel-images`
+| **Commandes** | Liste, détails, changement de statut | `/admin/api/commandes`
+| **Devis** | Gestion + envoi Stripe Quotes | `/admin/api/quotes`
+| **Remises** | Codes promo locaux + Stripe | `/admin/api/discounts`
+| **Newsletter** | Campagnes, abonnés | `/admin/api/newsletter/*`
+| **Rôles & Permissions** | RBAC complet | `/admin/api/roles`
+| **Logs API** | Filtres, auto-refresh, export CSV | `/admin/api/logs`
+| **Sauvegardes** | pg_dump, planification, restauration | `/admin/api/backup/*`
+| **API Docs** | Swagger UI dynamique | `/admin/api/swagger.json`
+|===
+
+---
+
+## 💾 Système de Sauvegardes
+
+Les sauvegardes de la base de données sont gérées via `pg_dump` :
+
+### Types de sauvegarde
+
+* **full** (`full_*.sql`) — Toutes les tables
+* **data** (`data_*.sql`) — Toutes les tables sauf `api_logs`
+* **logs** (`logs_*.sql`) — Uniquement la table `api_logs`
+* **auto_full** (`auto_full_*.sql`) — Sauvegarde automatique complète
+
+### Sauvegarde manuelle
+
+Via le panel admin → Sauvegardes → "Lancer la sauvegarde"
+
+### Sauvegarde automatique (planification)
+
+Planification avec intervalle en minutes via :
+* Interface admin : sélecteur `min/h`
+* Variable d'environnement : `BACKUP_INTERVAL_MINUTES=60`
+
+Les règles sont persistées dans `/backups/schedules.json`.
+
+### Restauration
+
+Depuis l'interface admin : téléchargement ou restauration directe via `psql`.
+
+### Volumes Docker
+
+[source,yaml]
+----
+volumes:
+  postgres_data:   # Données PostgreSQL (persistant)
+  uploads_data:    # Images uploadées
+  backups_data:    # Sauvegardes (.sql files)
+  api_logs:        # Fichier de logs API (JSONL)
+----
+
+---
+
+## 📝 Système de Logs
+
+Les logs API sont écrits dans **3 stockages simultanément** :
+
+[cols="1,2,2", options="header"]
+|===
+| Stockage | Persistance | Accès
+| **RAM** (500 entrées) | Perdue au redémarrage | Fallback si DB indisponible
+| **PostgreSQL** (table `api_logs`) | 90 jours (purge auto) | Interface logs + SQL
+| **Fichier** (`/var/log/api/api.log`) | Illimitée (JSONL) | `docker exec` + `tail`
+|==|
+
+### Fonctionnalités de l'interface logs
+
+* Cache local incrémental : 5000 logs initiaux, 50 par refresh
+* Auto-refresh (60s), export CSV complet
+* Filtres : niveau, méthode, statut HTTP, date, texte
+* Stats en temps réel par niveau
+
+---
+
+## ⚡ Cache Frontend
+
+Le panel admin intègre un cache API côté client automatique :
+
+* **`AdminApiCache`** — Cache mémoire avec TTL 30s
+* **Cache automatique** : toutes les `GET /admin/api/*` sont mises en cache
+* **Invalidation automatique** : `POST/PUT/DELETE` → vide le cache concerné
+* **Exclusions** : endpoints logs et backup (données temps réel)
+
+---
+
 ## 🔐 Sécurité
 
-La plateforme implémente les standards de sécurité suivants :
+### Rate Limiting
 
-* **Auth :** Tokens de session opaques via Header `Authorization`.
-* **2FA :** Authentification à deux facteurs via TOTP.
-* **Protection :** Rate limiting par adresse IP.
-* **Cryptographie :** Mots de passe hashés (Bcrypt) et sauvegardes chiffrées (AES-256 via Restic).
+**Node.js (express-rate-limit) :**
+[cols="1,2,2", options="header"]
+|===
+| Limiteur | Limite | Routes
+| `loginLimiter` | 5 requêtes/15min | `/auth/login`
+| `apiLimiter` | 100 requêtes/min | `/api/*`
+| `strictLimiter` | 120 requêtes/min | `/admin/api/*`
+|===
+
+**Go API :**
+[cols="1,2,2", options="header"]
+|===
+| Limiteur | Limite | Routes
+| `APILimiter` | 100/min par session | Toutes les routes
+| `AdminLimiter` | 600/min par session | Routes admin
+| `LoginLimiter` | 5/min par IP | `/api/login`
+|===
+
+### Circuit Breaker (Frontend)
+
+En cas de réponse 429, le frontend bloque toutes les requêtes API pendant la durée du `Retry-After` avec un bandeau rouge et compte à rebours.
+
+---
+
+## 🔧 Variables d'Environnement
+
+[cols="1,2,2", options="header"]
+|===
+| Variable | Description | Défaut
+| `DB_HOST` | Hôte PostgreSQL | `localhost`
+| `DB_PORT` | Port PostgreSQL | `5432`
+| `DB_USER` | Utilisateur DB | `postgres`
+| `DB_PASSWORD` | Mot de passe DB | `password`
+| `DB_NAME` | Nom de la base | `mydb`
+| `API_SECRET` | Secret pour les tokens | `""`
+| `STRIPE_SECRET_KEY` | Clé secrète Stripe | `""`
+| `STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe | `""`
+| `RESEND_API_KEY` | Clé API Resend (email) | `""`
+| `LOG_FILE_PATH` | Chemin fichier de logs | `/var/log/api/api.log`
+| `BACKUP_INTERVAL_MINUTES` | Intervalle backup auto (minutes) | `""`
+|===
+
+---
+
+## 📦 Commandes Docker Utiles
+
+[source,bash]
+----
+# Construire et démarrer
+docker-compose up --build -d
+
+# Voir les logs d'un service
+docker-compose logs -f api
+docker-compose logs -f web
+
+# Logs fichier API
+docker-compose exec api tail -f /var/log/api/api.log
+
+# Lister les sauvegardes
+docker-compose exec api ls -lh /backups/pgdump/
+
+# Console PostgreSQL
+docker-compose exec db psql -U postgres -d mydb
+
+# Rebuild un service
+docker-compose build api && docker-compose up -d
+docker-compose build web && docker-compose up -d
+
+# Arrêt sans perte de données
+docker-compose down
+
+# Arrêt + suppression volumes (⚠️ perte données)
+docker-compose down -v
+----
 
 ---
 
@@ -111,14 +323,34 @@ La plateforme implémente les standards de sécurité suivants :
 
 ### Exécution locale
 
-* **Go :** `cd api && go test ./... -v` (13 tests unitaires couvrant `middleware` et `errors`).
-* **Node.js :** `cd web && npm test`.
+[source,bash]
+----
+# Tests Go
+cd api && go test ./... -v
+
+# Lint Go
+cd api && go vet ./...
+
+# Tests Node.js
+cd web && npm test
+----
 
 ### Pipeline CI
+
 Le workflow GitHub Actions valide chaque modification :
-1.  **Linter :** `go vet`.
-2.  **Build :** Compilation des binaires.
-3.  **Test :** Exécution des suites de tests automatisées.
+1. **Linter :** `go vet`
+2. **Build :** Compilation des binaires
+3. **Test :** Suites de tests automatisées
+4. **Docker :** Construction des images
+
+### Pentest intégré
+
+Endpoint `/admin/api/security/pentest` vérifie :
+- Headers de sécurité (CSP, HSTS, X-Frame-Options...)
+- Rate limiting (login, API)
+- Protection CSRF
+- Blocage accès anonyme
+- Spécification Swagger
 
 ---
 
@@ -126,7 +358,7 @@ Le workflow GitHub Actions valide chaque modification :
 
 Ce projet valide les compétences acquises durant les 4 séances du module "Node.js & API REST" :
 
-1.  **S1 :** Architecture logicielle et modules métiers.
-2.  **S2 :** Sécurisation et durcissement OWASP.
-3.  **S3 :** Intégration de services tiers (Stripe, SMTP).
-4.  **S4 :** Industrialisation (Docker, Swagger, Tests).
+1. **S1 :** Architecture logicielle et modules métiers.
+2. **S2 :** Sécurisation et durcissement OWASP.
+3. **S3 :** Intégration de services tiers (Stripe, SMTP, Resend).
+4. **S4 :** Industrialisation (Docker, Swagger, Tests, CI/CD).
