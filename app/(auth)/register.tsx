@@ -72,10 +72,16 @@ export default function RegisterScreen() {
       await api.post('/api/users', { firstName, lastName, email: email.trim().toLowerCase(), password });
       setStep('done');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Impossible de créer le compte';
-      const isEmailTaken = msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('email');
-      if (isEmailTaken) { fe(['email']); }
-      setError(isEmailTaken ? 'Cette adresse e-mail est déjà utilisée' : msg);
+      const isNetwork = err instanceof TypeError;
+      const lc = err instanceof Error ? err.message.toLowerCase() : '';
+      if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
+        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+      } else if (lc.includes('already exists') || lc.includes('email already')) {
+        fe(['email']);
+        setError('Cette adresse e-mail est déjà utilisée.');
+      } else {
+        setError("Inscription impossible. Veuillez vérifier vos informations.");
+      }
     } finally {
       setIsLoading(false);
     }

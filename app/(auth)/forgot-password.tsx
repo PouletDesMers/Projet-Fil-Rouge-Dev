@@ -75,13 +75,16 @@ export default function ForgotPasswordScreen() {
       await api.post('/api/password-reset', { email: email.trim().toLowerCase(), password });
       setStep('done');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Une erreur est survenue';
-      if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('introuvable')) {
+      const isNetwork = err instanceof TypeError;
+      const lc = err instanceof Error ? err.message.toLowerCase() : '';
+      if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
+        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+      } else if (lc.includes('not found') || lc.includes('introuvable')) {
         setStep('email');
         setEmailError(true);
-        setError('Aucun compte associé à cette adresse e-mail');
+        setError('Aucun compte associé à cette adresse e-mail.');
       } else {
-        setError(msg);
+        setError('Une erreur est survenue. Veuillez réessayer.');
       }
     } finally {
       setIsLoading(false);

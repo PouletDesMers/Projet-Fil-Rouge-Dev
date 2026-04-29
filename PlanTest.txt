@@ -1,0 +1,134 @@
+Plan de test complet
+Prérequis
+Docker lancé (docker compose up -d)
+App lancée (npx expo start --clear)
+Téléphone sur le même réseau Wi-Fi que 172.16.1.178
+1. Authentification — Login
+1.1 Champs vides
+
+Laisser email ET mot de passe vides → tap "Se connecter"
+Attendu : "Veuillez remplir tous les champs", les deux champs en rouge
+1.2 Email invalide
+
+Saisir testtest (sans @) → tap "Se connecter"
+Attendu : "Adresse e-mail invalide", champ email en rouge
+1.3 Mauvais mot de passe
+
+Email : lahatraariantsoa@gmail.com / Mot de passe : mauvais123
+Attendu : "Email ou mot de passe incorrect.", les deux champs en rouge
+1.4 Email non vérifié
+
+
+docker exec projet-fil-rouge-dev-db-1 psql -U postgres -d mydb \
+  -c "UPDATE utilisateur SET email_verified = false WHERE email = 'nic@hotmail.com';"
+Login avec nic@hotmail.com + son mot de passe
+Attendu : "Votre e-mail n'est pas encore vérifié. Vérifiez votre boîte de réception."
+Remettre après : SET email_verified = true WHERE email = 'nic@hotmail.com'
+1.5 Compte désactivé
+
+
+docker exec projet-fil-rouge-dev-db-1 psql -U postgres -d mydb \
+  -c "UPDATE utilisateur SET statut = 'inactif' WHERE email = 'nic@hotmail.com';"
+Login avec nic@hotmail.com
+Attendu : "Votre compte a été désactivé. Contactez le support CYNA."
+Remettre après : SET statut = 'actif' WHERE email = 'nic@hotmail.com'
+1.6 Erreur réseau
+
+Couper le Wi-Fi du téléphone → tenter un login
+Attendu : "Impossible de contacter le serveur. Vérifiez votre connexion Internet."
+Remettre le Wi-Fi
+1.7 Login réussi
+
+Email : lahatraariantsoa@gmail.com + bon mot de passe
+Attendu : arrivée sur l'onglet Accueil, PAS de retour sur le login
+2. Inscription
+2.1 Email déjà utilisé
+
+S'inscrire avec lahatraariantsoa@gmail.com
+Attendu : "Cette adresse e-mail est déjà utilisée.", champ email en rouge
+2.2 Mot de passe faible
+
+Saisir azerty → les critères s'affichent en rouge
+Attendu : "Votre mot de passe ne respecte pas tous les critères"
+2.3 Mots de passe différents
+
+Mot de passe : Test@1234 / Confirmation : Test@5678
+Attendu : "Les mots de passe ne correspondent pas"
+2.4 Erreur réseau
+
+Wi-Fi coupé → tenter une inscription
+Attendu : "Impossible de contacter le serveur. Vérifiez votre connexion Internet."
+2.5 Inscription réussie
+
+Nouvel email + mot de passe fort valide
+Attendu : page de succès "Compte créé !" + bouton vers login
+3. Mot de passe oublié
+3.1 Email inconnu
+
+Saisir inconnu@test.com → Continuer → Réinitialiser
+Attendu : retour à l'étape e-mail + "Aucun compte associé à cette adresse e-mail."
+3.2 Erreur réseau
+
+Wi-Fi coupé → tenter la réinitialisation
+Attendu : "Impossible de contacter le serveur. Vérifiez votre connexion Internet."
+3.3 Réinitialisation réussie
+
+Email existant + nouveau mot de passe fort
+Attendu : page "Mot de passe mis à jour !" + bouton login
+Vérifier que le nouveau mot de passe fonctionne au login
+4. ChatFAB (bouton flottant)
+4.1 Visible sur les tabs
+
+Naviguer sur Accueil, Catalogue, Panier, Compte
+Attendu : bouton chat visible en bas à droite sur chacun
+4.2 Invisible sur le chat
+
+Tap sur le ChatFAB → écran chat ouvert
+Attendu : le bouton FAB n'apparaît PAS sur l'écran chat
+4.3 Invisible sur les pages auth
+
+Se déconnecter → écrans login/register
+Attendu : pas de FAB visible
+4.4 Ouverture du chat
+
+Tap FAB → écran chat s'ouvre
+Envoyer un message → réponse du bot
+5. Notifications
+5.1 Cloche dans le header
+
+Une fois connecté, vérifier la cloche en haut à droite
+Si notifications non lues : badge rouge avec le nombre
+5.2 Navigation vers notifications
+
+Tap sur la cloche → écran /notifications s'ouvre
+Les notifications s'affichent
+5.3 Présence sur tous les onglets
+
+Accueil : cloche + icône panier dans le header
+Catalogue : cloche dans le header
+Compte : cloche dans le header
+6. Pagination — Catalogue
+6.1 Chargement initial
+
+Ouvrir l'onglet Catalogue
+Attendu : premiers 20 produits chargés
+6.2 Scroll infini
+
+Scroller jusqu'en bas de la liste
+Attendu : spinner apparaît, nouveaux produits ajoutés
+6.3 Filtre catégorie
+
+Sélectionner une catégorie → la liste repart à zéro (page 1)
+Scroller → pagination fonctionne dans la catégorie filtrée
+6.4 Recherche
+
+Saisir un terme → liste repart à la page 1
+Scroller → pagination continue
+6.5 Page catégorie
+
+Aller sur une catégorie depuis l'accueil
+Scroller → nouveaux produits chargés automatiquement
+7. Smoke test final
+Parcours complet : Login → Catalogue → Produit → Panier → Checkout
+Vérifier qu'aucun écran ne plante
+Vérifier que la déconnexion (Compte → Se déconnecter) redirige bien vers login

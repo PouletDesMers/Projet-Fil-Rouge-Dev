@@ -71,9 +71,19 @@ export default function LoginScreen() {
         setIsLoading(false);
         return;
       }
-      setEmailError(true);
-      setPasswordError(true);
-      setError('Email ou mot de passe incorrect');
+      const isNetwork = err instanceof TypeError;
+      const lc = err instanceof Error ? err.message.toLowerCase() : '';
+      if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
+        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+      } else if (lc.includes('not verified') || lc.includes('verify your email') || lc.includes('email not verified')) {
+        setError("Votre e-mail n'est pas encore vérifié. Vérifiez votre boîte de réception.");
+      } else if (lc.includes('disabled') || lc.includes('account is disabled')) {
+        setError('Votre compte a été désactivé. Contactez le support CYNA.');
+      } else {
+        setEmailError(true);
+        setPasswordError(true);
+        setError('Email ou mot de passe incorrect.');
+      }
     } finally {
       setIsLoading(false);
     }

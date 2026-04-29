@@ -32,7 +32,13 @@ async function request<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `HTTP ${res.status}`);
+    let message = text || `HTTP ${res.status}`;
+    try {
+      const json = JSON.parse(text);
+      if (typeof json.error === 'string' && json.error) message = json.error;
+      else if (typeof json.message === 'string' && json.message) message = json.message;
+    } catch {}
+    throw new Error(message);
   }
 
   const text = await res.text();

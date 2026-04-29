@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { ChatFAB } from '@/components/chat-fab';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/context/cart-context';
 import { api } from '@/services/api';
@@ -66,9 +65,8 @@ export default function TabLayout() {
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
-    <View style={styles.container}>
-      <Tabs
-        screenOptions={{
+    <Tabs
+      screenOptions={{
           tabBarActiveTintColor: '#3b12a3',
           tabBarInactiveTintColor: '#888',
           headerShown: false,
@@ -156,13 +154,10 @@ export default function TabLayout() {
         {/* Screens cachés de la tab bar */}
         <Tabs.Screen name="dashboard" options={{ href: null }} />
       </Tabs>
-      <ChatFAB />
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   bellBtn:   { marginRight: 12, position: 'relative' },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   badge: {

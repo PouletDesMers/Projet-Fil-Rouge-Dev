@@ -64,7 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string, totpCode?: string) => {
-    setIsLoading(true);
     try {
       const body: Record<string, string> = { email, password };
       if (totpCode) body.totpCode = totpCode;
@@ -91,8 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(null);
       await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
