@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -30,19 +30,26 @@ export default function CatalogueScreen() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   type SortKey = 'default' | 'price_asc' | 'price_desc' | 'name_asc';
   const [sortKey, setSortKey] = useState<SortKey>('default');
+  const PAGE_LIMIT = 20;
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     loadCategories();
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => doSearch(), 300);
+    pageRef.current = 1;
+    const timer = setTimeout(() => doSearch(1, false), 300);
     return () => clearTimeout(timer);
   }, [search, selectedCat, minPrice, maxPrice, onlyAvailable, sortKey]);
 
@@ -57,45 +64,68 @@ export default function CatalogueScreen() {
     }
   };
 
-  const doSearch = useCallback(async () => {
-    setLoading(true);
+  const doSearch = useCallback(async (pageNum = 1, append = false) => {
+    if (fetchingRef.current && append) return;
+    fetchingRef.current = true;
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      hasMoreRef.current = true;
+      setHasMore(true);
+    }
     try {
       let raw: Record<string, unknown>[] = [];
+      const qp = new URLSearchParams({ page: String(pageNum), limit: String(PAGE_LIMIT) });
 
       if (search.trim()) {
-        // Recherche textuelle via endpoint public
-        const qp = new URLSearchParams({ q: search.trim() });
-        if (minPrice)      qp.append('minPrice', minPrice);
-        if (maxPrice)      qp.append('maxPrice', maxPrice);
+        qp.set('q', search.trim());
+        if (minPrice) qp.append('minPrice', minPrice);
+        if (maxPrice) qp.append('maxPrice', maxPrice);
         raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
       } else {
-        // Pas de terme de recherche : utiliser l'endpoint auth (liste complète)
-        const url = selectedCat
-          ? `/api/produits?category=${encodeURIComponent(selectedCat)}`
-          : '/api/produits';
-        raw = await api.get<Record<string, unknown>[]>(url);
+        if (selectedCat) qp.append('category', selectedCat);
+        raw = await api.get<Record<string, unknown>[]>(`/api/produits?${qp.toString()}`);
       }
 
-      let products = (raw || []).map(normalizeProduct);
+      let fetched = (raw || []).map(normalizeProduct);
 
-      if (onlyAvailable) products = products.filter(p => p.disponible);
-      if (minPrice)      products = products.filter(p => p.prix >= Number(minPrice));
-      if (maxPrice)      products = products.filter(p => p.prix <= Number(maxPrice));
+      if (onlyAvailable) fetched = fetched.filter(p => p.disponible);
+      if (minPrice)      fetched = fetched.filter(p => p.prix >= Number(minPrice));
+      if (maxPrice)      fetched = fetched.filter(p => p.prix <= Number(maxPrice));
       if (search.trim() && selectedCat) {
-        products = products.filter(p => p.categorie?.slug === selectedCat);
+        fetched = fetched.filter(p => p.categorie?.slug === selectedCat);
       }
 
-      if (sortKey === 'price_asc')  products = [...products].sort((a, b) => a.prix - b.prix);
-      if (sortKey === 'price_desc') products = [...products].sort((a, b) => b.prix - a.prix);
-      if (sortKey === 'name_asc')   products = [...products].sort((a, b) => a.nom.localeCompare(b.nom));
+      if (sortKey === 'price_asc')  fetched = [...fetched].sort((a, b) => a.prix - b.prix);
+      if (sortKey === 'price_desc') fetched = [...fetched].sort((a, b) => b.prix - a.prix);
+      if (sortKey === 'name_asc')   fetched = [...fetched].sort((a, b) => a.nom.localeCompare(b.nom));
 
-      setProducts(products);
+      const more = fetched.length >= PAGE_LIMIT;
+      hasMoreRef.current = more;
+      setHasMore(more);
+      pageRef.current = pageNum;
+
+      if (append) {
+        setProducts(prev => [...prev, ...fetched]);
+      } else {
+        setProducts(fetched);
+      }
     } catch {
-      setProducts([]);
+      if (!append) setProducts([]);
+      hasMoreRef.current = false;
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      fetchingRef.current = false;
     }
   }, [search, selectedCat, minPrice, maxPrice, onlyAvailable, sortKey]);
+
+  const loadMore = useCallback(() => {
+    if (!hasMoreRef.current || fetchingRef.current) return;
+    doSearch(pageRef.current + 1, true);
+  }, [doSearch]);
 
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity
@@ -237,6 +267,15 @@ export default function CatalogueScreen() {
           keyExtractor={(p) => p.id}
           renderItem={renderProduct}
           contentContainerStyle={styles.list}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.listLoader}>
+                <ActivityIndicator size="small" color="#3b12a3" />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={48} color="#ccc" />

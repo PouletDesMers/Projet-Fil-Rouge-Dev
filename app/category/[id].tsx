@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -21,6 +21,13 @@ export default function CategoryScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_LIMIT = 20;
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const fetchingRef = useRef(false);
+  const categoryRef = useRef<Category | null>(null);
 
   useEffect(() => {
     if (id) loadCategory();
@@ -32,13 +39,10 @@ export default function CategoryScreen() {
       const cats = (catsRaw || []).map(normalizeCategory);
       const cat = cats.find((c) => c.id === id);
       setCategory(cat ?? null);
+      categoryRef.current = cat ?? null;
 
       if (cat?.slug) {
-        const data = await api.get<Record<string, unknown>[]>(`/api/public/products/${cat.slug}`);
-        const sorted = (data || [])
-          .map(normalizeProduct)
-          .sort((a, b) => (b.priorite ?? 0) - (a.priorite ?? 0));
-        setProducts(sorted);
+        await loadProducts(cat, 1, false);
       }
     } catch {
       // ignore
@@ -46,6 +50,43 @@ export default function CategoryScreen() {
       setLoading(false);
     }
   };
+
+  const loadProducts = useCallback(async (cat: Category, pageNum: number, append: boolean) => {
+    if (!cat?.slug) return;
+    if (fetchingRef.current && append) return;
+    fetchingRef.current = true;
+    if (append) setLoadingMore(true);
+    try {
+      const data = await api.get<Record<string, unknown>[]>(
+        `/api/public/products/${cat.slug}?page=${pageNum}&limit=${PAGE_LIMIT}`
+      );
+      const fetched = (data || [])
+        .map(normalizeProduct)
+        .sort((a, b) => (b.priorite ?? 0) - (a.priorite ?? 0));
+      const more = fetched.length >= PAGE_LIMIT;
+      hasMoreRef.current = more;
+      setHasMore(more);
+      pageRef.current = pageNum;
+      if (append) {
+        setProducts(prev => [...prev, ...fetched]);
+      } else {
+        setProducts(fetched);
+      }
+    } catch {
+      if (!append) setProducts([]);
+      hasMoreRef.current = false;
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+      fetchingRef.current = false;
+    }
+  }, []);
+
+  const loadMore = useCallback(() => {
+    const cat = categoryRef.current;
+    if (!cat || !hasMoreRef.current || fetchingRef.current) return;
+    loadProducts(cat, pageRef.current + 1, true);
+  }, [loadProducts]);
 
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity
@@ -105,6 +146,15 @@ export default function CategoryScreen() {
         keyExtractor={(p) => p.id}
         renderItem={renderProduct}
         contentContainerStyle={styles.list}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.listLoader}>
+              <ActivityIndicator size="small" color="#3b12a3" />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={48} color="#ccc" />
@@ -162,6 +212,7 @@ const styles = StyleSheet.create({
   badge:         { backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   badgeText:     { color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  empty:     { flex: 1, alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 16, color: '#aaa', textAlign: 'center' },
+  empty:      { flex: 1, alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyText:  { fontSize: 16, color: '#aaa', textAlign: 'center' },
+  listLoader: { padding: 20, alignItems: 'center' },
 });

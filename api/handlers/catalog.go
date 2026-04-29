@@ -16,6 +16,35 @@ import (
 	"api/models"
 )
 
+// parsePagination returns (page, limit, offset) when "page" param is present; page=0 means no pagination.
+func parsePagination(r *http.Request) (page, limit, offset int) {
+	if r.URL.Query().Get("page") == "" {
+		return 0, 0, 0
+	}
+	page, limit = 1, 20
+	if v, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && v > 0 {
+		page = v
+	}
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 100 {
+		limit = v
+	}
+	offset = (page - 1) * limit
+	return
+}
+
+// parsePaginationDefault always paginates (page=1, limit=20 by default).
+func parsePaginationDefault(r *http.Request) (page, limit, offset int) {
+	page, limit = 1, 20
+	if v, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && v > 0 {
+		page = v
+	}
+	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 100 {
+		limit = v
+	}
+	offset = (page - 1) * limit
+	return
+}
+
 // ===== CATEGORIES =====
 
 func GetCategories(w http.ResponseWriter, r *http.Request) {
@@ -183,13 +212,22 @@ func GetProduits(w http.ResponseWriter, r *http.Request) {
 		       c.nom as categorie_nom
 		FROM produits p LEFT JOIN categories c ON p.id_categorie = c.id_categorie`
 
+	page, limit, offset := parsePagination(r)
+	catFilter := r.URL.Query().Get("category")
 	var rows *sql.Rows
 	var err error
-	catFilter := r.URL.Query().Get("category")
-	if catFilter != "" {
-		rows, err = config.DB.Query(baseQuery+" WHERE c.slug = $1 ORDER BY p.ordre_affichage ASC", catFilter)
+	if page > 0 {
+		if catFilter != "" {
+			rows, err = config.DB.Query(baseQuery+" WHERE c.slug = $1 ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3", catFilter, limit, offset)
+		} else {
+			rows, err = config.DB.Query(baseQuery+" ORDER BY p.ordre_affichage ASC LIMIT $1 OFFSET $2", limit, offset)
+		}
 	} else {
-		rows, err = config.DB.Query(baseQuery + " ORDER BY p.ordre_affichage ASC")
+		if catFilter != "" {
+			rows, err = config.DB.Query(baseQuery+" WHERE c.slug = $1 ORDER BY p.ordre_affichage ASC", catFilter)
+		} else {
+			rows, err = config.DB.Query(baseQuery + " ORDER BY p.ordre_affichage ASC")
+		}
 	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -219,10 +257,14 @@ func GetProduits(w http.ResponseWriter, r *http.Request) {
 func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	slug := mux.Vars(r)["slug"]
+	page, limit, offset := parsePaginationDefault(r)
+	useCache := page == 1 && limit == 20
 	cacheKey := cache.KeyProduitsByCategory(slug)
-	if cached := cache.CatalogCache.Get(cacheKey); cached != nil {
-		w.Write(cached)
-		return
+	if useCache {
+		if cached := cache.CatalogCache.Get(cacheKey); cached != nil {
+			w.Write(cached)
+			return
+		}
 	}
 	rows, err := config.DB.Query(`
 		SELECT p.id_produit, p.nom, p.slug,
@@ -232,7 +274,8 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
 		       COALESCE(p.ordre_affichage,0)
 		FROM produits p JOIN categories c ON p.id_categorie = c.id_categorie
-		WHERE c.slug = $1 AND p.actif = TRUE AND c.actif = TRUE ORDER BY p.ordre_affichage ASC`, slug)
+		WHERE c.slug = $1 AND p.actif = TRUE AND c.actif = TRUE
+		ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3`, slug, limit, offset)
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -253,7 +296,9 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 		}
 		produits = append(produits, p)
 	}
-	cache.SetJSON(cache.CatalogCache, cacheKey, produits)
+	if useCache {
+		cache.SetJSON(cache.CatalogCache, cacheKey, produits)
+	}
 	json.NewEncoder(w).Encode(produits)
 }
 
@@ -354,10 +399,14 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Search query too long", http.StatusBadRequest)
 		return
 	}
+	page, limit, offset := parsePaginationDefault(r)
+	useCache := page == 1 && limit == 20
 	cacheKey := cache.KeySearchResults(q)
-	if cached := cache.SearchCache.Get(cacheKey); cached != nil {
-		w.Write(cached)
-		return
+	if useCache {
+		if cached := cache.SearchCache.Get(cacheKey); cached != nil {
+			w.Write(cached)
+			return
+		}
 	}
 	pattern := "%" + q + "%"
 	rows, err := config.DB.Query(`
@@ -371,7 +420,7 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		FROM produits p JOIN categories c ON p.id_categorie = c.id_categorie
 		WHERE p.actif=TRUE AND c.actif=TRUE
 		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
-		ORDER BY p.ordre_affichage ASC LIMIT 50`, pattern)
+		ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3`, pattern, limit, offset)
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -408,7 +457,9 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		p.NomCategorie = p.CategorieNom
 		results = append(results, p)
 	}
-	cache.SetJSON(cache.SearchCache, cacheKey, results)
+	if useCache {
+		cache.SetJSON(cache.SearchCache, cacheKey, results)
+	}
 	json.NewEncoder(w).Encode(results)
 }
 
