@@ -34,6 +34,21 @@ export default function CheckoutScreen() {
   const { items, total, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const [step, setStep] = useState<Step>('recap');
+  const [submitting, setSubmitting] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+
+  // Adresse
+  const [fullName, setFullName] = useState('');
+  const [street, setStreet]     = useState('');
+  const [city, setCity]         = useState('');
+  const [zip, setZip]           = useState('');
+  const [country, setCountry]   = useState('France');
+
+  // Paiement
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry]  = useState('');
+  const [cardCvc, setCardCvc]        = useState('');
+  const [cardName, setCardName]      = useState('');
 
   if (!isAuthenticated) {
     return (
@@ -69,21 +84,6 @@ export default function CheckoutScreen() {
       </SafeAreaView>
     );
   }
-  const [submitting, setSubmitting] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
-
-  // Adresse
-  const [fullName, setFullName] = useState('');
-  const [street, setStreet]     = useState('');
-  const [city, setCity]         = useState('');
-  const [zip, setZip]           = useState('');
-  const [country, setCountry]   = useState('France');
-
-  // Paiement
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry]  = useState('');
-  const [cardCvc, setCardCvc]        = useState('');
-  const [cardName, setCardName]      = useState('');
 
   const currentIndex = STEPS.findIndex((s) => s.key === step);
   const availableItems = items.filter((i) => i.available);

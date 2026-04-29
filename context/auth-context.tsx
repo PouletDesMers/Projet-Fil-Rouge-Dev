@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { api, LoginResponse, setAuthToken, UserProfile } from '@/services/api';
 
@@ -101,8 +101,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ isAuthenticated, isLoading, user, token, login, logout }),
+    [isAuthenticated, isLoading, user, token, login, logout]
+  );
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, token, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
