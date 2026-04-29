@@ -1,10 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   TouchableOpacity,
@@ -13,29 +11,33 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { api, Invoice, normalizeInvoice } from '@/services/api';
+import { api, normalizeOrder, Order } from '@/services/api';
+import { downloadOrderPdf } from '@/services/pdf';
 
 export default function InvoicesScreen() {
   const router = useRouter();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Record<string, unknown>[]>('/api/factures')
-      .then(data => setInvoices((data || []).map(normalizeInvoice)))
-      .catch(() => setInvoices([]))
+    api.get<Record<string, unknown>[]>('/api/commandes')
+      .then(data => setOrders((data || []).map(normalizeOrder)))
+      .catch(() => setOrders([]))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDownload = async (invoice: Invoice) => {
-    if (!invoice.pdfUrl) {
-      Alert.alert('Facture indisponible', 'Le PDF de cette facture n\'est pas encore disponible.');
-      return;
-    }
+  const handleDownload = async (order: Order) => {
+    setDownloading(order.id);
     try {
-      await Linking.openURL(invoice.pdfUrl);
+      // Charger le détail de la commande pour avoir les articles
+      const detail = await api.get<Record<string, unknown>>(`/api/commandes/${order.id}`);
+      await downloadOrderPdf(normalizeOrder(detail));
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'ouvrir le PDF.');
+      // Si le détail échoue, utiliser les données qu'on a déjà
+      await downloadOrderPdf(order);
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -58,13 +60,14 @@ export default function InvoicesScreen() {
       </View>
 
       <FlatList
-        data={invoices}
+        data={orders}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           const date = item.date
             ? new Date(item.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
             : '—';
+          const isDownloading = downloading === item.id;
           return (
             <View style={styles.card}>
               <View style={styles.cardRow}>
@@ -72,17 +75,26 @@ export default function InvoicesScreen() {
                   <Ionicons name="document-text-outline" size={22} color="#3b12a3" />
                 </View>
                 <View style={styles.cardBody}>
-                  <ThemedText style={styles.cardTitle}>Facture #{item.id}</ThemedText>
+                  <ThemedText style={styles.cardTitle}>
+                    Facture #{item.id.slice(0, 8).toUpperCase()}
+                  </ThemedText>
                   <ThemedText style={styles.cardSub}>{date}</ThemedText>
                   <ThemedText style={styles.cardAmount}>{item.total.toFixed(2)} €</ThemedText>
                 </View>
                 <TouchableOpacity
-                  style={[styles.downloadBtn, !item.pdfUrl && styles.downloadBtnDisabled]}
+                  style={[styles.downloadBtn, isDownloading && styles.downloadBtnLoading]}
                   onPress={() => handleDownload(item)}
                   activeOpacity={0.7}
+                  disabled={isDownloading}
                 >
-                  <Ionicons name="download-outline" size={18} color={item.pdfUrl ? '#3b12a3' : '#bbb'} />
-                  <ThemedText style={[styles.downloadText, !item.pdfUrl && styles.downloadTextDisabled]}>PDF</ThemedText>
+                  {isDownloading ? (
+                    <ActivityIndicator size="small" color="#3b12a3" />
+                  ) : (
+                    <>
+                      <Ionicons name="download-outline" size={18} color="#3b12a3" />
+                      <ThemedText style={styles.downloadText}>PDF</ThemedText>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -124,10 +136,9 @@ const styles = StyleSheet.create({
   cardSub:       { fontSize: 12, color: '#666' },
   cardAmount:    { fontSize: 16, fontWeight: '800', color: '#3b12a3', marginTop: 2 },
 
-  downloadBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, borderRadius: 8, backgroundColor: '#f0ecff' },
-  downloadBtnDisabled: { backgroundColor: '#f5f5f5' },
-  downloadText:        { fontSize: 12, fontWeight: '600', color: '#3b12a3' },
-  downloadTextDisabled:{ color: '#bbb' },
+  downloadBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8, borderRadius: 8, backgroundColor: '#f0ecff', minWidth: 60, justifyContent: 'center' },
+  downloadBtnLoading: { backgroundColor: '#f5f5f5' },
+  downloadText:       { fontSize: 12, fontWeight: '600', color: '#3b12a3' },
 
   empty:      { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },

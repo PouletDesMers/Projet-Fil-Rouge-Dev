@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { api, normalizeOrder, Order } from '@/services/api';
+import { downloadOrderPdf } from '@/services/pdf';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   'En attente',
@@ -40,6 +41,7 @@ export default function OrdersScreen() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -113,9 +115,28 @@ export default function OrdersScreen() {
                     </ThemedText>
                   </View>
                   <ThemedText style={styles.orderTotal}>{order.total.toFixed(2)} €</ThemedText>
-                  <TouchableOpacity style={styles.invoiceBtn}>
-                    <Ionicons name="download-outline" size={16} color="#3b12a3" />
-                    <ThemedText style={styles.invoiceBtnText}>Facture</ThemedText>
+                  <TouchableOpacity
+                    style={styles.invoiceBtn}
+                    disabled={downloading === order.id}
+                    onPress={async () => {
+                      setDownloading(order.id);
+                      try {
+                        const detail = await api.get<Record<string, unknown>>(`/api/commandes/${order.id}`);
+                        await downloadOrderPdf(normalizeOrder(detail));
+                      } catch {
+                        await downloadOrderPdf(order);
+                      } finally {
+                        setDownloading(null);
+                      }
+                    }}
+                  >
+                    {downloading === order.id
+                      ? <ActivityIndicator size="small" color="#3b12a3" />
+                      : <>
+                          <Ionicons name="download-outline" size={16} color="#3b12a3" />
+                          <ThemedText style={styles.invoiceBtnText}>Facture</ThemedText>
+                        </>
+                    }
                   </TouchableOpacity>
                 </View>
               </View>

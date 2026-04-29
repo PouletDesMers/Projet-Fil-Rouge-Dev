@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { api, normalizeOrder, Order } from '@/services/api';
+import { downloadOrderPdf } from '@/services/pdf';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   'En attente',
@@ -41,6 +42,7 @@ export default function OrderDetailScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -92,8 +94,20 @@ export default function OrderDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Commande #{order.id}</ThemedText>
-        <View style={{ width: 40 }} />
+        <ThemedText style={styles.headerTitle}>Commande #{order.id.slice(0, 8).toUpperCase()}</ThemedText>
+        <TouchableOpacity
+          style={styles.pdfBtn}
+          onPress={async () => {
+            setDownloading(true);
+            await downloadOrderPdf(order!);
+            setDownloading(false);
+          }}
+          disabled={downloading}
+        >
+          {downloading
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Ionicons name="download-outline" size={22} color="#fff" />}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -170,6 +184,7 @@ const styles = StyleSheet.create({
   },
   backBtn:     { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  pdfBtn:      { padding: 4, width: 40, alignItems: 'center' },
 
   content: { padding: 16, gap: 16 },
   section: { gap: 8 },
