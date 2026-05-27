@@ -93,8 +93,10 @@ Pour les routes admin, le proxy Node.js applique :
 
 ### Prérequis
 
-* **Docker** & **Docker Compose** installés
-* Aucune installation locale de Go ou Node.js n'est requise
+⚠️ **IMPORTANT : L'utilisation de Docker et Docker Compose est STRICTEMENT OBLIGATOIRE** pour lancer ce projet. L'application a été conçue pour tourner exclusivement via des conteneurs.
+
+* **Docker** & **Docker Compose** installés sur votre machine (par exemple, via Docker Desktop)
+* Aucune installation locale de Go, Node.js ou PostgreSQL n'est requise, tout est géré par Docker.
 
 ### Installation
 
@@ -139,6 +141,17 @@ docker-compose up --build
 | **API REST** | http://localhost:8080
 | **Swagger** | http://localhost:3000/backend/#api-docs
 | **PostgreSQL** | localhost:5432
+|===
+
+### Comptes de Test
+
+Lors du premier lancement, les accès suivants sont générés automatiquement :
+
+[cols="1,2,2", options="header"]
+|===
+| Rôle | Email | Mot de passe
+| **Admin** | `admin@cyna.fr` | `Admin1234!`
+| **Client** | `user@cyna.fr` | `Admin1234!`
 |===
 
 ---
