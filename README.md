@@ -1,392 +1,273 @@
-# Projet-Fil-Rouge-Dev
+<div align="center">
+  <img src="./assets/images/icon.png" alt="CYNA Logo" width="120" />
 
-1️⃣ Table categorie
+  # CYNA — Plateforme SaaS Cybersécurité
 
-Technique :
-id_categorie : clé primaire, auto-incrémentée.
-nom : varchar(100), obligatoire.
-description : texte descriptif optionnel.
-actif : booléen, indique si la catégorie est disponible.
-Relations : 1 catégorie → plusieurs services.
+  **Protégez votre entreprise. Simplement.**
 
-Non technique :
-C’est la grande famille de services ou produits.
-Exemple : “Informatique”, “Marketing”, “Ressources humaines”.
-Chaque service appartient à une catégorie.
+  [![CI](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg)](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions)
+  ![Go](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go&logoColor=white)
+  ![React Native](https://img.shields.io/badge/React%20Native-Expo-000020?logo=expo)
+  ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?logo=postgresql&logoColor=white)
+  ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+  ![Stripe](https://img.shields.io/badge/Stripe-Paiement-635BFF?logo=stripe&logoColor=white)
 
-2️⃣ Table service
-Technique :
-id_service : clé primaire.
-nom, description, actif.
-id_categorie : clé étrangère vers categorie.
-Relations : 1 service → plusieurs produits.
-
-Non technique :
-C’est une offre spécifique dans une catégorie.
-Exemple : dans la catégorie “Informatique”, le service peut être “Maintenance PC” ou “Développement Web”.
-
-3️⃣ Table produit
-Technique :
-id_produit : clé primaire.
-nom, description.
-sur_devis : booléen, indique si le prix est personnalisé.
-actif : booléen, si le produit est disponible.
-id_service : clé étrangère vers service.
-Relations : 1 produit → plusieurs tarifications.
-
-Non technique :
-Produit = ce que le client peut acheter ou souscrire.
-Exemple : “Pack maintenance 1 an”, “Abonnement Web”.
-Certains produits nécessitent un devis personnalisé.
-
-4️⃣ Table tarification
-Technique :
-id_tarification : clé primaire.
-prix : numérique, montant.
-unite : unité du service (ex: utilisateur, licence).
-periodicite : fréquence (mensuel, annuel).
-id_produit : clé étrangère vers produit.
-
-Non technique :
-C’est le prix du produit et la façon dont il est facturé.
-Exemple : 50€/mois pour 1 licence utilisateur, ou 500€ une fois pour un service ponctuel.
-
-5️⃣ Table entreprise
-Technique :
-id_entreprise : clé primaire.
-nom, secteur, taille, pays.
-date_creation : timestamp par défaut NOW().
-
-Non technique :
-Représente le client ou l’organisation qui achète les services.
-Exemple : “Société ABC, secteur informatique, 50 employés, basée en France”.
-
-6️⃣ Table utilisateur
-
-Technique :
-id_utilisateur : clé primaire.
-email unique, mot_de_passe.
-nom, prenom, telephone, role (client, admin, support).
-statut, date_creation, derniere_connexion.
-id_entreprise : clé étrangère vers entreprise.
-
-Non technique :
-Représente une personne utilisant la plateforme.
-Peut être un client, un administrateur ou le support.
-Chaque utilisateur est lié à une entreprise.
-
-7️⃣ Table abonnement
-
-Technique :
-id_abonnement : clé primaire.
-date_debut, date_fin.
-quantite, statut (actif, suspendu, résilié).
-renouvellement_auto : booléen.
-id_entreprise, id_produit, id_tarification : clés étrangères.
-
-Non technique :
-Représente qu’une entreprise souscrit à un produit.
-Exemple : “Société ABC a souscrit 10 licences Web pour 1 an, renouvellement automatique activé”.
-
-8️⃣ Table commande
-Technique :
-id_commande : clé primaire.
-date_commande, montant_total, statut.
-id_utilisateur : clé étrangère vers utilisateur.
-
-Non technique :
-Chaque fois qu’un client achète un produit, cela crée une commande.
-Statut = payée, en attente ou échec.
-
-9️⃣ Table facture
-
-Technique :
-id_facture : clé primaire.
-date_facture, montant, lien_pdf.
-id_commande : clé étrangère unique vers commande.
-
-Non technique :
-Document officiel récapitulant la commande et le montant à payer.
-Peut être téléchargé ou envoyé au client.
-
-🔟 Table paiement
-
-Technique :
-id_paiement : clé primaire.
-moyen (CB, PayPal), statut, date_paiement.
-reference_externe pour suivi bancaire.
-id_commande : clé étrangère vers commande.
-
-Non technique :
-Indique si le client a payé et comment.
-Exemple : paiement via carte bancaire, en attente de validation.
-
-1️⃣1️⃣ Table ticket_support
-
-Technique :
-id_ticket : clé primaire.
-sujet, message, statut (ouvert, en cours, fermé).
-date_creation, id_utilisateur : clé étrangère.
-
-Non technique :
-Permet au client de contacter le support pour un problème.
-Exemple : “Je ne peux pas accéder à mon produit”.
-
-1️⃣2️⃣ Table notification
-
-Technique :
-id_notification : clé primaire.
-type (sécurité, facturation, info), message, lu (booléen).
-date_creation, id_utilisateur : clé étrangère.
-
-Non technique :
-Messages envoyés à l’utilisateur pour l’informer.
-Exemple : “Votre abonnement sera renouvelé demain”, “Mise à jour du système”.
-
-💡 Résumé global pour le client :
-
-Catégorie → Service → Produit → Tarification : la hiérarchie des offres.
-Entreprise → Utilisateur → Abonnement : qui utilise quoi et comment.
-Commande → Facture → Paiement : le suivi financier.
-Ticket & Notification : le support et la communication.
-# Welcome to your Expo app 👋
-
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# CYNA — Plateforme SaaS Cybersécurité
-
-![CI](https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev/actions/workflows/ci.yml/badge.svg)
-
-Projet fil rouge — Spécialisation DEV / CPI | École INGETIS Paris
-
-CYNA est une plateforme SaaS de cybersécurité permettant aux entreprises de souscrire à des solutions de protection (EDR, XDR, SOC). Le projet est découpé en trois services containerisés : une API Go, un serveur web Node.js et une base de données PostgreSQL.
+  *Projet Fil Rouge B3 CPI — SUP DE VINCI Paris*
+</div>
 
 ---
 
-## Stack technique
+## C'est quoi CYNA ?
 
-| Couche | Technologie |
+CYNA est une **plateforme en ligne** qui permet aux entreprises de **souscrire à des solutions de cybersécurité** — comme un abonnement en ligne, mais pour protéger vos systèmes informatiques contre les cyberattaques.
+
+> **Vous n'êtes pas développeur ?** Pas de panique. Imaginez CYNA comme un supermarché de la sécurité informatique : vous choisissez une protection, vous payez, et vous gérez tout depuis un tableau de bord ou une application mobile.
+
+**EDR, XDR, SOC ?** Ce sont des types de protections — des systèmes qui surveillent et défendent automatiquement votre réseau. CYNA vous y donne accès facilement, sans être expert.
+
+---
+
+## Ce que CYNA permet de faire
+
+### Sur le site web
+
+| Fonctionnalité | Ce que vous pouvez faire |
 |---|---|
-| API backend | Go 1.21 — gorilla/mux, lib/pq, bcrypt, OTP |
-| Serveur web / proxy | Node.js 20 — Express, http-proxy-middleware |
-| Base de données | PostgreSQL 16 |
-| Containerisation | Docker + Docker Compose |
-| CI | GitHub Actions |
+| Catalogue | Parcourir et comparer toutes les offres de cybersécurité |
+| Abonnement | Souscrire en quelques clics avec paiement sécurisé |
+| Tableau de bord | Suivre vos abonnements, commandes et factures |
+| Support | Ouvrir un ticket si vous avez un problème |
+| Espace admin | Gérer les clients, produits et commandes (équipe CYNA) |
+
+### Sur l'application mobile (iOS & Android)
+
+| Fonctionnalité | Ce que vous pouvez faire |
+|---|---|
+| Connexion sécurisée | Se connecter avec double authentification (2FA) |
+| Catalogue produits | Rechercher, filtrer et consulter les fiches produits |
+| Panier & Paiement | Commander directement depuis son téléphone |
+| Mon compte | Voir ses abonnements, factures et historique |
+| Support | Contacter l'équipe CYNA depuis l'app |
+| Chatbot | Obtenir des réponses rapides aux questions fréquentes |
 
 ---
 
-## Architecture
+## Aperçu visuel
+
+> Des captures d'écran de l'application et du site seront ajoutées ici. Pour voir le projet en action, suivez les instructions de lancement ci-dessous.
+
+---
+
+## Comment est organisée la base de données ?
+
+Les données sont stockées dans une base de données PostgreSQL. Voici comment elles s'articulent :
+
+**Version simple :**
+- **Catégorie → Service → Produit** : le catalogue des offres
+- **Entreprise → Utilisateur → Abonnement** : qui utilise quoi et comment
+- **Commande → Facture → Paiement** : le suivi financier
+- **Ticket & Notification** : le support et la communication
+
+**Schéma de la base de données :**
+
+![Schéma BDD CYNA](./projet_cyna_sch%C3%A9maBDD.png)
+
+**Modèle Conceptuel de Données (MCD) :**
+
+![MCD CYNA](./MCD%20Cyna.png)
+
+---
+
+## Comment fonctionne le système ?
+
+CYNA est composé de **trois services** qui communiquent ensemble, plus une **application mobile** :
 
 ```
-Projet-Fil-Rouge-Dev/
-├── api/                    # API REST en Go
-│   ├── config/             # Configuration (DB, env)
-│   ├── errors/             # Classes d'erreurs personnalisées + tests
-│   ├── middleware/         # Auth JWT, rate limiting, logger, error handler + tests
-│   ├── models/             # Modèles de données
-│   ├── repositories/       # Couche d'accès aux données (SQL)
-│   ├── services/           # Logique métier
-│   ├── handlers/           # Contrôleurs HTTP
-│   ├── routes/             # Déclaration des routes
-│   ├── cache/              # Cache en mémoire
-│   ├── logger/             # Logger structuré
-│   └── main.go
-├── web/                    # Serveur web Node.js (proxy + frontend)
-│   ├── server.js
-│   ├── frontend/           # Pages HTML/CSS/JS publiques
-│   ├── backend/            # Interface d'administration
-│   └── middleware/         # Rate limiting, sécurité
-├── db/                     # Scripts SQL d'initialisation
-├── .github/workflows/      # CI GitHub Actions
-└── docker-compose.yml
-```
-
-### Architecture en couches (API Go)
-
-```
-Routes → Handlers → Services → Repositories → PostgreSQL
-              ↕
-         Middleware (Auth, RateLimit, Logger, ErrorHandler)
+                         Utilisateur
+                        /            \
+              Navigateur web       Application mobile
+                    |               (iOS & Android)
+                    |                     |
+             ┌──────┴──────┐              |
+             │ Site web    │              |
+             │ Node.js     │              |
+             │ Port 3000   │              |
+             └──────┬──────┘              |
+                    │                     |
+                    └──────────┬──────────┘
+                               │  API REST (HTTP)
+                               ▼
+                    ┌──────────────────────┐
+                    │    API Backend        │
+                    │    Go — Port 8080     │
+                    │  JWT · 2FA · Stripe   │
+                    └──────────┬───────────┘
+                               │  SQL
+                               ▼
+                    ┌──────────────────────┐
+                    │   Base de données    │
+                    │   PostgreSQL 16      │
+                    │   Port 5432          │
+                    └──────────────────────┘
 ```
 
 ---
 
-## Prérequis
+## Technologies utilisées
 
-- [Docker](https://docs.docker.com/get-docker/) et [Docker Compose](https://docs.docker.com/compose/)
-
-> Tout le projet se lance via Docker. Go et Node.js **n'ont pas besoin d'être installés** sur la machine hôte.
+| Domaine | Technologie | Rôle |
+|---|---|---|
+| API Backend | **Go 1.21** | Traite les données et les requêtes |
+| Site Web | **Node.js 20 + Express** | Sert les pages au navigateur |
+| Application mobile | **React Native + Expo** | App iOS & Android |
+| Base de données | **PostgreSQL 16** | Stocke toutes les données |
+| Paiement | **Stripe** | Traitement des paiements |
+| Authentification | **JWT + TOTP (2FA)** | Connexion sécurisée |
+| Infrastructure | **Docker + Docker Compose** | Lance tout en une commande |
+| CI/CD | **GitHub Actions** | Vérifie le code automatiquement |
 
 ---
 
-## Lancement
+## Lancer le projet
 
-### 1. Cloner le projet
+### Site web & API (Docker)
+
+Un seul outil est nécessaire : **Docker**. Go et Node.js n'ont pas besoin d'être installés séparément.
+
+- [Télécharger Docker](https://docs.docker.com/get-docker/)
+
+**1. Récupérer le projet**
 
 ```bash
 git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
 cd Projet-Fil-Rouge-Dev
 ```
 
-### 2. Configurer les variables d'environnement
+**2. Configurer les variables d'environnement**
 
-Créez un fichier `.env` à la racine :
+Copiez `.env.example` en `.env` et remplissez vos clés Stripe :
 
 ```env
-# Stripe (requis pour les paiements)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
-### 3. Démarrer tous les services
+**3. Lancer tous les services**
 
 ```bash
 docker-compose up --build
 ```
 
-Les trois conteneurs démarrent dans l'ordre : **db** → **api** → **web**. La base de données est prête avant l'API grâce au healthcheck PostgreSQL.
+Les services démarrent automatiquement dans le bon ordre (base de données → API → site web).
 
 | Service | URL |
 |---|---|
-| Frontend CYNA | http://localhost:3000 |
+| Site CYNA | http://localhost:3000 |
 | API REST | http://localhost:8080 |
-| Swagger / API Docs | http://localhost:8080/swagger |
-| PostgreSQL | localhost:5432 |
+| Documentation API (Swagger) | http://localhost:8080/swagger |
 
-### Commandes utiles
+**Commandes utiles**
 
 ```bash
-# Démarrer en arrière-plan
+# Lancer en arrière-plan
 docker-compose up -d --build
 
 # Voir les logs en temps réel
 docker-compose logs -f
 
-# Logs d'un seul service
-docker-compose logs -f api
-
-# Arrêter et supprimer les conteneurs
+# Arrêter les services
 docker-compose down
 
-# Arrêter et supprimer les volumes (repart de zéro)
+# Tout réinitialiser (repart de zéro)
 docker-compose down -v
-
-# Rebuild un seul service
-docker-compose up -d --build api
 ```
 
 ---
 
-## Tests
+### Application mobile
 
-### Tests Go (13 tests unitaires)
+L'application mobile fonctionne indépendamment des conteneurs Docker.
+
+**Prérequis :** [Node.js](https://nodejs.org/) + l'app **Expo Go** sur votre téléphone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
 
 ```bash
-cd api
-go test ./... -v
+# Installer les dépendances
+npm install
+
+# Lancer l'application
+npx expo start
 ```
 
-Modules testés : `errors/`, `middleware/validate`, `middleware/error_handler`
+Scannez le QR code avec **Expo Go** pour ouvrir l'app sur votre téléphone.
 
-### Tests Node.js
+Ajoutez aussi ces variables dans votre `.env` pour que l'app se connecte à l'API :
 
-```bash
-cd web
-npm test
+```env
+EXPO_PUBLIC_API_URL=http://<votre-ip-locale>:8080
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
----
-
-## CI/CD
-
-La pipeline GitHub Actions se déclenche sur chaque push et pull request :
-
-- **Job `test-go`** : `go build` → `go vet` → `go test ./...`
-- **Job `test-node`** : `npm ci` → `npm test`
-
----
-
-## Modules fonctionnels
-
-| Module | Endpoints |
-|---|---|
-| Authentification | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` |
-| Utilisateurs | `GET/PUT /api/users/me`, `GET /api/admin/users` |
-| Catalogue produits | `GET/POST/PUT/DELETE /api/products`, `GET /api/categories` |
-| Abonnements | `GET/POST /api/subscriptions`, `DELETE /api/subscriptions/:id` |
-| Facturation | `GET /api/billing/invoices` |
-| Images | `POST /api/images/upload`, `DELETE /api/images/:id` |
-| API Keys | `GET/POST/DELETE /api/apikeys` |
-| Support | `GET/POST /api/support/tickets` |
-| Sauvegarde | `POST /api/admin/backup` (Restic) |
+> Remplacez `<votre-ip-locale>` par l'IP de votre machine (ex: `192.168.1.42`). `localhost` ne fonctionne pas depuis un vrai téléphone.
 
 ---
 
 ## Sécurité
 
-- Authentification par token JWT (header `Authorization: Bearer <token>`)
-- 2FA via TOTP (compatible Google Authenticator)
-- Rate limiting par IP (middleware Go)
-- Headers HTTP sécurisés
-- Mots de passe hashés avec bcrypt
-- Sauvegarde chiffrée avec Restic (AES-256)
+| Mesure | Détail |
+|---|---|
+| JWT | Chaque requête nécessite un token signé |
+| Double authentification (2FA) | Code TOTP compatible Google Authenticator |
+| Mots de passe | Hashés avec bcrypt — jamais stockés en clair |
+| Anti-spam | Rate limiting par adresse IP |
+| En-têtes HTTP | Protection contre les attaques web courantes |
+| Sauvegardes | Chiffrées avec Restic (AES-256) |
 
 ---
 
-## Projet pédagogique — TP INGETIS Paris
+## Tests
 
-Ce projet suit le programme des 4 séances du TP *Node.js & API REST — De la théorie à la production* :
+```bash
+# Tests de l'API Go (13 tests unitaires)
+cd api
+go test ./... -v
 
-| Séance | Livrable |
-|---|---|
-| 1 — Architecture en couches | `feat: architecture en couches - modules Produits et Abonnements` ✅ |
-| 2 — Sécurité JWT + OWASP | `feat: securite JWT + rate limiting + OWASP hardening` |
-| 3 — Services tiers (Stripe, emails) | `feat: paiement Stripe + webhooks + emails transactionnels` |
-| 4 — Production (Swagger, tests, Docker) | `feat: swagger + tests unitaires + docker + health check` |
+# Tests du serveur web Node.js
+cd web
+npm test
+```
 
+La CI/CD (GitHub Actions) lance ces tests automatiquement à chaque modification du code.
+
+---
+
+## Structure du projet
+
+```
+Projet-Fil-Rouge-Dev/
+├── api/                    # API REST — Go
+│   ├── handlers/           # Contrôleurs HTTP
+│   ├── services/           # Logique métier
+│   ├── repositories/       # Accès base de données
+│   ├── middleware/         # Auth, rate limiting, logs
+│   └── main.go
+├── web/                    # Site web — Node.js
+│   ├── frontend/           # Pages HTML/CSS publiques
+│   └── backend/            # Interface d'administration
+├── app/                    # Application mobile — React Native
+│   ├── (auth)/             # Login, inscription, mot de passe oublié
+│   ├── (tabs)/             # Onglets principaux (accueil, catalogue, panier...)
+│   ├── product/            # Fiches produits
+│   └── checkout/           # Tunnel de paiement
+├── db/                     # Scripts SQL d'initialisation
+├── assets/                 # Images et ressources de l'app
+├── .github/workflows/      # CI/CD GitHub Actions
+└── docker-compose.yml      # Orchestration des services
+```
+
+---
+
+## Contexte pédagogique
+
+Ce projet a été développé dans le cadre du **Projet Fil Rouge** de la formation **B3 CPI** à **SUP DE VINCI Paris**.
+
+**Objectif :** concevoir et développer de A à Z une plateforme SaaS complète — architecture, base de données, API, site web, application mobile, sécurité et déploiement.
