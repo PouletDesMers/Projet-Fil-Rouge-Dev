@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title id="pageTitle">Produit | CYNA</title>
     
+    <!-- DOMPurify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="img/favicon.png" />
     <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
@@ -536,7 +539,7 @@
         const html = (product.description_html || '').trim();
         const isEmpty = html === '' || html === '<p><br></p>' || html === '<p></p>';
         if (!isEmpty) {
-          descEl.innerHTML = html;
+          descEl.innerHTML = DOMPurify.sanitize(html);
         } else {
           descEl.textContent = product.description_longue || product.description_courte || 'Aucune description disponible.';
         }
@@ -567,11 +570,12 @@
         if (images.length > 0) {
           document.getElementById('galleryMain').src = images[0];
           const thumbs = document.getElementById('galleryThumbs');
-          thumbs.innerHTML = images.map((url, i) => `
+          const thumbsHtml = images.map((url, i) => `
             <img src="${url}" alt="Vignette ${i+1}"
                  style="width:72px;height:52px;object-fit:cover;border-radius:8px;
                         border:2px solid ${i===0?'#5610C0':'#dee2e6'};cursor:pointer;"
                  onclick="selectThumb(this,'${url}')">`).join('');
+          thumbs.innerHTML = DOMPurify.sanitize(thumbsHtml);
           gallery.style.display = 'block';
         } else {
           gallery.style.display = 'none';
@@ -590,7 +594,7 @@
         // Order buttons
         const orderButtons = document.getElementById('orderButtons');
         if (product.type_achat === 'devis') {
-          orderButtons.innerHTML = `
+          const deHtml = `
             <button class="btn btn-primary" onclick="openQuoteModal()">
               <i class="bi bi-file-earmark-text"></i> Demander un devis
             </button>
@@ -598,10 +602,11 @@
               <i class="bi bi-chat-dots"></i> Nous contacter
             </button>
           `;
+          orderButtons.innerHTML = DOMPurify.sanitize(deHtml);
         } else {
           // Escape single quotes in the name to avoid breaking the inline onclick
           const safeName = (product.nom || '').replace(/'/g, "\\'");
-          orderButtons.innerHTML = `
+          const ordHtml = `
             <button class="btn btn-primary" onclick="addToCart({id:'${product.slug || product.id_produit}',slug:'${product.slug || product.id_produit}',name:'${safeName}',price:${product.prix || 0},qty:1,duration:'${product.duree || 'mois'}'})">
               <i class="bi bi-cart-plus"></i> Ajouter au panier
             </button>
@@ -609,6 +614,7 @@
               <i class="bi bi-file-earmark-text"></i> Demander un devis
             </button>
           `;
+          orderButtons.innerHTML = DOMPurify.sanitize(ordHtml);
         }
 
         // Show content, hide loading

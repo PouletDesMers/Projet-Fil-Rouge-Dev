@@ -99,7 +99,8 @@ function renderProducts(products) {
     return;
   }
 
-  grid.innerHTML = products.map(product => renderProductCard(product)).join('');
+  const gridHtml = products.map(product => renderProductCard(product)).join('');
+  grid.innerHTML = DOMPurify.sanitize(gridHtml);
 }
 
 function renderProductCard(product) {
