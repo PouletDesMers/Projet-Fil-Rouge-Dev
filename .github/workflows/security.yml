@@ -1,0 +1,62 @@
+name: "🔐 Security Scanning — CYNA Backend"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 8 * * 1'
+
+jobs:
+  snyk-open-source:
+    name: "📦 Snyk Open Source"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --json-file-output=snyk-oss-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snyk-oss-report
+          path: snyk-oss-report.json
+          retention-days: 30
+
+  snyk-code:
+    name: "🔍 Snyk Code (SAST)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: code test
+          args: --severity-threshold=high --sarif-file-output=snyk-code.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-code.sarif
+
+  snyk-container:
+    name: "🐳 Snyk Container"
+    runs-on: ubuntu-latest
+    if: hashFiles('Dockerfile') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag cyna-backend:${{ github.sha }} --file Dockerfile .
+      - uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: cyna-backend:${{ github.sha }}
+          args: --severity-threshold=high --file=Dockerfile
