@@ -34,4 +34,4 @@ coverage.html
 restic-cache/
 backups/
 
-tp.md
+tp.md*.typ
