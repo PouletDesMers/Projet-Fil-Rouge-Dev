@@ -35,3 +35,4 @@ restic-cache/
 backups/
 
 tp.md*.typ
+SNYK_RECAP.typ
