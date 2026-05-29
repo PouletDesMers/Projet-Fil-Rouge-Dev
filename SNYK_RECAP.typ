@@ -6,20 +6,15 @@
   #text(size: 24pt, weight: "bold")[Récapitulatif Snyk — CYNA]
   
   #v(1em)
-  Auteur: Equipe sécurité   Date: 29 mai 2026
+  Auteur: Equipe sécurité \
+  Date: 29 mai 2026
 ]
 
 #line(length: 100%)
 
 = Résumé exécutif
 
-Ce rapport rassemble toutes les opérations effectuées pour intégrer Snyk (Open Source, Code, Container) dans le projet, les scans effectués, les erreurs rencontrées, les modifications appliquées et les recommandations opérationnelles. Les sections suivantes présentent :
-
-- un historique des actions et commits effectués ;
-- les résultats clefs des scans (frontend/backend) ;
-- des exemples "Avant / Après" montrant le code vulnérable et la correction recommandée ;
-- la liste détaillée des fichiers modifiés et commandes utiles ;
-- recommandations Docker & CI.
+Ce rapport rassemble toutes les opérations effectuées pour intégrer Snyk (Open Source, Code, Container) dans le projet, les scans effectués, les erreurs rencontrées, les modifications appliquées et les recommandations opérationnelles. 
 
 #v(1em)
 *Légende des severités*
@@ -33,57 +28,37 @@ Ce rapport rassemble toutes les opérations effectuées pour intégrer Snyk (Ope
 = Actions réalisées
 
 + Installation et authentification de la CLI Snyk localement (`snyk auth`).
-+ Scans initiaux :
-  - Frontend `web` : `npx snyk test` #sym.arrow résultats détaillés sauvegardés.
-  - Backend `api` : `npx snyk test --all-projects` #sym.arrow OK (aucun chemin vulnérable).
++ Scans initiaux : Backend `api` OK (0 faille) / Frontend `web` : ~30 vulnérabilités.
 + Synchronisation `package-lock.json` (`cd web && npm install`).
-+ Upgrades ciblées : `axios` #sym.arrow `^1.15.2`, `express` #sym.arrow `^4.22.2`.
-+ Réscan et export JSON (`npx snyk test --json > web/snyk-web-after.json`).
++ Upgrades ciblées initiales : `axios` #sym.arrow `^1.15.2`, `express` #sym.arrow `^4.22.2`.
++ Upgrades critiques finalisées : `multer` #sym.arrow `2.1.1` et `overrides` NPM pour `picomatch` (`^2.3.2`).
++ Politique d'exception : création d'un fichier `.snyk` via `snyk ignore` pour la faille `xlsx` (ReDoS sans correctif partagé disponible publiquement).
++ Réscan et validation locale : 0 faille Critical/High détectée !
 + Envoi de snapshots : `snyk monitor` (api + web).
 + Ajout de CI GitHub : `.github/workflows/security.yml` (Snyk OSS/Code/Container).
 + Opt-in Node 24 pour Actions : ajout de `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` dans les workflows.
-+ Gestion Git : déplacement des modifications vers la branche `clement-dev`, résolution des conflits et push.
++ Gestion Git : Déplacement des modifications vers la branche `clement-dev`, résolution des conflits et push sur le dépôt.
 
 = Fichiers modifiés / ajoutés
 
-- `web/package.json` (bump `axios`, `express` — préservation `express-rate-limit`, `helmet`).
+- `web/package.json` (bump `axios`, `express`, `multer` — ajout clause `overrides` pour `picomatch`).
 - `web/package-lock.json` (regénéré).
-- `web/snyk-web.json` / `web/snyk-web-after.json` (exports Snyk JSON).
+- `web/.snyk` (règles de bypass documentées).
+- `web/snyk-web.json` (exports Snyk JSON initiaux).
 - `.github/workflows/security.yml` (nouveau pipeline Snyk).
 - `.github/workflows/ci.yml` (opt-in Node24).
-- `SNYK_RECAP.adoc`, `SNYK_RECAP.md`, `SNYK_RECAP.typ` (rapports générés).
-
-= Erreurs rencontrées et résolution
-
-== `npm install -g snyk` #sym.arrow EACCES (permission denied)
-*Cause* : tentative d'installation globale sans droits root vers `/usr/lib/node_modules/`.
-
-*Action* :
-- option rapide : `sudo npm install -g snyk` (si acceptable),
-- option safe : `npm config set prefix '~/.npm-global'` et ajouter `~/.npm-global/bin` au `PATH`,
-- usage recommandé : `nvm` pour gérer Node sans sudo.
-
-*Log (extrait)* :
-```text
-npm error code EACCES
-Error: EACCES: permission denied, mkdir '/usr/lib/node_modules/snyk'
-```
-
-== `npx snyk test` (web) #sym.arrow package-lock out of sync
-*Problème détecté* : `csv-parse@^5.6.0` absent du `package-lock.json`. *Solution* : `cd web && npm install` puis `npx snyk test`.
+- `SNYK_RECAP.typ` et documents associés.
+- `DCT_Section_4.3_Snyk.md` (section pour le Document de Conception Technique).
 
 = Résultats détaillés — Frontend `web`
 
-- Avant corrections : ~30 vulnérabilités détectées.
-- Après `axios`/`express` upgrade : 12 vulnérabilités restantes :
-- #text(fill: red)[CRITICAL] : 1
-- #text(fill: orange)[HIGH] : 8
-- #text(fill: yellow.darken(20%))[MEDIUM] : 3
+*Bilan final (après les correctifs multters, picomatch et xlsx)* :
+- #text(fill: red)[CRITICAL] : 0
+- #text(fill: orange)[HIGH] : 0
+- #text(fill: yellow.darken(20%))[MEDIUM] : 1 (limitée par exemption justifiée pour `xlsx`)
 - #text(fill: gray)[LOW] : 0
 
-Ces vulnérabilités sont principalement introduites par : `multer` (uploads), `picomatch` (transitivement), `path-to-regexp`.
-
-*Recommandation prioritaire* : migrer `multer` vers `^2.x` (breaking change) et auditer tous les points d'upload (validation, timeouts, file limits, gestion d'erreurs).
+*Toutes les failles prioritaires liées à `multer` (Uncontrolled Recursion/DoS) et `picomatch` (ReDoS) ont été corrigées avec succès.*
 
 = Résumé Backend `api`
 
@@ -92,7 +67,7 @@ Ces vulnérabilités sont principalement introduites par : `multer` (uploads), `
 
 = Exemples Avant / Après (code)
 
-== Injection SQL
+== 1. Injection SQL 
 *#text(fill: red)[❌ AVANT — Injection SQL possible]*
 ```js
 app.get('/products/:category', async (req, res) => {
@@ -116,25 +91,48 @@ res.json(result.rows);
 });
 ```
 
-== Authentification
-*#text(fill: red)[❌ AVANT (extrait vulnérable volontaire)]*
+== 2. Authentification
+*#text(fill: red)[❌ AVANT (vulnérable)]*
 ```js
 router.post('/login', async (req, res) => {
 const { email, password } = req.body;
 const result = await db.query(`SELECT * FROM users WHERE email = '${email}'`);
-// logging du mot de passe + token créé avec secret en dur etc.
+// Logging du mot de passe en clair + cryptographie faible
 });
 ```
 
-*#text(fill: green)[✅ APRÈS — corrections appliquées]*
+*#text(fill: green)[✅ APRÈS — Corrections de sécurité]*
 ```js
 router.post('/login', async (req, res) => {
 const { email, password } = req.body;
-// Requête paramétrée
+// 1) Requête paramétrée : prémunir des SQL Injecton
 const result = await db.query('SELECT id, password_hash, role FROM users WHERE email = $1', [email]);
-// CompareHash, ne loggez pas les passwords
-// Sign JWT avec process.env.JWT_SECRET, expiration et algo HS256
+// 2) Ne pas logguer les mots de passe
+// 3) Hasher/Comparer avec Bcrypt/Argon2
 });
+```
+
+== 3. Dépendances Transitifs (package.json)
+*#text(fill: red)[❌ AVANT — Risques de DoS, ReDoS et Faille Critique]*
+```json
+{
+"dependencies": {
+"multer": "^1.4.5-lts.2" // Présence de faille Uncontrolled Recursion / DoS
+// Et picomatch v2.3.1 (faille ReDoS) appelé par des paquets tiers
+}
+}
+```
+
+*#text(fill: green)[✅ APRÈS — Upgrades et clauses Overrides]*
+```json
+{
+"dependencies": {
+"multer": "^2.1.1"       // Fix CVE : Upgrade vers la branche 2.x sécurisée
+},
+"overrides": {
+"picomatch": "^2.3.2"    // Fix ReDoS : Forçage d'une version saine globalement
+}
+}
 ```
 
 = Docker & Container — recommandations
@@ -145,26 +143,9 @@ const result = await db.query('SELECT id, password_hash, role FROM users WHERE e
 = CI / GitHub Actions — détails
 
 - Nouveau workflow ajouté : `.github/workflows/security.yml` (jobs : Snyk OSS, Snyk Code, Snyk Container).
-- Ajout de l'env global `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` pour anticiper la dépréciation Node20 sur runners.
-- Important : ajouter le secret `SNYK_TOKEN` dans GitHub pour activer `snyk monitor`, tagging de projet et politiques org.
-
-= Commandes utiles (reproduction)
-
-```sh
-# Frontend
-cd web
-npm install
-npx snyk test --json > snyk-web-after.json
-snyk monitor
-
-# Backend
-cd ../api
-npx snyk test --all-projects
-snyk monitor --all-projects
-```
+- Protection du main : Gate de sécurité active #sym.arrow tout build échouera (fail-on-policy) si des failles HIGH/CRITICAL sont découvertes.
 
 = Prochaines étapes recommandées
 
-+ Migrer `multer` vers `^2.x` et adapter le code d'upload ; ajouter tests d'intégration.
-+ Mettre en place une job CI pour `snyk monitor` afin d'historiser automatiquement.
-+ Créer PRs pour les changements majeurs et activer gating (Snyk fail-on-policy pour `high`/`critical`).
++ Tester intensivement le module d'upload (la migration de `multer` vers la version 2.1.1 pouvant introduire de légers _breaking changes_ d'API).
++ Mettre en place un plan de traitement définitif pour le paquet `xlsx` lorsqu'un correctif sera officialisé (actuellement ignoré formellement).
