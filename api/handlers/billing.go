@@ -189,8 +189,7 @@ func GetCommandes(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	var role string
-	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+	role, _ := r.Context().Value(models.UserRoleKey).(string)
 
 	var rows *sql.Rows
 	var err error

@@ -682,6 +682,32 @@
                                 >Dashboard — Vue d'ensemble
                             </h1>
                             <p class="text-muted mb-0" id="dash-date"></p>
+                            <div class="mt-2">
+                                <button
+                                    class="btn btn-outline-secondary btn-sm me-1"
+                                    onclick="AdminDashboard.exportUserReport()"
+                                    title="Exporter les utilisateurs en CSV"
+                                >
+                                    <i class="bi bi-download me-1"></i
+                                    >Utilisateurs
+                                </button>
+                                <button
+                                    class="btn btn-outline-secondary btn-sm me-1"
+                                    onclick="AdminDashboard.exportOrderReport()"
+                                    title="Exporter les commandes en CSV"
+                                >
+                                    <i class="bi bi-download me-1"></i>Commandes
+                                </button>
+                                <button
+                                    class="btn btn-outline-secondary btn-sm"
+                                    onclick="
+                                        AdminDashboard.exportRevenueReport()
+                                    "
+                                    title="Exporter les revenus par mois en CSV"
+                                >
+                                    <i class="bi bi-download me-1"></i>Revenus
+                                </button>
+                            </div>
                         </div>
                         <button
                             class="btn btn-outline-secondary btn-sm"
@@ -2090,6 +2116,15 @@
                                 onclick="AdminBackup.load()"
                             >
                                 <i class="bi bi-arrow-clockwise"></i> Actualiser
+                            </button>
+                            <button
+                                class="btn btn-outline-success btn-sm"
+                                id="btn-backup-report"
+                                onclick="AdminBackup.generateReport()"
+                                title="Générer un rapport des sauvegardes"
+                            >
+                                <i class="bi bi-file-earmark-bar-graph me-1"></i
+                                >Rapport
                             </button>
                             <div class="input-group" style="width: auto">
                                 <label

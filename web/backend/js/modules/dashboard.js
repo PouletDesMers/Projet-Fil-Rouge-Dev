@@ -51,16 +51,27 @@ const AdminDashboard = {
 
   async loadStats(usersData) {
     try {
-      const [categoriesRes, ordersRes] = await Promise.all([
+      const [categoriesRes, ordersRes] = await Promise.allSettled([
         fetch("/admin/api/categories", { credentials: "include" }),
-        fetch("/admin/api/commandes", { credentials: "include" }).catch(
-          () => null,
-        ),
+        fetch("/admin/api/commandes", { credentials: "include" }),
       ]);
 
       const users = Array.isArray(usersData) ? usersData : [];
-      const categories = categoriesRes.ok ? await categoriesRes.json() : [];
-      const orders = ordersRes && ordersRes.ok ? await ordersRes.json() : [];
+      const catOk =
+        categoriesRes.status === "fulfilled" && categoriesRes.value.ok;
+      const categories = catOk ? await categoriesRes.value.json() : [];
+
+      let orders = [];
+      if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+        orders = await ordersRes.value.json();
+        console.log("Commandes chargées:", orders.length);
+      } else {
+        console.warn(
+          "Commandes indisponibles:",
+          ordersRes.status,
+          ordersRes.reason?.message || "",
+        );
+      }
 
       const total = Array.isArray(users) ? users.length : 0;
       const active = Array.isArray(users)
@@ -510,6 +521,169 @@ const AdminDashboard = {
   _setText(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
+  },
+
+  // ── Rapports CSV ──────────────────────────────────────────────────
+
+  /** Export CSV générique (délimiteur ; pour Excel français) */
+  _downloadCSV(filename, headers, rows) {
+    const BOM = "\uFEFF";
+    const sep = ";";
+    const csv =
+      BOM +
+      headers.map((h) => `"${h}"`).join(sep) +
+      "\n" +
+      rows
+        .map((r) =>
+          r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(sep),
+        )
+        .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
+  /** Rapport Utilisateurs */
+  async exportUserReport() {
+    try {
+      const res = await fetch("/admin/api/users", { credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        AdminUtils?.showToast?.(
+          "Erreur API: " + (err.error || res.statusText || res.status),
+          "danger",
+        );
+        return;
+      }
+      const users = await res.json();
+      if (!Array.isArray(users) || users.length === 0) {
+        AdminUtils?.showToast?.("Aucun utilisateur à exporter", "warning");
+        return;
+      }
+      const headers = [
+        "ID",
+        "Email",
+        "Nom",
+        "Prénom",
+        "Rôle",
+        "Statut",
+        "2FA",
+        "Créé le",
+        "Dernière connexion",
+      ];
+      const rows = users.map((u) => [
+        u.id_utilisateur,
+        u.email,
+        u.nom || u.lastName || "",
+        u.prenom || u.firstName || "",
+        u.role || "",
+        u.statut || u.status || "",
+        u.totp_enabled ? "Oui" : "Non",
+        u.date_creation || u.createdAt || "",
+        u.derniere_connexion || "",
+      ]);
+      this._downloadCSV(
+        `utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows,
+      );
+      AdminUtils?.showToast?.(
+        `${rows.length} utilisateurs exportés`,
+        "success",
+      );
+    } catch (e) {
+      console.error("exportUserReport:", e);
+    }
+  },
+
+  /** Rapport Commandes */
+  async exportOrderReport() {
+    try {
+      const res = await fetch("/admin/api/commandes", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        AdminUtils?.showToast?.(
+          "Erreur API: " + (err.error || res.statusText || res.status),
+          "danger",
+        );
+        return;
+      }
+      const orders = await res.json();
+      const arr = Array.isArray(orders) ? orders : orders.commandes || [];
+      if (arr.length === 0) {
+        AdminUtils?.showToast?.("Aucune commande à exporter", "warning");
+        return;
+      }
+      const headers = [
+        "N°",
+        "Client ID",
+        "Date",
+        "Montant TTC",
+        "Statut",
+        "Code promo",
+      ];
+      const rows = arr.map((o) => [
+        o.id,
+        o.userId || "",
+        o.orderDate || "",
+        `${(o.totalAmount || 0).toFixed(2)} €`,
+        o.status || "",
+        o.promoCode || "",
+      ]);
+      this._downloadCSV(
+        `commandes-${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows,
+      );
+      AdminUtils?.showToast?.(`${rows.length} commandes exportées`, "success");
+    } catch (e) {
+      console.error("exportOrderReport:", e);
+    }
+  },
+
+  /** Rapport Revenus (depuis les commandes) */
+  async exportRevenueReport() {
+    try {
+      const res = await fetch("/admin/api/commandes", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        AdminUtils?.showToast?.(
+          "Erreur API: " + (err.error || res.statusText || res.status),
+          "danger",
+        );
+        return;
+      }
+      const orders = await res.json();
+      const arr = Array.isArray(orders) ? orders : orders.commandes || [];
+
+      // Par mois
+      const byMonth = {};
+      arr.forEach((o) => {
+        const d = new Date(o.orderDate || o.created_at || 0);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        byMonth[key] = (byMonth[key] || 0) + (parseFloat(o.totalAmount) || 0);
+      });
+      const headers = ["Mois", "CA TTC"];
+      const rows = Object.entries(byMonth)
+        .sort()
+        .map(([m, ca]) => [m, `${ca.toFixed(2)} €`]);
+
+      this._downloadCSV(
+        `revenus-${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows,
+      );
+      AdminUtils?.showToast?.(`${rows.length} mois exportés`, "success");
+    } catch (e) {
+      console.error("exportRevenueReport:", e);
+    }
   },
 };
 

@@ -502,6 +502,192 @@ const AdminBackup = (() => {
     }
   }
 
+  // ===== RAPPORT =====
+  async function generateReport() {
+    setStatus("info", "⏳ Génération du rapport en cours…");
+
+    try {
+      const [listRes, statsRes, schedRes] = await Promise.all([
+        fetch("/admin/api/backup/list", { credentials: "include" }),
+        fetch("/admin/api/backup/stats", { credentials: "include" }),
+        fetch("/admin/api/backup/schedule", { credentials: "include" }),
+      ]);
+
+      const listData = listRes.ok ? await listRes.json() : {};
+      const snapshots = listData.snapshots || [];
+      const stats = statsRes.ok ? await statsRes.json() : {};
+      const schedData = schedRes.ok ? await schedRes.json() : {};
+      const rules = schedData.rules || [];
+
+      const now = new Date().toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const autoCount = snapshots.filter((s) =>
+        (s.tags || []).includes("auto"),
+      ).length;
+      const manualCount = snapshots.length - autoCount;
+
+      const typeFull = snapshots.filter((s) =>
+        (s.tags || []).some((t) => t === "full" || t === "data" || t === "logs")
+          ? (s.tags || []).includes("full")
+          : true,
+      ).length;
+      const typeData = snapshots.filter((s) =>
+        (s.tags || []).includes("data"),
+      ).length;
+      const typeLogs = snapshots.filter((s) =>
+        (s.tags || []).includes("logs"),
+      ).length;
+
+      const report = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Rapport Backup CYNA — ${now}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;padding:30px;max-width:900px;margin:0 auto;color:#1a1a2e}
+h1{color:#7602F9;border-bottom:3px solid #7602F9;padding-bottom:10px;margin-bottom:25px}
+h2{color:#5610C0;margin:25px 0 15px;font-size:1.3em}
+.header-bar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:30px}
+.stat-box{background:linear-gradient(135deg,#0a1628,#1a2a4a);color:white;padding:18px 22px;border-radius:10px;min-width:160px;flex:1}
+.stat-box .num{font-size:2em;font-weight:700;color:#00d4aa}
+.stat-box .lbl{font-size:.8em;color:#8892a4;margin-top:4px}
+table{width:100%;border-collapse:collapse;margin:15px 0}
+th{background:#0a1628;color:#00d4aa;padding:10px 12px;text-align:left;font-size:.85em}
+td{padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:.85em}
+.summary{margin:20px 0;font-size:.85em;line-height:1.8}
+.footer{margin-top:40px;padding-top:15px;border-top:1px solid #e2e8f0;font-size:.75em;color:#888}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75em;margin:0 2px}
+.tag-auto{background:#d4edda;color:#155724}.tag-manual{background:#f8f9fa;color:#6c757d}.tag-full{background:#cce5ff;color:#004085}.tag-data{background:#fff3cd;color:#856404}.tag-log{background:#f8d7da;color:#721c24}
+.print-btn{background:#7602F9;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:.9em;margin-bottom:20px}
+@media print{.print-btn{display:none}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨️ Imprimer / PDF</button>
+<h1>📊 Rapport de Sauvegardes — CYNA</h1>
+<p style="color:#888;margin-bottom:25px">Généré le ${now}</p>
+
+<div class="header-bar">
+  <div class="stat-box">
+    <div class="num">${snapshots.length}</div>
+    <div class="lbl">Total backups</div>
+  </div>
+  <div class="stat-box">
+    <div class="num">${humanSize(stats.total_size || 0)}</div>
+    <div class="lbl">Espace total</div>
+  </div>
+  <div class="stat-box">
+    <div class="num">${autoCount}</div>
+    <div class="lbl">Automatiques</div>
+  </div>
+  <div class="stat-box">
+    <div class="num">${manualCount}</div>
+    <div class="lbl">Manuels</div>
+  </div>
+  <div class="stat-box">
+    <div class="num">${rules.filter((r) => r.enabled).length}</div>
+    <div class="lbl">Planifications actives</div>
+  </div>
+</div>
+
+<h2>🔍 Résumé</h2>
+<div class="summary">
+  <strong>Total sauvegardes :</strong> ${snapshots.length}<br>
+  <strong>Espace disque utilisé :</strong> ${humanSize(stats.total_size || 0)}<br>
+  <strong>Sauvegardes manuelles :</strong> ${manualCount} (${snapshots.length ? Math.round((manualCount / snapshots.length) * 100) : 0}%)<br>
+  <strong>Sauvegardes automatiques :</strong> ${autoCount} (${snapshots.length ? Math.round((autoCount / snapshots.length) * 100) : 0}%)<br>
+  <strong>Planifications actives :</strong> ${rules.filter((r) => r.enabled).length} / ${rules.length}<br>
+  <strong>Rétention :</strong> 10 derniers snapshots auto conservés
+</div>
+
+<h2>📋 Liste des Sauvegardes (${Math.min(snapshots.length, 20)} dernières)</h2>
+<table>
+<tr><th>Fichier</th><th>Date</th><th>Type</th><th>Mode</th></tr>
+${snapshots
+  .slice(0, 20)
+  .map((s) => {
+    const tags = s.tags || [];
+    const isAuto = tags.includes("auto");
+    const typeLabel = tags.includes("full")
+      ? "Complète"
+      : tags.includes("data")
+        ? "Données"
+        : tags.includes("logs")
+          ? "Logs"
+          : "Complète";
+    const typeClass =
+      typeLabel === "Complète"
+        ? "full"
+        : typeLabel === "Données"
+          ? "data"
+          : "log";
+    return `<tr>
+      <td><code>${esc(s.short_id || s.id || "—")}</code></td>
+      <td>${new Date(s.time).toLocaleString("fr-FR")}</td>
+      <td><span class="tag tag-${typeClass}">${typeLabel}</span></td>
+      <td><span class="tag ${isAuto ? "tag-auto" : "tag-manual"}">${isAuto ? "Auto" : "Manuel"}</span></td>
+    </tr>`;
+  })
+  .join("")}
+</table>
+${snapshots.length > 20 ? `<p style="color:#888;font-size:.8em">... et ${snapshots.length - 20} autres sauvegardes</p>` : ""}
+
+${
+  rules.length > 0
+    ? `
+<h2>⏱️ Planifications</h2>
+<table>
+<tr><th>Type</th><th>Intervalle</th><th>Statut</th><th>Prochaine exécution</th></tr>
+${rules
+  .map((r) => {
+    const intervalLabel =
+      r.interval_minutes >= 60
+        ? Math.round(r.interval_minutes / 60) + "h"
+        : r.interval_minutes + "min";
+    return `<tr>
+      <td>${r.type === "full" ? "Complète" : r.type === "data" ? "Données" : "Logs"}</td>
+      <td>Toutes les ${intervalLabel}</td>
+      <td>${r.enabled ? "✅ Actif" : "⛔ Inactif"}</td>
+      <td>${r.next_run ? new Date(r.next_run).toLocaleString("fr-FR") : "—"}</td>
+    </tr>`;
+  })
+  .join("")}
+</table>
+`
+    : ""
+}
+
+<div class="footer">
+  Rapport généré automatiquement par le système de sauvegarde CYNA · ${now}
+</div>
+</body>
+</html>`;
+
+      const blob = new Blob([report], { type: "text/html;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup-rapport-${new Date().toISOString().slice(0, 10)}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+
+      setStatus(
+        "success",
+        `✅ Rapport généré (${snapshots.length} backups analysés). Ouvrez le fichier HTML téléchargé.`,
+      );
+    } catch (e) {
+      setStatus("danger", `❌ Erreur rapport : ${e.message}`);
+    }
+  }
+
   // ===== HELPERS =====
   function setStatus(type, html) {
     const el = document.getElementById("backup-status");
@@ -536,6 +722,7 @@ const AdminBackup = (() => {
     downloadSnapshot,
     confirmRestore,
 
+    generateReport,
     refreshSchedule,
     addScheduleRule,
     deleteRule,

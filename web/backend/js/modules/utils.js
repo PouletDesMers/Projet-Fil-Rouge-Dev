@@ -16,7 +16,11 @@ const AdminApiCache = {
   _defaultTTL: 30000, // 30 secondes
 
   // URLs dont les réponses ne doivent JAMAIS être mises en cache
-  _neverCache: ["/admin/api/backup/", "/admin/api/logs"],
+  _neverCache: [
+    "/admin/api/backup/",
+    "/admin/api/logs",
+    "/admin/api/permissions",
+  ],
 
   // Associations endpoint → préfixe à invalider en cas de mutation
   // Ex: POST /admin/api/categories → invalide toutes les GET /admin/api/categories*

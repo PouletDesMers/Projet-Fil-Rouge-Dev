@@ -2109,6 +2109,39 @@ app.post("/api/request-quote", async (req, res) => {
   console.log(
     `[request-quote] Nouvelle demande de devis : ${fullName || email} — ${productName}`,
   );
+
+  // Envoyer un email de confirmation au client
+  try {
+    await sendAdminNotification(
+      email,
+      "Votre demande de devis CYNA",
+      `Bonjour ${fullName || email},<br><br>` +
+        `Nous avons bien reçu votre demande de devis pour <strong>${productName}</strong>.<br><br>` +
+        `Notre équipe va analyser vos besoins et vous enverra un devis personnalisé sous 24-48h.<br><br>` +
+        `Quantité demandée: ${quantity || 1}<br>` +
+        `${message ? `Message: ${message}<br><br>` : "<br>"}` +
+        `Vous pouvez suivre l'avancement dans votre espace personnel.<br><br>` +
+        `L'équipe CYNA`,
+    );
+  } catch (e) {
+    console.warn("[request-quote] Email client non envoyé:", e.message);
+  }
+
+  // Notifier l'admin (via le même email pour l'instant)
+  try {
+    await sendAdminNotification(
+      email,
+      "Nouvelle demande de devis reçue — CYNA",
+      `Nouvelle demande de devis de <strong>${fullName || email}</strong> pour <strong>${productName}</strong>.<br><br>` +
+        `${company ? `Société: ${company}<br>` : ""}` +
+        `${phone ? `Téléphone: ${phone}<br>` : ""}` +
+        `Quantité: ${quantity || 1}<br>` +
+        `${message ? `Message: ${message}<br>` : ""}`,
+    );
+  } catch (e) {
+    console.warn("[request-quote] Email admin non envoyé:", e.message);
+  }
+
   return res.json({ success: true });
 });
 

@@ -137,10 +137,10 @@ async function loadPermissions() {
                   .map(
                     (perm, idx) => `
                 <tr>
-                  ${idx === 0 ? `<td rowspan="${perms.length}"><strong>${category}</strong></td>` : ""}
-                  <td><code>${perm.code}</code></td>
-                  <td>${perm.description || "-"}</td>
-                  <td>${perm.actif ? '<span class="badge bg-success">Actif</span>' : '<span class="badge bg-secondary">Inactif</span>'}</td>
+                  ${idx === 0 ? `<td rowspan="${perms.length}"><strong>${category || "Autre"}</strong></td>` : ""}
+                  <td><code>${perm.code || "—"}</code></td>
+                  <td>${perm.description || "—"}</td>
+                  <td>${perm.actif != null && perm.actif ? '<span class="badge bg-success">Actif</span>' : '<span class="badge bg-secondary">Inactif</span>'}</td>
                 </tr>
               `,
                   )
@@ -188,10 +188,10 @@ async function saveRole(id, nom, description) {
 
     if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
 
-    showToast(id ? "Rôle mise à jour" : "Rôle créé", "success");
+    AdminUtils?.showToast?.(id ? "Rôle mise à jour" : "Rôle créé", "success");
     loadRoles();
   } catch (error) {
-    showToast(`Erreur: ${error.message}`, "danger");
+    console.error("saveRole error:", error.message);
   }
 }
 
@@ -216,10 +216,10 @@ async function deleteRole(roleId) {
 
     if (!response.ok) throw new Error("Erreur");
 
-    showToast("Rôle supprimé", "success");
+    AdminUtils?.showToast?.("Rôle supprimé", "success");
     loadRoles();
   } catch (error) {
-    showToast(`Erreur: ${error.message}`, "danger");
+    console.error("deleteRole error:", error.message);
   }
 }
 
@@ -236,9 +236,9 @@ async function assignPermissionToRole(roleId, permissionCode) {
 
     if (!response.ok) throw new Error("Erreur");
 
-    showToast("Permission assignée", "success");
+    AdminUtils?.showToast?.("Permission assignée", "success");
   } catch (error) {
-    showToast(`Erreur: ${error.message}`, "danger");
+    console.error("assignPermission error:", error.message);
   }
 }
 
@@ -255,9 +255,9 @@ async function removePermissionFromRole(roleId, permissionCode) {
 
     if (!response.ok) throw new Error("Erreur");
 
-    showToast("Permission supprimée", "success");
+    AdminUtils?.showToast?.("Permission supprimée", "success");
   } catch (error) {
-    showToast(`Erreur: ${error.message}`, "danger");
+    console.error("removePermission error:", error.message);
   }
 }
 
@@ -300,19 +300,22 @@ async function openPermissions(roleId, roleName) {
       grouped[category].push(perm);
     });
 
+    const safeCode = (p) => (p && p.code ? p.code : "—");
+    const safeDesc = (p) => (p && p.description ? p.description : "");
+
     const html = Object.entries(grouped)
       .map(
         ([cat, perms]) => `
       <div class="col-md-6">
         <div class="border rounded p-3 h-100">
-          <h6 class="fw-semibold mb-2">${cat}</h6>
+          <h6 class="fw-semibold mb-2">${cat || "Autre"}</h6>
           ${perms
             .map(
               (perm) => `
             <div class="form-check form-switch">
-              <input class="form-check-input role-perm-toggle" type="checkbox" data-code="${perm.code}" ${currentPermissions.has(perm.code) ? "checked" : ""}>
+              <input class="form-check-input role-perm-toggle" type="checkbox" data-code="${safeCode(perm)}" ${currentPermissions.has(safeCode(perm)) ? "checked" : ""}>
               <label class="form-check-label">
-                <code>${perm.code}</code> — ${perm.description || ""}
+                <code>${safeCode(perm)}</code> ${safeDesc(perm) ? "— " + safeDesc(perm) : ""}
               </label>
             </div>
           `,
