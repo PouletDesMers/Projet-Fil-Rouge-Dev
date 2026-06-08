@@ -162,4 +162,100 @@ export default {
 
     copyright: "Â© 2026 CYNA. All rights reserved.",
   },
+
+  contact: {
+    title: "Contact Us",
+    subtitle: "We are here to help. Send us a message and we will respond as soon as possible.",
+    success_message: "Thank you! Your message has been sent successfully. We will get back to you soon.",
+    info_notice: "All fields marked with an asterisk (*) are required.",
+    
+    form_name: "Full Name *",
+    form_name_placeholder: "Your name",
+    form_email: "Email *",
+    form_email_placeholder: "your.email@example.com",
+    form_phone: "Phone",
+    form_phone_placeholder: "+1 (555) 123-4567",
+    form_subject: "Subject *",
+    form_subject_placeholder: "Select a subject...",
+    form_message: "Message *",
+    form_message_placeholder: "Please explain how we can help you...",
+    form_submit: "Send Message",
+    form_submit_error: "An error occurred while sending the message.",
+    form_invalid_email: "Please enter a valid email address.",
+
+    subject_general: "General Inquiry",
+    subject_support: "Technical Support",
+    subject_billing: "Billing",
+    subject_partnership: "Partnership",
+    subject_other: "Other",
+
+    email_title: "Email",
+    phone_title: "Phone",
+    address_title: "Address",
+    address: "123 Cybersecurity Street<br />75000 Paris, France",
+  },
+
+  team: {
+    title: "Our Team",
+    subtitle: "Meet the passionate experts who build CYNA every day. Together, we create innovative cybersecurity solutions to protect your business.",
+    
+    mission_title: "Our Mission",
+    mission_description: "At CYNA, we believe every organization deserves robust and accessible cybersecurity protection. Our team is dedicated to transforming how businesses approach security.",
+    mission_box_title: "Why do we do this?",
+    mission_box_content: "We founded CYNA to offer pragmatic and comprehensive protection against cyber threats to SMEs and mid-market companies that often lack resources and expertise. Our mission is to make cybersecurity accessible to everyone.",
+    
+    team_members_title: "Project Team",
+    team_members_description: "These passionate individuals united their skills to create CYNA. Together, they bring diverse expertise in development, cybersecurity, and project management.",
+    
+    role_developer: "Developer",
+    role_security: "Security Expert",
+    role_devops: "DevOps & Infrastructure",
+    
+    member1_bio: "Backend development and infrastructure expert, passionate about creating robust and scalable solutions.",
+    member2_bio: "Frontend specialist and user experience expert, creating intuitive and modern interfaces.",
+    member3_bio: "Cybersecurity specialist and penetration testing expert, ensuring CYNA provides maximum protection.",
+    member4_bio: "Cloud infrastructure and DevOps expert, ensuring reliability and scalability of our services.",
+    
+    values_title: "Our Values",
+    value_security: "Security",
+    value_security_desc: "Protecting your data is our absolute priority.",
+    value_expertise: "Expertise",
+    value_expertise_desc: "A team of passionate and committed experts.",
+    value_innovation: "Innovation",
+    value_innovation_desc: "Modern and cutting-edge solutions.",
+    value_partnership: "Partnership",
+    value_partnership_desc: "We work as a true partner.",
+    
+    cta_title: "Want to join us?",
+    cta_description: "We are always looking for passionate talent to strengthen our team.",
+    cta_button: "Contact Us",
+  },
+
+  footer: {
+    about_title: "About",
+    about_cyna: "About CYNA",
+    team: "Our Team",
+    careers: "Careers",
+    blog: "Blog",
+
+    products_title: "Products",
+    categories: "Categories",
+    pricing: "Pricing",
+    comparison: "Comparison",
+    roadmap: "Roadmap",
+
+    support_title: "Support",
+    help_center: "Help Center",
+    documentation: "Documentation",
+    contact: "Contact Us",
+    status: "Service Status",
+
+    legal_title: "Legal",
+    terms: "Terms of Use",
+    privacy: "Privacy Policy",
+    cookies: "Cookie Policy",
+    legal_notice: "Legal Notice",
+
+    copyright: "© 2026 CYNA. All rights reserved.",
+  },
 };
