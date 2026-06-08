@@ -397,10 +397,11 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
     const email = validation.email;
 
-    // Appeler l'API pour réinitialiser le mot de passe
+    // Appeler l'API pour réinitialiser le mot de passe (avec token sécurisé)
     const response = await axios.post("http://api:8080/api/password-reset", {
       email,
       password,
+      token,
     });
 
     // Marquer le token comme utilisé
@@ -1259,9 +1260,76 @@ app.post(
   "/admin/api/newsletter/campaigns",
   proxyToApiWithAuth("/admin/newsletter/campaigns"),
 );
+// POST /admin/api/newsletter/campaigns/:id/send — Envoi réel via Resend
 app.post(
   "/admin/api/newsletter/campaigns/:id/send",
-  proxyToApiWithAuth("/admin/newsletter/campaigns/:id/send"),
+  checkAdminAuth,
+  async (req, res) => {
+    const token = getAuthToken(req);
+    const campaignId = parseInt(req.params.id);
+
+    try {
+      // 1. Récupérer la campagne
+      const campaignResp = await axios.get(
+        `http://api:8080/api/admin/newsletter/campaigns`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const campaigns = campaignResp.data || [];
+      const campaign = campaigns.find((c) => c.id_campaign === campaignId);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campagne non trouvée" });
+      }
+
+      // 2. Récupérer les abonnés
+      const subResp = await axios.get(
+        `http://api:8080/api/admin/newsletter/subscribers`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const subscribers = subResp.data || [];
+      const activeSubs = subscribers.filter((s) => s.is_subscribed);
+
+      if (activeSubs.length === 0) {
+        return res.json({ sent: 0, total: 0, message: "Aucun abonné actif" });
+      }
+
+      // 3. Envoyer les emails via Resend
+      let sentCount = 0;
+      let errorCount = 0;
+      const unsubscribeLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/unsubscribe`;
+
+      for (const sub of activeSubs) {
+        try {
+          await sendNewsletterEmail(
+            sub.email,
+            campaign.title,
+            campaign.content,
+            unsubscribeLink,
+          );
+          sentCount++;
+        } catch (err) {
+          errorCount++;
+          console.error(`Newsletter send failed to ${sub.email}:`, err.message);
+        }
+      }
+
+      // 4. Marquer comme envoyée dans l'API Go
+      await axios.post(
+        `http://api:8080/api/admin/newsletter/campaigns/${campaignId}/send`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      res.json({
+        sent: sentCount,
+        total: activeSubs.length,
+        errors: errorCount,
+        message: `${sentCount}/${activeSubs.length} emails envoyés`,
+      });
+    } catch (error) {
+      console.error("Newsletter send error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  },
 );
 
 // GET /admin/api/quotes — Devis (commandes devis_* en DB + enrichissement Stripe)
