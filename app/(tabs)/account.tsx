@@ -83,8 +83,8 @@ export default function AccountScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <ScrollView>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <ScrollView style={{ backgroundColor: '#f5f5f5' }}>
         {/* Avatar + nom */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
@@ -101,6 +101,8 @@ export default function AccountScreen() {
           <ThemedText style={styles.sectionTitle}>Mon compte</ThemedText>
           <View style={styles.card}>
             <MenuItem icon="person-outline"       label="Informations personnelles"  onPress={() => router.push('/account/profile' as never)} />
+            <View style={styles.divider} />
+            <MenuItem icon="lock-closed-outline"  label="Changer le mot de passe"    onPress={() => router.push('/account/change-password' as never)} />
             <View style={styles.divider} />
             <MenuItem icon="location-outline"     label="Carnet d'adresses"          onPress={() => router.push('/account/addresses' as never)} />
             <View style={styles.divider} />
@@ -146,7 +148,7 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: '#f5f5f5' },
+  safe:   { flex: 1, backgroundColor: '#3b12a3' },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   profileHeader: {

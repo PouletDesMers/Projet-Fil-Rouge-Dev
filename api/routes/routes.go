@@ -32,6 +32,7 @@ func Register(r *mux.Router) {
 	r.HandleFunc("/api/public/carousel-images", handlers.GetActiveCarouselImages).Methods("GET")
 	r.HandleFunc("/api/public/categories", handlers.GetActiveCategories).Methods("GET")
 	r.HandleFunc("/api/public/products/{slug}", handlers.GetActiveProduitsByCategory).Methods("GET")
+	r.HandleFunc("/api/public/produits/{id}", handlers.GetProduit).Methods("GET")
 	r.HandleFunc("/api/public/search", handlers.SearchProduits).Methods("GET")
 	r.HandleFunc("/api/public/top-products", handlers.GetTopProductsLast3Months).Methods("GET")
 	r.HandleFunc("/api/public/contact", handlers.CreateTicketSupport).Methods("POST")

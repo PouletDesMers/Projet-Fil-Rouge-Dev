@@ -38,7 +38,7 @@ export default function ProductScreen() {
 
   const loadProduct = async () => {
     try {
-      const raw = await api.get<Record<string, unknown>>(`/api/produits/${id}`);
+      const raw = await api.get<Record<string, unknown>>(`/api/public/produits/${id}`);
       if (!raw) throw new Error('not_found');
       const normalized = normalizeProduct(raw);
       setProduct(normalized);

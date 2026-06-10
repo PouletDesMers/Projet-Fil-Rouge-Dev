@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { api, CarouselImage, Category, normalizeCarouselImage, normalizeCategory, normalizeProduct, Product } from '@/services/api';
@@ -22,7 +22,6 @@ const CARD_W = Math.floor((W - 48) / 2);
 
 export default function HomeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [topProducts, setTopProducts] = useState<Product[]>([]);
@@ -69,11 +68,11 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: '#f0f2f5' }}>
 
         {/* En-tête marque */}
-        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <View style={styles.header}>
           <View style={styles.headerDecor} pointerEvents="none">
             <Ionicons name="shield-checkmark" size={150} color="rgba(255,255,255,0.07)" />
           </View>
@@ -249,6 +248,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#3b12a3',
     paddingHorizontal: 16,
+    paddingTop: 14,
     paddingBottom: 16,
     overflow: 'hidden',
   },
