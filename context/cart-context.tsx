@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export type Duration = '1_month' | '1_year' | '2_years';
 
@@ -44,8 +45,24 @@ export function useCart() {
   return ctx;
 }
 
+const CART_STORAGE_KEY = 'cyna_cart';
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Restaurer le panier au démarrage
+  useEffect(() => {
+    AsyncStorage.getItem(CART_STORAGE_KEY)
+      .then(raw => {
+        if (raw) setItems(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Persister le panier à chaque modification
+  useEffect(() => {
+    AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items)).catch(() => {});
+  }, [items]);
 
   const addItem = useCallback((newItem: Omit<CartItem, 'id' | 'quantity'>) => {
     const id = `${newItem.productId}_${newItem.duration}`;
