@@ -410,7 +410,9 @@ app.get('/api/public/search', async (req, res) => {
 app.post('/api/users', async (req, res) => {
   try {
     // Create user in API
-    const response = await axios.post('http://api:8080/api/users', req.body);
+    const response = await axios.post('http://api:8080/api/users', req.body, {
+      headers: { 'X-Source': 'web' }
+    });
     const user = response.data;
 
     // Generate verification token

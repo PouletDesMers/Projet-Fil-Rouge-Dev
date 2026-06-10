@@ -500,6 +500,25 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	_, _ = config.DB.Exec(`UPDATE utilisateur SET role = $1 WHERE id_utilisateur = $2`, roleName, u.ID)
 	u.Role = roleName
 	u.MotDePasse = ""
+
+	// Envoyer l'email de vérification depuis Go sauf si le service web le gère lui-même
+	if r.Header.Get("X-Source") != "web" {
+		capturedEmail := u.Email
+		capturedPrenom := u.Prenom
+		capturedID := u.ID
+		go func() {
+			token := generateRandomToken()
+			if token == "" {
+				return
+			}
+			config.DB.Exec(`
+				INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+				VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
+				capturedEmail, token, capturedID)
+			sendEmailVerification(capturedEmail, capturedPrenom, token)
+		}()
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	cache.InvalidateAdminUsers()
@@ -832,8 +851,7 @@ func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TODO: envoyer le code par email (service mail non configuré en dev)
-		log.Printf("[DEV] Password reset code for %s: %s", data.Email, codeStr)
+		go sendEmailPasswordReset(data.Email, codeStr)
 	}()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1033,8 +1051,15 @@ func ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Generate token and send email
-	// This would integrate with the Node.js email service
+	// Générer un nouveau token de vérification et envoyer l'email
+	token := generateRandomToken()
+	if token != "" {
+		config.DB.Exec(`
+			INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+			VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
+			data.Email, token, userID)
+		go sendEmailVerification(data.Email, firstName, token)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
