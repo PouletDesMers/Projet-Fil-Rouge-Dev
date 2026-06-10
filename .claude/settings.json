@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem \"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\" -Depth 1)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem \"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\app\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\\", \"\"\\) })",
+      "PowerShell(Get-ChildItem \"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\services\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\\", \"\"\\) })",
+      "PowerShell(Get-ChildItem \"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\context\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"c:\\\\Lahatra\\\\Projet-Fil-Rouge-Dev\\\\\", \"\"\\) })",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
