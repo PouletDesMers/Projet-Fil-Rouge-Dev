@@ -69,12 +69,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateDuration = useCallback((id: string, duration: Duration) => {
-    setItems(prev =>
-      prev.map(i => {
-        if (i.id !== id) return i;
-        return { ...i, id: `${i.productId}_${duration}`, duration };
-      })
-    );
+    setItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      const newId = `${item.productId}_${duration}`;
+      if (newId === id) return prev;
+      const duplicate = prev.find(i => i.id === newId);
+      if (duplicate) {
+        // Fusionner les quantités dans l'item existant et supprimer l'item courant
+        return prev
+          .map(i => i.id === newId ? { ...i, quantity: i.quantity + item.quantity } : i)
+          .filter(i => i.id !== id);
+      }
+      return prev.map(i => i.id === id ? { ...i, id: newId, duration } : i);
+    });
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
