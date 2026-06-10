@@ -94,6 +94,8 @@ export default function MenuModal() {
             <View style={styles.separator} />
             <TouchableOpacity
               style={styles.logoutBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Se déconnecter"
               onPress={() =>
                 Alert.alert(
                   'Déconnexion',

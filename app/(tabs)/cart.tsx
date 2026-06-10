@@ -111,6 +111,8 @@ export default function CartScreen() {
               onPress={() => router.push('/checkout')}
               activeOpacity={0.8}
               disabled={unavailableItems.length === items.length}
+              accessibilityRole="button"
+              accessibilityLabel="Procéder au paiement"
             >
               <ThemedText style={styles.checkoutBtnText}>Procéder au paiement</ThemedText>
               <Ionicons name="arrow-forward" size={18} color="#fff" />

@@ -213,6 +213,8 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={isLoading}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Se connecter"
             >
               <ThemedText style={styles.buttonText}>
                 {isLoading ? 'Connexion...' : 'Se connecter'}
