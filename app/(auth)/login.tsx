@@ -25,7 +25,6 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
 
-  // 2FA
   const [needs2fa, setNeeds2fa] = useState(false);
   const [totpCode, setTotpCode] = useState('');
   const [totpError, setTotpError] = useState<string | null>(null);
@@ -115,48 +114,55 @@ export default function LoginScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-            <TouchableOpacity onPress={handleBack2fa} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-              <ThemedText style={styles.backText}>Retour</ThemedText>
-            </TouchableOpacity>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <View style={styles.topSection}>
+              <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
+              <ThemedText style={styles.logo}>CYNA</ThemedText>
+              <ThemedText style={styles.tagline}>Vérification en deux étapes</ThemedText>
+            </View>
 
-            <ThemedText style={styles.logo}>CYNA</ThemedText>
-            <ThemedText style={styles.title}>Vérification</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Ouvrez votre application d'authentification et saisissez le code à 6 chiffres.
-            </ThemedText>
-
-            <View style={styles.form}>
-              <View style={styles.totpContainer}>
-                <TextInput
-                  style={[styles.totpInput, totpError && styles.totpInputError]}
-                  placeholder="000000"
-                  placeholderTextColor="#ccc"
-                  value={totpCode}
-                  onChangeText={(v) => {
-                    setTotpCode(v.replace(/\D/g, '').slice(0, 6));
-                    setTotpError(null);
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  autoFocus
-                  textAlign="center"
-                />
-              </View>
-
-              <FormError message={totpError} />
-
-              <TouchableOpacity
-                style={[styles.button, (isLoading || totpCode.length < 6) && styles.buttonDisabled]}
-                onPress={handleTotpSubmit}
-                disabled={isLoading || totpCode.length < 6}
-                activeOpacity={0.8}
-              >
-                <ThemedText style={styles.buttonText}>
-                  {isLoading ? 'Vérification...' : 'Valider'}
-                </ThemedText>
+            <View style={styles.card}>
+              <TouchableOpacity onPress={handleBack2fa} style={styles.backBtn}>
+                <Ionicons name="arrow-back" size={22} color="#3b12a3" />
+                <ThemedText style={styles.backText}>Retour</ThemedText>
               </TouchableOpacity>
+
+              <ThemedText style={styles.title}>Vérification</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Ouvrez votre application d'authentification et saisissez le code à 6 chiffres.
+              </ThemedText>
+
+              <View style={styles.form}>
+                <View style={styles.totpContainer}>
+                  <TextInput
+                    style={[styles.totpInput, totpError && styles.totpInputError]}
+                    placeholder="000000"
+                    placeholderTextColor="#ccc"
+                    value={totpCode}
+                    onChangeText={(v) => {
+                      setTotpCode(v.replace(/\D/g, '').slice(0, 6));
+                      setTotpError(null);
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    autoFocus
+                    textAlign="center"
+                  />
+                </View>
+
+                <FormError message={totpError} />
+
+                <TouchableOpacity
+                  style={[styles.button, (isLoading || totpCode.length < 6) && styles.buttonDisabled]}
+                  onPress={handleTotpSubmit}
+                  disabled={isLoading || totpCode.length < 6}
+                  activeOpacity={0.8}
+                >
+                  <ThemedText style={styles.buttonText}>
+                    {isLoading ? 'Vérification...' : 'Valider'}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -168,65 +174,72 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <ThemedText style={styles.logo}>CYNA</ThemedText>
-          <ThemedText style={styles.title}>Bienvenue</ThemedText>
-          <ThemedText style={styles.subtitle}>Connectez-vous pour continuer</ThemedText>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.topSection}>
+            <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
+            <ThemedText style={styles.logo}>CYNA</ThemedText>
+            <ThemedText style={styles.tagline}>Cybersécurité managée pour les PME</ThemedText>
+          </View>
 
-          <View style={styles.form}>
-            <TextInput
-              style={[styles.input, emailError && styles.inputError]}
-              placeholder="Adresse e-mail"
-              placeholderTextColor="#888"
-              value={email}
-              onChangeText={v => { setEmail(v); clearErrors(); }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
+          <View style={styles.card}>
+            <ThemedText style={styles.title}>Bienvenue</ThemedText>
+            <ThemedText style={styles.subtitle}>Connectez-vous pour continuer</ThemedText>
 
-            <View style={styles.passwordRow}>
+            <View style={styles.form}>
               <TextInput
-                style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
-                placeholder="Mot de passe"
+                style={[styles.input, emailError && styles.inputError]}
+                placeholder="Adresse e-mail"
                 placeholderTextColor="#888"
-                value={password}
-                onChangeText={v => { setPassword(v); clearErrors(); }}
-                secureTextEntry={!showPassword}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
+                value={email}
+                onChangeText={v => { setEmail(v); clearErrors(); }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                returnKeyType="next"
               />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
+                  placeholder="Mot de passe"
+                  placeholderTextColor="#888"
+                  value={password}
+                  onChangeText={v => { setPassword(v); clearErrors(); }}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotLink}>
+                <ThemedText style={styles.forgotText}>Mot de passe oublié ?</ThemedText>
+              </TouchableOpacity>
+
+              <FormError message={error} />
+
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Se connecter"
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isLoading ? 'Connexion...' : 'Se connecter'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={styles.link}>
+                <ThemedText style={styles.linkSubText}>
+                  Pas encore de compte ?{' '}
+                  <ThemedText style={styles.linkText}>S'inscrire</ThemedText>
+                </ThemedText>
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotLink}>
-              <ThemedText style={styles.forgotText}>Mot de passe oublié ?</ThemedText>
-            </TouchableOpacity>
-
-            <FormError message={error} />
-
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Se connecter"
-            >
-              <ThemedText style={styles.buttonText}>
-                {isLoading ? 'Connexion...' : 'Se connecter'}
-              </ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={styles.link}>
-              <ThemedText style={styles.linkSubText}>
-                Pas encore de compte ?{' '}
-                <ThemedText style={styles.linkText}>S'inscrire</ThemedText>
-              </ThemedText>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -235,16 +248,35 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: '#fff' },
-  flex:      { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: 30, paddingTop: 60, paddingBottom: 40 },
+  safe:          { flex: 1, backgroundColor: '#3b12a3' },
+  flex:          { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+
+  topSection: {
+    alignItems: 'center',
+    paddingTop: 44,
+    paddingBottom: 36,
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  logo:    { fontSize: 34, fontWeight: '900', color: '#fff', letterSpacing: 4 },
+  tagline: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+
+  card: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 28,
+    paddingTop: 28,
+    paddingBottom: 40,
+  },
 
   backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#3b12a3', fontSize: 15 },
 
-  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 30, lineHeight: 46 },
-  title:    { fontSize: 28, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 8 },
-  subtitle: { fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 36, lineHeight: 22 },
+  title:    { fontSize: 24, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 6 },
+  subtitle: { fontSize: 15, textAlign: 'center', color: '#666', marginBottom: 24, lineHeight: 22 },
 
   form: { gap: 14 },
   input: {
@@ -252,9 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 16, color: '#1a1a1a',
   },
-  inputError: {
-    borderColor: '#ef4444', backgroundColor: '#FEF2F2',
-  },
+  inputError:    { borderColor: '#ef4444', backgroundColor: '#FEF2F2' },
   passwordRow:   { position: 'relative' },
   passwordInput: { paddingRight: 48 },
   eyeBtn:        { position: 'absolute', right: 14, top: 14 },
@@ -270,7 +300,6 @@ const styles = StyleSheet.create({
   linkText:    { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
   linkSubText: { color: '#555', fontSize: 14 },
 
-  // 2FA
   totpContainer: { alignItems: 'center', marginVertical: 8 },
   totpInput: {
     width: 180, height: 64, fontSize: 32, fontWeight: '700',
@@ -278,7 +307,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8', borderWidth: 2, borderColor: '#3b12a3',
     borderRadius: 12,
   },
-  totpInputError: {
-    borderColor: '#ef4444', backgroundColor: '#FEF2F2',
-  },
+  totpInputError: { borderColor: '#ef4444', backgroundColor: '#FEF2F2' },
 });

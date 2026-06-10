@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image } from 'expo-image';
 import {
     ActivityIndicator,
     Dimensions,
@@ -12,16 +12,17 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { api, CarouselImage, Category, normalizeCarouselImage, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 const { width: W } = Dimensions.get('window');
-const CARD_W = Math.floor((W - 48) / 2); // 2 colonnes avec gap
+const CARD_W = Math.floor((W - 48) / 2);
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [topProducts, setTopProducts] = useState<Product[]>([]);
@@ -69,10 +70,17 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: '#f0f2f5' }}>
 
-        {/* Barre de recherche */}
-        <View style={styles.searchBar}>
+        {/* En-tête marque */}
+        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+          <View style={styles.headerDecor} pointerEvents="none">
+            <Ionicons name="shield-checkmark" size={150} color="rgba(255,255,255,0.07)" />
+          </View>
+          <View style={styles.brandRow}>
+            <ThemedText style={styles.brandLogo}>CYNA</ThemedText>
+            <ThemedText style={styles.brandTagline}>Cybersécurité managée pour les PME</ThemedText>
+          </View>
           <View style={styles.searchRow}>
             <Ionicons name="search-outline" size={16} color="#aaa" style={{ marginLeft: 12 }} />
             <TextInput
@@ -235,13 +243,26 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: '#f0f2f5' },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  safe:   { flex: 1, backgroundColor: '#3b12a3' },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f2f5' },
 
-  searchBar: {
+  header: {
     backgroundColor: '#3b12a3',
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    overflow: 'hidden',
   },
+  headerDecor: {
+    position: 'absolute',
+    right: -28,
+    top: -16,
+  },
+  brandRow: {
+    marginBottom: 14,
+  },
+  brandLogo:    { fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: 3 },
+  brandTagline: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '500', marginTop: 3 },
+
   searchRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
     borderRadius: 24, height: 44, overflow: 'hidden',
@@ -302,7 +323,7 @@ const styles = StyleSheet.create({
   productBody:  { padding: 10 },
   productName:  { fontSize: 13, fontWeight: '700', color: '#1a1a1a', lineHeight: 19, marginBottom: 4 },
   productPrice: { fontSize: 13, fontWeight: '700', color: '#3b12a3' },
-  badge:        { marginTop: 4, backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start' },
+  badge:        { marginTop: 4, backgroundColor: '#cc2222', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start' },
   badgeText:    { color: '#fff', fontSize: 10, fontWeight: '700' },
 
   emptyState:    { alignItems: 'center', paddingTop: 80, paddingHorizontal: 30 },
