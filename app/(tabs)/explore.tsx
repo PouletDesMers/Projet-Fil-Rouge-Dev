@@ -16,15 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
-interface SearchParams {
-  q?: string;
-}
-
 export default function CatalogueScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<SearchParams>();
+  const params = useLocalSearchParams();
+  const initialQ = Array.isArray(params.q) ? params.q[0] : (params.q ?? '');
 
-  const [search, setSearch] = useState(params.q ?? '');
+  const [search, setSearch] = useState(initialQ);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
