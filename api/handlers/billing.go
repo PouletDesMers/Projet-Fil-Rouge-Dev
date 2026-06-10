@@ -16,12 +16,38 @@ import (
 // ===== ABONNEMENTS =====
 
 func GetAbonnements(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement")
+	userID, ok := getUserID(r)
+	if !ok {
+		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	const q = "SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement"
+
+	var role string
+	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+
+	var rows *sql.Rows
+	var err error
+	if role == "admin" {
+		rows, err = config.DB.Query(q)
+	} else {
+		// Filtrer par l'entreprise de l'utilisateur connecté
+		var entrepriseID sql.NullInt64
+		config.DB.QueryRow("SELECT id_entreprise FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&entrepriseID)
+		if !entrepriseID.Valid {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode([]models.Abonnement{})
+			return
+		}
+		rows, err = config.DB.Query(q+" WHERE id_entreprise = $1", entrepriseID.Int64)
+	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
+
 	items := []models.Abonnement{}
 	for rows.Next() {
 		var a models.Abonnement
