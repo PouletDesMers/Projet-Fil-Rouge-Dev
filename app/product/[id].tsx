@@ -80,9 +80,9 @@ export default function ProductScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loader}>
+      <SafeAreaView style={styles.loader}>
         <ActivityIndicator size="large" color="#3b12a3" />
-      </View>
+      </SafeAreaView>
     );
   }
 
