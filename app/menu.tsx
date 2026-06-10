@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
 import {
+  Alert,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -91,7 +92,20 @@ export default function MenuModal() {
         {isAuthenticated && (
           <>
             <View style={styles.separator} />
-            <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={() =>
+                Alert.alert(
+                  'Déconnexion',
+                  'Voulez-vous vraiment vous déconnecter ?',
+                  [
+                    { text: 'Annuler', style: 'cancel' },
+                    { text: 'Se déconnecter', style: 'destructive', onPress: logout },
+                  ]
+                )
+              }
+              activeOpacity={0.8}
+            >
               <Ionicons name="log-out-outline" size={20} color="#ff4444" />
               <ThemedText style={styles.logoutText}>Se déconnecter</ThemedText>
             </TouchableOpacity>
