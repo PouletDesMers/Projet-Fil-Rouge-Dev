@@ -16,7 +16,7 @@ import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
 import { api } from '@/services/api';
 
-type Step = 'email' | 'password' | 'done';
+type Step = 'email' | 'code' | 'password' | 'done';
 
 const PWD_RULES = [
   { test: (p: string) => p.length >= 8,           label: '8 caractères minimum' },
@@ -29,21 +29,24 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState(false);
+  const [codeError, setCodeError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [confirmError, setConfirmError] = useState(false);
 
   const goBack = () => {
-    if (step === 'password') { setStep('email'); setError(null); setPasswordError(false); setConfirmError(false); }
+    if (step === 'code')     { setStep('email'); setError(null); setCodeError(false); }
+    else if (step === 'password') { setStep('code'); setError(null); setPasswordError(false); setConfirmError(false); }
     else router.back();
   };
 
-  const handleEmailNext = () => {
+  const handleEmailNext = async () => {
     setError(null);
     setEmailError(false);
     if (!email.trim()) {
@@ -51,6 +54,23 @@ export default function ForgotPasswordScreen() {
     }
     if (!email.includes('@') || !email.includes('.')) {
       setEmailError(true); setError('Adresse e-mail invalide'); return;
+    }
+    setIsLoading(true);
+    try {
+      await api.post('/api/password-reset/request', { email: email.trim().toLowerCase() });
+      setStep('code');
+    } catch {
+      setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCodeNext = () => {
+    setError(null);
+    setCodeError(false);
+    if (!code.trim() || code.trim().length !== 6 || !/^\d{6}$/.test(code.trim())) {
+      setCodeError(true); setError('Veuillez saisir le code à 6 chiffres reçu par e-mail'); return;
     }
     setStep('password');
   };
@@ -72,17 +92,21 @@ export default function ForgotPasswordScreen() {
 
     setIsLoading(true);
     try {
-      await api.post('/api/password-reset', { email: email.trim().toLowerCase(), password });
+      await api.post('/api/password-reset', {
+        email: email.trim().toLowerCase(),
+        code: code.trim(),
+        password,
+      });
       setStep('done');
     } catch (err: unknown) {
       const isNetwork = err instanceof TypeError;
       const lc = err instanceof Error ? err.message.toLowerCase() : '';
       if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
         setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
-      } else if (lc.includes('not found') || lc.includes('introuvable')) {
-        setStep('email');
-        setEmailError(true);
-        setError('Aucun compte associé à cette adresse e-mail.');
+      } else if (lc.includes('invalid') || lc.includes('expired') || lc.includes('already used')) {
+        setStep('code');
+        setCodeError(true);
+        setError('Code invalide ou expiré. Recommencez depuis le début.');
       } else {
         setError('Une erreur est survenue. Veuillez réessayer.');
       }
@@ -126,8 +150,15 @@ export default function ForgotPasswordScreen() {
                   onSubmitEditing={handleEmailNext}
                 />
                 <FormError message={error} />
-                <TouchableOpacity style={styles.button} onPress={handleEmailNext} activeOpacity={0.8}>
-                  <ThemedText style={styles.buttonText}>Continuer</ThemedText>
+                <TouchableOpacity
+                  style={[styles.button, isLoading && styles.buttonDisabled]}
+                  onPress={handleEmailNext}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <ThemedText style={styles.buttonText}>
+                    {isLoading ? 'Envoi en cours...' : 'Continuer'}
+                  </ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.link}>
                   <ThemedText style={styles.linkText}>Retour à la connexion</ThemedText>
@@ -136,7 +167,43 @@ export default function ForgotPasswordScreen() {
             </>
           )}
 
-          {/* ── Étape 2 : nouveau mot de passe ── */}
+          {/* ── Étape 2 : code OTP ── */}
+          {step === 'code' && (
+            <>
+              <ThemedText style={styles.title}>Vérification</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Un code à 6 chiffres a été envoyé à{' '}
+                <ThemedText style={styles.emailHighlight}>{email}</ThemedText>.
+                {'\n'}Saisissez-le ci-dessous.
+              </ThemedText>
+              <View style={styles.form}>
+                <TextInput
+                  style={[styles.input, styles.codeInput, codeError && styles.inputError]}
+                  placeholder="000000"
+                  placeholderTextColor="#888"
+                  value={code}
+                  onChangeText={v => { setCode(v.replace(/\D/g, '').slice(0, 6)); setError(null); setCodeError(false); }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  returnKeyType="done"
+                  onSubmitEditing={handleCodeNext}
+                />
+                <FormError message={error} />
+                <TouchableOpacity style={styles.button} onPress={handleCodeNext} activeOpacity={0.8}>
+                  <ThemedText style={styles.buttonText}>Valider</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleEmailNext}
+                  style={styles.link}
+                  disabled={isLoading}
+                >
+                  <ThemedText style={styles.linkText}>Renvoyer le code</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {/* ── Étape 3 : nouveau mot de passe ── */}
           {step === 'password' && (
             <>
               <ThemedText style={styles.title}>Nouveau mot de passe</ThemedText>
@@ -206,7 +273,7 @@ export default function ForgotPasswordScreen() {
             </>
           )}
 
-          {/* ── Étape 3 : succès ── */}
+          {/* ── Étape 4 : succès ── */}
           {step === 'done' && (
             <View style={styles.successBox}>
               <View style={styles.successIcon}>
@@ -252,6 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 16, color: '#1a1a1a',
   },
+  codeInput: { textAlign: 'center', fontSize: 28, fontWeight: '700', letterSpacing: 8 },
   inputError:    { borderColor: '#ef4444', backgroundColor: '#FEF2F2' },
   passwordRow:   { position: 'relative' },
   passwordInput: { paddingRight: 48 },

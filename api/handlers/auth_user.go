@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"image/png"
 	"log"
 	"net/http"
@@ -782,9 +783,70 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 // ===== PASSWORD RESET =====
 
+// RequestPasswordReset — étape 1 : génère un OTP 6 chiffres et le stocke en base.
+// Répond toujours 200 pour éviter l'énumération d'emails.
+func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" {
+		jsonErr(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Exécuté de façon silencieuse : aucun retour différencié pour ne pas énumérer les emails.
+	func() {
+		var userID int
+		if err := config.DB.QueryRow(
+			"SELECT id_utilisateur FROM utilisateur WHERE email = $1", data.Email,
+		).Scan(&userID); err != nil {
+			return
+		}
+
+		// Invalider les codes en attente pour cet email
+		config.DB.Exec(`
+			UPDATE email_verification_tokens
+			SET used = TRUE, used_at = NOW()
+			WHERE email = $1 AND used = FALSE AND token LIKE 'pwr_%'`,
+			data.Email)
+
+		// Générer un OTP à 6 chiffres via crypto/rand
+		b := make([]byte, 4)
+		if _, err := rand.Read(b); err != nil {
+			log.Printf("[RequestPasswordReset] rand.Read error: %v", err)
+			return
+		}
+		n := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])) % 1_000_000
+		codeStr := fmt.Sprintf("%06d", n)
+
+		if _, err := config.DB.Exec(`
+			INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+			VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes')`,
+			data.Email, "pwr_"+codeStr, userID); err != nil {
+			log.Printf("[RequestPasswordReset] DB insert error: %v", err)
+			return
+		}
+
+		// TODO: envoyer le code par email (service mail non configuré en dev)
+		log.Printf("[DEV] Password reset code for %s: %s", data.Email, codeStr)
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "If this email is registered, a reset code has been sent.",
+	})
+}
+
+// ResetPassword — étape 2 : valide le code OTP puis met à jour le mot de passe.
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		Email    string `json:"email"`
+		Code     string `json:"code"`
 		Password string `json:"password"`
 	}
 
@@ -794,19 +856,31 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
-	if data.Email == "" || data.Password == "" {
-		jsonErr(w, "Email and password are required", http.StatusBadRequest)
+	data.Code = strings.TrimSpace(data.Code)
+	if data.Email == "" || data.Code == "" || data.Password == "" {
+		jsonErr(w, "Email, code, and password are required", http.StatusBadRequest)
 		return
 	}
 
-	// Vérifier que l'email existe
+	// Vérifier le code OTP
 	var userID int
-	row := config.DB.QueryRow(
-		"SELECT id_utilisateur FROM utilisateur WHERE email = $1",
-		data.Email)
-
-	if err := row.Scan(&userID); err != nil {
-		jsonErr(w, "User not found", http.StatusNotFound)
+	var usedAt sql.NullTime
+	err := config.DB.QueryRow(`
+		SELECT id_utilisateur, used_at
+		FROM email_verification_tokens
+		WHERE email = $1 AND token = $2 AND expires_at > NOW()`,
+		data.Email, "pwr_"+data.Code,
+	).Scan(&userID, &usedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			jsonErr(w, "Invalid or expired reset code", http.StatusUnauthorized)
+		} else {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+	if usedAt.Valid {
+		jsonErr(w, "Reset code already used", http.StatusUnauthorized)
 		return
 	}
 
@@ -824,6 +898,13 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Failed to update password", http.StatusInternalServerError)
 		return
 	}
+
+	// Marquer le token comme utilisé
+	config.DB.Exec(`
+		UPDATE email_verification_tokens
+		SET used = TRUE, used_at = NOW()
+		WHERE email = $1 AND token = $2`,
+		data.Email, "pwr_"+data.Code)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{

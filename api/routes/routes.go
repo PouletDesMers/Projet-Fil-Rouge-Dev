@@ -21,6 +21,7 @@ func Register(r *mux.Router) {
 
 	// ── Public ─────────────────────────────────────────────────────────────────
 	r.Handle("/api/login", mw.RateLimitLogin(http.HandlerFunc(handlers.Login))).Methods("POST")
+	r.Handle("/api/password-reset/request", mw.RateLimitRegister(http.HandlerFunc(handlers.RequestPasswordReset))).Methods("POST")
 	r.Handle("/api/password-reset", mw.RateLimitRegister(http.HandlerFunc(handlers.ResetPassword))).Methods("POST")
 	r.Handle("/api/verify-email", mw.RateLimitRegister(http.HandlerFunc(handlers.VerifyEmail))).Methods("POST")
 	r.Handle("/api/save-verification-token", mw.RateLimitRegister(http.HandlerFunc(handlers.SaveVerificationToken))).Methods("POST")
