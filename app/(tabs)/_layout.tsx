@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs, useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -29,19 +29,8 @@ function CartTabIcon({ color }: { color: string }) {
   );
 }
 
-function NotificationBell() {
+function NotificationBell({ unread }: { unread: number }) {
   const router = useRouter();
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    api.get<Record<string, unknown>[]>('/api/notifications')
-      .then((raw) => {
-        const count = (raw || []).filter((n) => !n.lu && !n.read).length;
-        setUnread(count);
-      })
-      .catch(() => {});
-  }, []);
-
   return (
     <TouchableOpacity
       onPress={() => router.push('/notifications')}
@@ -60,12 +49,24 @@ function NotificationBell() {
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  const fetchNotifications = useCallback(() => {
+    api.get<Record<string, unknown>[]>('/api/notifications')
+      .then((raw) => setUnread((raw || []).filter((n) => !n.lu && !n.read).length))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) fetchNotifications();
+  }, [isAuthenticated, fetchNotifications]);
 
   if (isLoading) return null;
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
     <Tabs
+      screenListeners={{ focus: fetchNotifications }}
       screenOptions={{
           tabBarActiveTintColor: '#3b12a3',
           tabBarInactiveTintColor: '#888',
@@ -102,7 +103,7 @@ export default function TabLayout() {
             ),
             headerRight: () => (
               <View style={styles.headerActions}>
-                <NotificationBell />
+                <NotificationBell unread={unread} />
                 <TouchableOpacity
                   onPress={() => router.push('/(tabs)/cart')}
                   style={{ marginRight: 16 }}
@@ -123,7 +124,7 @@ export default function TabLayout() {
             headerStyle: { backgroundColor: '#3b12a3' },
             headerTintColor: '#fff',
             headerTitleStyle: { fontWeight: '700' },
-            headerRight: () => <NotificationBell />,
+            headerRight: () => <NotificationBell unread={unread} />,
           }}
         />
         <Tabs.Screen
@@ -148,7 +149,7 @@ export default function TabLayout() {
             headerStyle: { backgroundColor: '#3b12a3' },
             headerTintColor: '#fff',
             headerTitleStyle: { fontWeight: '700' },
-            headerRight: () => <NotificationBell />,
+            headerRight: () => <NotificationBell unread={unread} />,
           }}
         />
         {/* Screens cachés de la tab bar */}
