@@ -70,6 +70,7 @@ export default function MenuModal() {
         {isAuthenticated ? (
           <>
             <View style={styles.separator} />
+            <MenuLink icon="speedometer-outline"    label="Tableau de bord"       onPress={() => go('/(tabs)/dashboard')} />
             <MenuLink icon="person-outline"         label="Mon compte"            onPress={() => go('/(tabs)/account')} />
             <MenuLink icon="settings-outline"       label="Mes paramètres"        onPress={() => go('/account/profile')} />
             <MenuLink icon="receipt-outline"        label="Mes commandes"         onPress={() => go('/orders')} />
