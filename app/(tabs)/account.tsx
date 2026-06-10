@@ -100,11 +100,11 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Mon compte</ThemedText>
           <View style={styles.card}>
-            <MenuItem icon="person-outline"       label="Informations personnelles"  onPress={() => router.push('/account/profile' as any)} />
+            <MenuItem icon="person-outline"       label="Informations personnelles"  onPress={() => router.push('/account/profile' as never)} />
             <View style={styles.divider} />
-            <MenuItem icon="location-outline"     label="Carnet d'adresses"          onPress={() => router.push('/account/addresses' as any)} />
+            <MenuItem icon="location-outline"     label="Carnet d'adresses"          onPress={() => router.push('/account/addresses' as never)} />
             <View style={styles.divider} />
-            <MenuItem icon="card-outline"         label="Méthodes de paiement"       onPress={() => router.push('/account/payment-methods' as any)} />
+            <MenuItem icon="card-outline"         label="Méthodes de paiement"       onPress={() => router.push('/account/payment-methods' as never)} />
           </View>
         </View>
 
@@ -112,11 +112,11 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Abonnements & Commandes</ThemedText>
           <View style={styles.card}>
-            <MenuItem icon="refresh-circle-outline" label="Mes abonnements actifs"  onPress={() => router.push('/account/subscriptions' as any)} />
+            <MenuItem icon="refresh-circle-outline" label="Mes abonnements actifs"  onPress={() => router.push('/account/subscriptions' as never)} />
             <View style={styles.divider} />
             <MenuItem icon="receipt-outline"        label="Historique des commandes" onPress={() => router.push('/orders')} />
             <View style={styles.divider} />
-            <MenuItem icon="document-text-outline"  label="Mes factures"            onPress={() => router.push('/account/invoices' as any)} />
+            <MenuItem icon="document-text-outline"  label="Mes factures"            onPress={() => router.push('/account/invoices' as never)} />
           </View>
         </View>
 

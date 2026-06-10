@@ -93,7 +93,7 @@ export default function PaymentMethodsScreen() {
             <View style={styles.card}>
               <View style={styles.cardRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name={iconName as any} size={22} color="#3b12a3" />
+                  <Ionicons name={iconName as never} size={22} color="#3b12a3" />
                 </View>
                 <View style={styles.cardBody}>
                   <ThemedText style={styles.cardTitle}>{item.method ?? 'Carte'}</ThemedText>
