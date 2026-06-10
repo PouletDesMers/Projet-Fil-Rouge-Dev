@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
 import {
     ActivityIndicator,
     Dimensions,
     FlatList,
-    Image,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -110,7 +110,7 @@ export default function HomeScreen() {
                   onPress={() => item.link && router.push(item.link as never)}
                 >
                   {item.url ? (
-                    <Image source={{ uri: item.url }} style={styles.carouselImage} resizeMode="cover" />
+                    <Image source={{ uri: item.url }} style={styles.carouselImage} contentFit="cover" />
                   ) : (
                     <View style={[styles.carouselImage, styles.carouselPlaceholder]}>
                       <Ionicons name="shield-checkmark-outline" size={48} color="rgba(255,255,255,0.6)" />
@@ -161,7 +161,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(`/category/${item.id}` as never)}
                 >
                   {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.categoryImage} resizeMode="cover" />
+                    <Image source={{ uri: item.image }} style={styles.categoryImage} contentFit="cover" />
                   ) : (
                     <View style={styles.categoryImagePlaceholder}>
                       <Ionicons name="grid-outline" size={32} color="#3b12a3" />
@@ -193,7 +193,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(`/product/${p.id}` as never)}
                 >
                   {p.image ? (
-                    <Image source={{ uri: p.image }} style={styles.productImage} resizeMode="cover" />
+                    <Image source={{ uri: p.image }} style={styles.productImage} contentFit="cover" />
                   ) : (
                     <View style={styles.productImagePlaceholder}>
                       <Ionicons name="shield-checkmark-outline" size={36} color="#3b12a3" />
