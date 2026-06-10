@@ -302,6 +302,44 @@ func GetActiveProduitsByCategory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(produits)
 }
 
+func GetProduit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		jsonErr(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	var p models.ProduitWeb
+	var descHTML, catNom sql.NullString
+	err = config.DB.QueryRow(`
+		SELECT p.id_produit, p.nom, p.slug,
+		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
+		       p.description_html, COALESCE(p.images::text,'[]'),
+		       p.prix, COALESCE(p.devise,'EUR'), COALESCE(p.duree,''), p.id_categorie,
+		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
+		       COALESCE(p.ordre_affichage,0), COALESCE(p.actif,false),
+		       COALESCE(p.date_creation,NOW()), COALESCE(p.date_modification,NOW()),
+		       c.nom as categorie_nom
+		FROM produits p LEFT JOIN categories c ON p.id_categorie = c.id_categorie
+		WHERE p.id_produit = $1`, id).Scan(
+		&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+		&descHTML, &p.Images, &p.Prix, &p.Devise, &p.Duree, &p.IDCategorie,
+		&p.Tag, &p.Statut, &p.TypeAchat, &p.OrdreAffichage, &p.Actif,
+		&p.DateCreation, &p.DateModification, &catNom)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			jsonErr(w, "Product not found", http.StatusNotFound)
+		} else {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+	if descHTML.Valid {
+		p.DescriptionHTML = descHTML.String
+	}
+	json.NewEncoder(w).Encode(p)
+}
+
 func CreateProduit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var p models.ProduitWeb

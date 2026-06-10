@@ -37,11 +37,9 @@ export default function ProductScreen() {
 
   const loadProduct = async () => {
     try {
-      // Pas de GET /api/produits/{id} → on charge la liste complète et on filtre
-      const all = await api.get<Record<string, unknown>[]>('/api/produits');
-      const found = (all || []).find(p => String(p.id_produit) === id);
-      if (!found) throw new Error('not_found');
-      const normalized = normalizeProduct(found);
+      const raw = await api.get<Record<string, unknown>>(`/api/produits/${id}`);
+      if (!raw) throw new Error('not_found');
+      const normalized = normalizeProduct(raw);
       setProduct(normalized);
       if (normalized.categorie?.slug) {
         loadSimilar(normalized.categorie.slug, normalized.id);

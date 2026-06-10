@@ -51,6 +51,7 @@ func Register(r *mux.Router) {
 	// ── Produits ───────────────────────────────────────────────────────────────
 	r.Handle("/api/produits", auth(http.HandlerFunc(handlers.GetProduits))).Methods("GET")
 	r.Handle("/api/produits", auth(http.HandlerFunc(handlers.CreateProduit))).Methods("POST")
+	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.GetProduit))).Methods("GET")
 	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.UpdateProduit))).Methods("PUT")
 	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.DeleteProduit))).Methods("DELETE")
 
