@@ -25,6 +25,8 @@ const PWD_RULES = [
   { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: '1 caractère spécial'  },
 ];
 
+const STEP_INDEX: Partial<Record<Step, number>> = { email: 0, code: 1, password: 2 };
+
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('email');
@@ -39,6 +41,8 @@ export default function ForgotPasswordScreen() {
   const [codeError, setCodeError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [confirmError, setConfirmError] = useState(false);
+
+  const currentStep = STEP_INDEX[step] ?? -1;
 
   const goBack = () => {
     if (step === 'code')     { setStep('email'); setError(null); setCodeError(false); }
@@ -128,6 +132,17 @@ export default function ForgotPasswordScreen() {
           )}
 
           <ThemedText style={styles.logo}>CYNA</ThemedText>
+
+          {/* Indicateur d'étape */}
+          {step !== 'done' && (
+            <View style={styles.stepper}>
+              <View style={[styles.stepDot, currentStep === 0 && styles.stepDotActive, currentStep > 0 && styles.stepDotDone]} />
+              <View style={[styles.stepLine, currentStep > 0 && styles.stepLineActive]} />
+              <View style={[styles.stepDot, currentStep === 1 && styles.stepDotActive, currentStep > 1 && styles.stepDotDone]} />
+              <View style={[styles.stepLine, currentStep > 1 && styles.stepLineActive]} />
+              <View style={[styles.stepDot, currentStep === 2 && styles.stepDotActive, currentStep > 2 && styles.stepDotDone]} />
+            </View>
+          )}
 
           {/* ── Étape 1 : e-mail ── */}
           {step === 'email' && (
@@ -341,4 +356,11 @@ const styles = StyleSheet.create({
   successIcon:  { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
   successTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' },
   successText:  { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
+
+  stepper:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  stepDot:        { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e0e0e0' },
+  stepDotActive:  { backgroundColor: '#3b12a3', width: 24, borderRadius: 12 },
+  stepDotDone:    { backgroundColor: '#3b12a3' },
+  stepLine:       { height: 2, width: 36, backgroundColor: '#e0e0e0', marginHorizontal: 4 },
+  stepLineActive: { backgroundColor: '#3b12a3' },
 });

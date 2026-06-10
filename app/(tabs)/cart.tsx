@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
 
   itemFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   qtyRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  qtyBtn:     { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
+  qtyBtn:     { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
   qtyBtnText: { fontSize: 18, color: '#3b12a3', fontWeight: '700', lineHeight: 22 },
   qtyText:    { fontSize: 16, fontWeight: '700', color: '#1a1a1a', minWidth: 20, textAlign: 'center' },
   itemPrice:  { fontSize: 17, fontWeight: '700', color: '#3b12a3' },

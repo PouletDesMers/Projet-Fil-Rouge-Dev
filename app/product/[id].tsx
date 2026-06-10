@@ -1,17 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Duration, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
@@ -22,6 +22,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { addItem, count } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -105,7 +106,7 @@ export default function ProductScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Header */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -132,7 +133,7 @@ export default function ProductScreen() {
               }
             >
               {images.map((uri, i) => (
-                <Image key={i} source={{ uri }} style={styles.productImage} resizeMode="cover" />
+                <Image key={i} source={{ uri }} style={styles.productImage} contentFit="cover" />
               ))}
             </ScrollView>
             {images.length > 1 && (
@@ -223,7 +224,7 @@ export default function ProductScreen() {
                     onPress={() => router.push(`/product/${p.id}` as never)}
                   >
                     {p.image ? (
-                      <Image source={{ uri: p.image }} style={styles.similarImage} resizeMode="cover" />
+                      <Image source={{ uri: p.image }} style={styles.similarImage} contentFit="cover" />
                     ) : (
                       <View style={styles.similarImagePlaceholder}>
                         <Ionicons name="cube-outline" size={28} color="#3b12a3" />
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: '#fff' },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  topBar:   { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 10 },
+  topBar:   { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10 },
   backBtn:  { backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 20, padding: 8 },
   cartBtn:  { backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 20, padding: 8 },
   cartBadge: {
