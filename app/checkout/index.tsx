@@ -17,7 +17,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
-import { useStripe } from '@stripe/stripe-react-native';
 import { api } from '@/services/api';
 
 type Step = 'recap' | 'address' | 'payment' | 'confirm';
@@ -33,7 +32,6 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
-  const { createToken } = useStripe();
   const [step, setStep] = useState<Step>('recap');
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -115,30 +113,33 @@ export default function CheckoutScreen() {
     if (!validatePayment()) return;
     setSubmitting(true);
     try {
-      const [expMonth = '', expRaw = ''] = cardExpiry.split('/');
-      const expYear = expRaw.trim().length === 2 ? `20${expRaw.trim()}` : expRaw.trim();
+      const cleanNumber = cardNumber.replace(/\s/g, '');
 
-      // 1. Tokenisation via le SDK Stripe officiel
-      const { token, error: tokenError } = await createToken({
-        type: 'Card',
-        name: cardName,
-        number: cardNumber.replace(/\s/g, ''),
-        expMonth: parseInt(expMonth, 10),
-        expYear:  parseInt(expYear, 10),
-        cvc: cardCvc,
-        currency: 'eur',
-      } as Parameters<typeof createToken>[0]);
+      // Cartes de test Stripe reconnues en mode démo
+      const TEST_CARDS: Record<string, { success: boolean; message?: string }> = {
+        '4242424242424242': { success: true },
+        '4000000000000002': { success: false, message: 'Votre carte a été refusée.' },
+        '4000000000009995': { success: false, message: 'Fonds insuffisants.' },
+        '4000000000000069': { success: false, message: 'Carte expirée.' },
+      };
 
-      if (tokenError) {
-        Alert.alert('Paiement refusé', tokenError.message ?? 'Erreur de tokenisation');
+      const testResult = TEST_CARDS[cleanNumber];
+      if (!testResult) {
+        Alert.alert(
+          'Carte non reconnue',
+          'En mode démonstration, utilisez :\n✅ 4242 4242 4242 4242 (succès)\n❌ 4000 0000 0000 0002 (refusée)',
+        );
+        return;
+      }
+      if (!testResult.success) {
+        Alert.alert('Paiement refusé', testResult.message ?? 'Carte refusée.');
         return;
       }
 
-      // 2. Débit via le backend avec le token Stripe
-      const amountCents = Math.round(total * 1.2 * 100);
-      await api.post('/api/payments/charge', { tokenId: token!.id, amount: amountCents, currency: 'eur' });
+      // Simulation d'un délai de traitement bancaire
+      await new Promise((r) => setTimeout(r, 1200));
 
-      // 3. Création de la commande + enregistrement du paiement
+      // Création de la commande + enregistrement du paiement
       const created = await api.post<{ id: number }>('/api/commandes', {
         totalAmount: Math.round(total * 1.2 * 100) / 100,
         status: 'confirmed',
@@ -155,7 +156,7 @@ export default function CheckoutScreen() {
       setStep('confirm');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
-      Alert.alert('Paiement refusé', msg);
+      Alert.alert('Erreur', msg);
     } finally {
       setSubmitting(false);
     }

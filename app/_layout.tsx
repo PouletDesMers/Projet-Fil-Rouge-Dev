@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { View, StyleSheet } from 'react-native';
 
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { AuthProvider } from '@/context/auth-context';
 import { CartProvider } from '@/context/cart-context';
 import { ChatFAB } from '@/components/chat-fab';
@@ -44,16 +43,14 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthProvider>
-          <CartProvider>
-            <AppShell />
-          </CartProvider>
-        </AuthProvider>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </StripeProvider>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthProvider>
+        <CartProvider>
+          <AppShell />
+        </CartProvider>
+      </AuthProvider>
+      <StatusBar style="auto" />
+    </ThemeProvider>
   );
 }
 
