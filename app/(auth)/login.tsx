@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { api } from '@/services/api';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -29,6 +30,9 @@ export default function LoginScreen() {
   const [totpCode, setTotpCode] = useState('');
   const [totpError, setTotpError] = useState<string | null>(null);
   const pendingCreds = useRef<{ email: string; password: string } | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   const router = useRouter();
   const { login } = useAuth();
@@ -37,6 +41,21 @@ export default function LoginScreen() {
     setError(null);
     setEmailError(false);
     setPasswordError(false);
+    setEmailNotVerified(false);
+    setResendDone(false);
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    try {
+      await api.post('/api/resend-verification-email', { email: email.trim().toLowerCase() });
+      setResendDone(true);
+    } catch {
+      // fail silently — server always returns 200
+      setResendDone(true);
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleLogin = async () => {
@@ -75,7 +94,8 @@ export default function LoginScreen() {
       if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
         setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
       } else if (lc.includes('not verified') || lc.includes('verify your email') || lc.includes('email not verified')) {
-        setError("Votre e-mail n'est pas encore vérifié. Vérifiez votre boîte de réception.");
+        setEmailNotVerified(true);
+        setError("Votre e-mail n'est pas encore vérifié.");
       } else if (lc.includes('disabled') || lc.includes('account is disabled')) {
         setError('Votre compte a été désactivé. Contactez le support CYNA.');
       } else {
@@ -220,6 +240,22 @@ export default function LoginScreen() {
 
               <FormError message={error} />
 
+              {emailNotVerified && (
+                <TouchableOpacity
+                  style={styles.resendBtn}
+                  onPress={handleResendVerification}
+                  disabled={resendLoading || resendDone}
+                >
+                  <ThemedText style={styles.resendText}>
+                    {resendDone
+                      ? '✓ Email de vérification renvoyé'
+                      : resendLoading
+                      ? 'Envoi...'
+                      : 'Renvoyer l\'email de vérification'}
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 style={[styles.button, isLoading && styles.buttonDisabled]}
                 onPress={handleLogin}
@@ -299,6 +335,9 @@ const styles = StyleSheet.create({
   link:        { alignItems: 'center', marginTop: 6 },
   linkText:    { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
   linkSubText: { color: '#555', fontSize: 14 },
+
+  resendBtn:  { alignItems: 'center', paddingVertical: 8, marginTop: -4 },
+  resendText: { color: '#3b12a3', fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
 
   totpContainer: { alignItems: 'center', marginVertical: 8 },
   totpInput: {

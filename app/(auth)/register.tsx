@@ -102,14 +102,14 @@ export default function RegisterScreen() {
           </View>
           <ThemedText style={styles.successTitle}>Compte créé !</ThemedText>
           <ThemedText style={styles.successText}>
-            Bienvenue chez CYNA. Vous pouvez maintenant vous connecter et découvrir nos services.
+            Un email de vérification a été envoyé à {email}. Cliquez sur le lien dans l'email pour activer votre compte.
           </ThemedText>
           <TouchableOpacity
             style={[styles.button, { width: '100%', marginTop: 8 }]}
             onPress={() => router.replace('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.buttonText}>Se connecter</ThemedText>
+            <ThemedText style={styles.buttonText}>Aller à la connexion</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
