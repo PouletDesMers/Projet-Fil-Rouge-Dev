@@ -501,22 +501,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	u.Role = roleName
 	u.MotDePasse = ""
 
-	// Envoyer l'email de vérification depuis Go sauf si le service web le gère lui-même
+	// Mobile : email vérifié immédiatement (le lien localhost ne fonctionne pas sur téléphone)
+	// Web : le service Node.js gère la vérification de son côté
 	if r.Header.Get("X-Source") != "web" {
+		config.DB.Exec(`UPDATE utilisateur SET email_verified = TRUE, email_verified_at = NOW() WHERE id_utilisateur = $1`, u.ID)
 		capturedEmail := u.Email
 		capturedPrenom := u.Prenom
-		capturedID := u.ID
-		go func() {
-			token := generateRandomToken()
-			if token == "" {
-				return
-			}
-			config.DB.Exec(`
-				INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
-				VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
-				capturedEmail, token, capturedID)
-			sendEmailVerification(capturedEmail, capturedPrenom, token)
-		}()
+		go sendEmailWelcome(capturedEmail, capturedPrenom)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -824,8 +815,10 @@ func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		if err := config.DB.QueryRow(
 			"SELECT id_utilisateur FROM utilisateur WHERE email = $1", data.Email,
 		).Scan(&userID); err != nil {
+			log.Printf("[RequestPasswordReset] email non trouvé en base: %s (%v)", data.Email, err)
 			return
 		}
+		log.Printf("[RequestPasswordReset] utilisateur trouvé id=%d pour %s", userID, data.Email)
 
 		// Invalider les codes en attente pour cet email
 		config.DB.Exec(`
@@ -842,6 +835,7 @@ func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		}
 		n := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])) % 1_000_000
 		codeStr := fmt.Sprintf("%06d", n)
+		log.Printf("[RequestPasswordReset] OTP généré pour %s, envoi email en cours...", data.Email)
 
 		if _, err := config.DB.Exec(`
 			INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
@@ -852,6 +846,7 @@ func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		}
 
 		go sendEmailPasswordReset(data.Email, codeStr)
+		log.Printf("[RequestPasswordReset] email OTP lancé pour %s", data.Email)
 	}()
 
 	w.Header().Set("Content-Type", "application/json")

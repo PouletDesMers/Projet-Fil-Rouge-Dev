@@ -33,6 +33,37 @@ func sendEmail(to, subject, html string) error {
 	return nil
 }
 
+// sendEmailWelcome envoie un email de bienvenue après inscription mobile (email déjà vérifié).
+func sendEmailWelcome(to, firstName string) {
+	subject := "Bienvenue sur CYNA !"
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:24px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+    <div style="background:#3b12a3;padding:28px;text-align:center;">
+      <h1 style="color:#fff;font-size:26px;letter-spacing:4px;margin:0;">CYNA</h1>
+      <p style="color:rgba(255,255,255,.7);margin:8px 0 0;font-size:13px;">Cybersécurité managée pour les PME</p>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="color:#1a1a1a;margin-top:0;">Bienvenue, %s !</h2>
+      <p style="color:#555;line-height:1.6;">Votre compte CYNA a été créé avec succès. Vous pouvez dès maintenant accéder à nos services de cybersécurité managée.</p>
+      <div style="background:#f0ecff;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
+        <p style="color:#3b12a3;font-weight:700;margin:0;font-size:15px;">Votre compte est actif</p>
+      </div>
+      <p style="color:#aaa;font-size:12px;">Si vous n'avez pas créé ce compte, contactez-nous immédiatement.</p>
+    </div>
+    <div style="background:#f9f9f9;padding:16px;text-align:center;border-top:1px solid #eee;">
+      <p style="color:#bbb;font-size:11px;margin:0;">© 2025 CYNA — Tous droits réservés</p>
+    </div>
+  </div>
+</body>
+</html>`, firstName)
+
+	if err := sendEmail(to, subject, html); err != nil {
+		log.Printf("[EMAIL] Erreur envoi bienvenue à %s: %v", to, err)
+	}
+}
+
 // sendEmailPasswordReset envoie le code OTP de réinitialisation de mot de passe.
 func sendEmailPasswordReset(to, code string) {
 	subject := "Code de réinitialisation CYNA"
