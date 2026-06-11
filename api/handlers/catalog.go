@@ -429,41 +429,12 @@ func DeleteProduit(w http.ResponseWriter, r *http.Request) {
 func SearchProduits(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	if q == "" {
-		json.NewEncoder(w).Encode([]interface{}{})
-		return
-	}
+	category := strings.TrimSpace(r.URL.Query().Get("category"))
 	if len(q) > 100 {
 		jsonErr(w, "Search query too long", http.StatusBadRequest)
 		return
 	}
 	page, limit, offset := parsePaginationDefault(r)
-	useCache := page == 1 && limit == 20
-	cacheKey := cache.KeySearchResults(q)
-	if useCache {
-		if cached := cache.SearchCache.Get(cacheKey); cached != nil {
-			w.Write(cached)
-			return
-		}
-	}
-	pattern := "%" + q + "%"
-	rows, err := config.DB.Query(`
-		SELECT p.id_produit, p.nom, p.slug,
-		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
-		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
-		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
-		       COALESCE(p.ordre_affichage,0),
-		       COALESCE(c.nom,''), COALESCE(c.slug,''),
-		       COALESCE(p.images::text,'[]')
-		FROM produits p JOIN categories c ON p.id_categorie = c.id_categorie
-		WHERE p.actif=TRUE AND c.actif=TRUE
-		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
-		ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3`, pattern, limit, offset)
-	if err != nil {
-		jsonErr(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
 
 	type SearchResult struct {
 		ID                int     `json:"id_produit"`
@@ -483,6 +454,56 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		NomCategorie      string  `json:"nom_categorie"`
 		Images            string  `json:"images"`
 	}
+
+	baseSelect := `
+		SELECT p.id_produit, p.nom, p.slug,
+		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
+		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
+		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
+		       COALESCE(p.ordre_affichage,0),
+		       COALESCE(c.nom,''), COALESCE(c.slug,''),
+		       COALESCE(p.images::text,'[]')
+		FROM produits p JOIN categories c ON p.id_categorie = c.id_categorie
+		WHERE p.actif=TRUE AND c.actif=TRUE`
+
+	var rows *sql.Rows
+	var err error
+
+	if q == "" {
+		// Browse mode: all active products, optional category filter
+		if category != "" {
+			rows, err = config.DB.Query(baseSelect+" AND c.slug=$1 ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3", category, limit, offset)
+		} else {
+			rows, err = config.DB.Query(baseSelect+" ORDER BY p.ordre_affichage ASC LIMIT $1 OFFSET $2", limit, offset)
+		}
+	} else {
+		// Search mode: filter by text
+		useCache := page == 1 && limit == 20
+		cacheKey := cache.KeySearchResults(q)
+		if useCache {
+			if cached := cache.SearchCache.Get(cacheKey); cached != nil {
+				w.Write(cached)
+				return
+			}
+		}
+		pattern := "%" + q + "%"
+		if category != "" {
+			rows, err = config.DB.Query(baseSelect+
+				` AND c.slug=$1 AND (p.nom ILIKE $2 OR p.description_courte ILIKE $2 OR p.tag ILIKE $2 OR c.nom ILIKE $2)
+				ORDER BY p.ordre_affichage ASC LIMIT $3 OFFSET $4`, category, pattern, limit, offset)
+		} else {
+			rows, err = config.DB.Query(baseSelect+
+				` AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
+				ORDER BY p.ordre_affichage ASC LIMIT $2 OFFSET $3`, pattern, limit, offset)
+		}
+		_ = useCache
+	}
+	if err != nil {
+		jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
 	results := []SearchResult{}
 	for rows.Next() {
 		var p SearchResult
@@ -494,9 +515,6 @@ func SearchProduits(w http.ResponseWriter, r *http.Request) {
 		}
 		p.NomCategorie = p.CategorieNom
 		results = append(results, p)
-	}
-	if useCache {
-		cache.SetJSON(cache.SearchCache, cacheKey, results)
 	}
 	json.NewEncoder(w).Encode(results)
 }

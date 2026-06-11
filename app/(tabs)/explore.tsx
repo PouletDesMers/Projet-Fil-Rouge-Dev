@@ -78,11 +78,9 @@ export default function CatalogueScreen() {
         qp.set('q', search.trim());
         if (minPrice) qp.append('minPrice', minPrice);
         if (maxPrice) qp.append('maxPrice', maxPrice);
-        raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
-      } else {
-        if (selectedCat) qp.append('category', selectedCat);
-        raw = await api.get<Record<string, unknown>[]>(`/api/produits?${qp.toString()}`);
       }
+      if (selectedCat) qp.append('category', selectedCat);
+      raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
 
       let fetched = (raw || []).map(normalizeProduct);
 

@@ -298,7 +298,25 @@ func DeleteCommande(w http.ResponseWriter, r *http.Request) {
 // ===== FACTURES =====
 
 func GetFactures(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id_facture, date_facture, montant, lien_pdf, id_commande FROM facture")
+	userID, ok := getUserID(r)
+	if !ok {
+		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var role string
+	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+
+	var rows *sql.Rows
+	var err error
+	if role == "admin" {
+		rows, err = config.DB.Query("SELECT id_facture, date_facture, montant, lien_pdf, id_commande FROM facture")
+	} else {
+		rows, err = config.DB.Query(`
+			SELECT f.id_facture, f.date_facture, f.montant, f.lien_pdf, f.id_commande
+			FROM facture f
+			JOIN commande c ON f.id_commande = c.id_commande
+			WHERE c.id_utilisateur = $1`, userID)
+	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -367,7 +385,25 @@ func DeleteFacture(w http.ResponseWriter, r *http.Request) {
 // ===== PAIEMENTS =====
 
 func GetPaiements(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id_paiement, moyen, statut, date_paiement, reference_externe, id_commande FROM paiement")
+	userID, ok := getUserID(r)
+	if !ok {
+		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var role string
+	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+
+	var rows *sql.Rows
+	var err error
+	if role == "admin" {
+		rows, err = config.DB.Query("SELECT id_paiement, moyen, statut, date_paiement, reference_externe, id_commande FROM paiement")
+	} else {
+		rows, err = config.DB.Query(`
+			SELECT p.id_paiement, p.moyen, p.statut, p.date_paiement, p.reference_externe, p.id_commande
+			FROM paiement p
+			JOIN commande c ON p.id_commande = c.id_commande
+			WHERE c.id_utilisateur = $1`, userID)
+	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
