@@ -501,13 +501,28 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	u.Role = roleName
 	u.MotDePasse = ""
 
-	// Mobile : email vérifié immédiatement (le lien localhost ne fonctionne pas sur téléphone)
+	// Mobile : envoyer email de vérification avec lien accessible depuis le téléphone (IP LAN)
 	// Web : le service Node.js gère la vérification de son côté
 	if r.Header.Get("X-Source") != "web" {
-		config.DB.Exec(`UPDATE utilisateur SET email_verified = TRUE, email_verified_at = NOW() WHERE id_utilisateur = $1`, u.ID)
 		capturedEmail := u.Email
 		capturedPrenom := u.Prenom
-		go sendEmailWelcome(capturedEmail, capturedPrenom)
+		capturedID := u.ID
+		go func() {
+			token := generateRandomToken()
+			if token == "" {
+				log.Printf("[CreateUser] generateRandomToken a échoué pour %s", capturedEmail)
+				return
+			}
+			if _, err := config.DB.Exec(`
+				INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+				VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
+				capturedEmail, token, capturedID); err != nil {
+				log.Printf("[CreateUser] DB insert token error pour %s: %v", capturedEmail, err)
+				return
+			}
+			sendEmailVerification(capturedEmail, capturedPrenom, token)
+			log.Printf("[CreateUser] email de vérification envoyé à %s", capturedEmail)
+		}()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -781,9 +796,18 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := config.DB.Exec(
-		"UPDATE utilisateur SET prenom=$1, nom=$2, email=$3, telephone=$4 WHERE id_utilisateur=$5",
-		data.FirstName, data.LastName, data.Email, data.Phone, userID); err != nil {
+	// Ne jamais écraser l'email avec une chaîne vide
+	var execErr error
+	if data.Email != "" {
+		_, execErr = config.DB.Exec(
+			"UPDATE utilisateur SET prenom=$1, nom=$2, email=$3, telephone=$4 WHERE id_utilisateur=$5",
+			data.FirstName, data.LastName, data.Email, data.Phone, userID)
+	} else {
+		_, execErr = config.DB.Exec(
+			"UPDATE utilisateur SET prenom=$1, nom=$2, telephone=$3 WHERE id_utilisateur=$4",
+			data.FirstName, data.LastName, data.Phone, userID)
+	}
+	if execErr != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
