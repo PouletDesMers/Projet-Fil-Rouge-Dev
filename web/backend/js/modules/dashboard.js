@@ -26,8 +26,13 @@ const AdminDashboard = {
     // Fetch users une seule fois, partagé entre loadStats et loadRecentUsers
     let usersData = null;
     try {
-      const res = await fetch("/admin/api/users", { credentials: "include" });
-      if (res.ok) usersData = await res.json();
+      const res = await fetch("/admin/api/users?limit=9999", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const d = await res.json();
+        usersData = d.users || d;
+      }
     } catch (e) {
       /* on continue sans users */
     }
@@ -53,7 +58,7 @@ const AdminDashboard = {
     try {
       const [categoriesRes, ordersRes] = await Promise.allSettled([
         fetch("/admin/api/categories", { credentials: "include" }),
-        fetch("/admin/api/commandes", { credentials: "include" }),
+        fetch("/admin/api/commandes?limit=9999", { credentials: "include" }),
       ]);
 
       const users = Array.isArray(usersData) ? usersData : [];
@@ -64,7 +69,6 @@ const AdminDashboard = {
       let orders = [];
       if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
         orders = await ordersRes.value.json();
-        console.log("Commandes chargées:", orders.length);
       } else {
         console.warn(
           "Commandes indisponibles:",
@@ -549,7 +553,9 @@ const AdminDashboard = {
   /** Rapport Utilisateurs */
   async exportUserReport() {
     try {
-      const res = await fetch("/admin/api/users", { credentials: "include" });
+      const res = await fetch("/admin/api/users?limit=9999", {
+        credentials: "include",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         AdminUtils?.showToast?.(
@@ -558,7 +564,8 @@ const AdminDashboard = {
         );
         return;
       }
-      const users = await res.json();
+      const data = await res.json();
+      const users = data.users || data;
       if (!Array.isArray(users) || users.length === 0) {
         AdminUtils?.showToast?.("Aucun utilisateur à exporter", "warning");
         return;
@@ -602,7 +609,7 @@ const AdminDashboard = {
   /** Rapport Commandes */
   async exportOrderReport() {
     try {
-      const res = await fetch("/admin/api/commandes", {
+      const res = await fetch("/admin/api/commandes?limit=9999", {
         credentials: "include",
       });
       if (!res.ok) {
@@ -613,7 +620,8 @@ const AdminDashboard = {
         );
         return;
       }
-      const orders = await res.json();
+      const data = await res.json();
+      const orders = data.commandes || data;
       const arr = Array.isArray(orders) ? orders : orders.commandes || [];
       if (arr.length === 0) {
         AdminUtils?.showToast?.("Aucune commande à exporter", "warning");
@@ -649,7 +657,7 @@ const AdminDashboard = {
   /** Rapport Revenus (depuis les commandes) */
   async exportRevenueReport() {
     try {
-      const res = await fetch("/admin/api/commandes", {
+      const res = await fetch("/admin/api/commandes?limit=9999", {
         credentials: "include",
       });
       if (!res.ok) {
@@ -660,7 +668,8 @@ const AdminDashboard = {
         );
         return;
       }
-      const orders = await res.json();
+      const data = await res.json();
+      const orders = data.commandes || data;
       const arr = Array.isArray(orders) ? orders : orders.commandes || [];
 
       // Par mois

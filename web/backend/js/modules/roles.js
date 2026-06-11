@@ -163,12 +163,10 @@ async function loadPermissions() {
   }
 }
 
-function createRole() {
-  const nom = prompt("Nom du rôle:");
+async function createRole() {
+  const nom = await showPrompt("Nom du nouveau rôle");
   if (!nom) return;
-
-  const description = prompt("Description (optionnel):");
-
+  const description = await showPrompt("Description (optionnelle)");
   saveRole(null, nom, description);
 }
 
@@ -195,12 +193,11 @@ async function saveRole(id, nom, description) {
   }
 }
 
-function editRole(roleId) {
-  // Could implement inline editing or a modal
-  const newNom = prompt("Nouveau nom du rôle:");
+async function editRole(roleId) {
+  const newNom = await showPrompt("Nouveau nom du rôle");
   if (!newNom) return;
 
-  const newDesc = prompt("Description (optionnel):");
+  const newDesc = await showPrompt("Description (optionnelle)");
   saveRole(roleId, newNom, newDesc);
 }
 

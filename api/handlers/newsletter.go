@@ -74,20 +74,32 @@ func UnsubscribeNewsletter(w http.ResponseWriter, r *http.Request) {
 
 // Get newsletter subscribers (admin)
 func GetNewsletterSubscribers(w http.ResponseWriter, r *http.Request) {
-	page := r.URL.Query().Get("page")
-	if page == "" {
-		page = "1"
+	pageStr := r.URL.Query().Get("page")
+	if pageStr == "" {
+		pageStr = "1"
 	}
+	page := atoi(pageStr)
 
-	offset := (atoi(page) - 1) * 50
+	limitStr := r.URL.Query().Get("limit")
+	limit := 50
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 500 {
+			limit = l
+		}
+	}
+	offset := (page - 1) * limit
+
+	// Count total
+	var total int
+	config.DB.QueryRow(`SELECT COUNT(*) FROM newsletter_subscribers WHERE is_subscribed = TRUE`).Scan(&total)
 
 	rows, err := config.DB.Query(`
 		SELECT id_subscriber, email, is_subscribed, subscribed_at
 		FROM newsletter_subscribers
 		WHERE is_subscribed = TRUE
 		ORDER BY subscribed_at DESC
-		LIMIT 50 OFFSET $1
-	`, offset)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 
 	if err != nil {
 		jsonErr(w, "Failed to fetch subscribers", http.StatusInternalServerError)
@@ -114,8 +126,17 @@ func GetNewsletterSubscribers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	if subscribers == nil {
+		subscribers = []map[string]interface{}{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscribers)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"subscribers": subscribers,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+	})
 }
 
 // Get newsletter campaigns

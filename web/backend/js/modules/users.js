@@ -174,21 +174,9 @@ async function loadUsers() {
 // View user details - SIMPLE ET DIRECT
 async function viewUser(userId) {
   try {
-    console.log("=== viewUser START ===");
-    console.log("User ID:", userId);
-    console.log("Bootstrap available:", typeof bootstrap !== "undefined");
-
     const response = await apiFetch(`/admin/api/users/${userId}`);
-
     if (!response.ok) throw new Error("Utilisateur introuvable");
-
     const user = await response.json();
-    console.log("User data:", user);
-    console.log(
-      "User totp_enabled:",
-      user.totp_enabled,
-      typeof user.totp_enabled,
-    );
 
     // Build modal content
     const content = `
@@ -220,35 +208,18 @@ async function viewUser(userId) {
       </table>
     `;
 
-    console.log("Content built, length:", content.length);
-
     // Insert content
     const contentEl = document.getElementById("userDetailsContent");
-    console.log("Content element found:", contentEl !== null);
-
-    if (!contentEl) {
-      throw new Error("Element userDetailsContent not found");
-    }
-
+    if (!contentEl) throw new Error("Element userDetailsContent not found");
     contentEl.innerHTML = content;
-    console.log("Content inserted");
 
-    // Show modal THE SIMPLE WAY
+    // Show modal
     const modalEl = document.getElementById("userDetailsModal");
-    console.log("Modal element found:", modalEl !== null);
-
-    if (!modalEl) {
-      throw new Error("Element userDetailsModal not found");
-    }
-
-    console.log("Getting modal instance...");
+    if (!modalEl) throw new Error("Element userDetailsModal not found");
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    console.log("Modal instance created:", modal !== null);
-    console.log("Calling modal.show()...");
     modal.show();
-    console.log("=== viewUser END ===");
   } catch (error) {
-    console.error("=== viewUser ERROR ===", error);
+    console.error("viewUser error:", error);
     AdminUtils.showAlert("Erreur: " + error.message, "danger");
   }
 }

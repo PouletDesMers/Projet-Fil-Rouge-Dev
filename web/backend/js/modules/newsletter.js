@@ -5,25 +5,35 @@ function buildAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function loadNewsletterSubscribers() {
+// ── Pagination state ──────────────────────────────────────────────────
+let _newsletterPage = 1;
+const _newsletterLimit = 50;
+
+async function loadNewsletterSubscribers(page = 1) {
   try {
     const container = document.getElementById("newsletterContainer");
-
     if (!container) return;
 
     container.innerHTML =
       '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
 
-    const response = await fetch("/admin/api/newsletter/subscribers", {
-      headers: buildAuthHeaders(),
-      credentials: "include",
-    });
+    _newsletterPage = page;
+    const response = await fetch(
+      `/admin/api/newsletter/subscribers?page=${page}&limit=${_newsletterLimit}`,
+      {
+        headers: buildAuthHeaders(),
+        credentials: "include",
+      },
+    );
 
     if (!response.ok) {
       throw new Error("Erreur lors de la récupération des abonnés");
     }
 
-    const subscribers = await response.json();
+    const data = await response.json();
+    // Support both legacy (raw array) and new (paginated) format
+    const subscribers = Array.isArray(data) ? data : data.subscribers || [];
+    const total = data.total != null ? data.total : subscribers.length;
 
     if (!subscribers || subscribers.length === 0) {
       container.innerHTML =
@@ -33,12 +43,12 @@ async function loadNewsletterSubscribers() {
 
     const tableHTML = `
       <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" aria-label="Liste des abonnés à la newsletter">
           <thead class="table-light">
             <tr>
-              <th>Email</th>
-              <th>Abonné depuis</th>
-              <th>Actions</th>
+              <th scope="col">Email</th>
+              <th scope="col">Abonné depuis</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -49,8 +59,8 @@ async function loadNewsletterSubscribers() {
                 <td>${sub.email}</td>
                 <td>${new Date(sub.subscribedAt).toLocaleDateString("fr-FR")}</td>
                 <td>
-                  <button class="btn btn-sm btn-danger" onclick="AdminNewsletter.unsubscribeUser('${sub.email}')">
-                    <i class="bi bi-trash"></i> Désabonner
+                  <button class="btn btn-sm btn-danger" data-action="unsubscribe" data-email="${sub.email}" aria-label="Désabonner ${sub.email}">
+                    <i class="bi bi-trash" aria-hidden="true"></i> Désabonner
                   </button>
                 </td>
               </tr>
@@ -60,6 +70,7 @@ async function loadNewsletterSubscribers() {
           </tbody>
         </table>
       </div>
+      ${renderPagination(page, total, _newsletterLimit)}
     `;
 
     container.innerHTML = tableHTML;
@@ -71,10 +82,73 @@ async function loadNewsletterSubscribers() {
   }
 }
 
+function renderPagination(currentPage, total, limit) {
+  const totalPages = Math.ceil(total / limit);
+  if (totalPages <= 1) return "";
+
+  let html =
+    '<nav aria-label="Pagination des abonnés"><ul class="pagination pagination-sm justify-content-center mt-3">';
+
+  // Previous
+  html += `<li class="page-item ${currentPage <= 1 ? "disabled" : ""}">
+    <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Page précédente">&laquo;</a></li>`;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    if (
+      p === 1 ||
+      p === totalPages ||
+      (p >= currentPage - 2 && p <= currentPage + 2)
+    ) {
+      html += `<li class="page-item ${p === currentPage ? "active" : ""}">
+        <a class="page-link" href="#" data-page="${p}" ${p === currentPage ? 'aria-current="page"' : ""}>${p}</a></li>`;
+    } else if (p === currentPage - 3 || p === currentPage + 3) {
+      html +=
+        '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+    }
+  }
+
+  // Next
+  html += `<li class="page-item ${currentPage >= totalPages ? "disabled" : ""}">
+    <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Page suivante">&raquo;</a></li>`;
+
+  html += "</ul></nav>";
+  return html;
+}
+
+// Pagination click delegation (set up once)
+document.addEventListener("click", function (e) {
+  const pageLink = e.target.closest("[data-page]");
+  if (pageLink) {
+    e.preventDefault();
+    const page = parseInt(pageLink.getAttribute("data-page"));
+    if (page > 0) loadNewsletterSubscribers(page);
+  }
+});
+
+// Unsubscribe click delegation (replaces inline onclick)
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest("[data-action='unsubscribe']");
+  if (btn) {
+    e.preventDefault();
+    const email = btn.getAttribute("data-email");
+    if (email) AdminNewsletter.unsubscribeUser(email);
+  }
+});
+
+// Send campaign delegation
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest("[data-action='send-campaign']");
+  if (btn) {
+    e.preventDefault();
+    const id = parseInt(btn.getAttribute("data-id"));
+    if (id) AdminNewsletter.sendCampaign(id);
+  }
+});
+
 async function loadNewsletterCampaigns() {
   try {
     const container = document.getElementById("campaignsContainer");
-
     if (!container) return;
 
     container.innerHTML =
@@ -99,13 +173,13 @@ async function loadNewsletterCampaigns() {
 
     const tableHTML = `
       <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" aria-label="Liste des campagnes newsletter">
           <thead class="table-light">
             <tr>
-              <th>Titre</th>
-              <th>Créée le</th>
-              <th>Statut</th>
-              <th>Actions</th>
+              <th scope="col">Titre</th>
+              <th scope="col">Créée le</th>
+              <th scope="col">Statut</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -118,17 +192,17 @@ async function loadNewsletterCampaigns() {
                 <td>
                   ${
                     campaign.sent_at
-                      ? `<span class="badge bg-success">Envoyée</span>`
-                      : `<span class="badge bg-warning">Brouillon</span>`
+                      ? `<span class="badge bg-success" role="status">Envoyée</span>`
+                      : `<span class="badge bg-warning text-dark" role="status">Brouillon</span>`
                   }
                 </td>
                 <td>
                   ${
                     !campaign.sent_at
-                      ? `<button class="btn btn-sm btn-primary" onclick="AdminNewsletter.sendCampaign(${campaign.id})">
-                      <i class="bi bi-send"></i> Envoyer
+                      ? `<button class="btn btn-sm btn-primary" data-action="send-campaign" data-id="${campaign.id}" aria-label="Envoyer la campagne ${campaign.title}">
+                      <i class="bi bi-send" aria-hidden="true"></i> Envoyer
                     </button>`
-                      : `<span class="text-muted text-sm">Envoyée</span>`
+                      : `<span class="text-muted small">Envoyée</span>`
                   }
                 </td>
               </tr>
@@ -150,7 +224,7 @@ async function loadNewsletterCampaigns() {
 }
 
 async function unsubscribeUser(email) {
-  if (!confirm(`Désabonner ${email}?`)) return;
+  if (!confirm(`Désabonner ${email} ?`)) return;
 
   try {
     const response = await fetch("/api/newsletter/unsubscribe", {
@@ -162,17 +236,17 @@ async function unsubscribeUser(email) {
     if (!response.ok) throw new Error("Erreur");
 
     showToast("Utilisateur désabonné", "success");
-    loadNewsletterSubscribers();
+    loadNewsletterSubscribers(_newsletterPage);
   } catch (error) {
     showToast(`Erreur: ${error.message}`, "danger");
   }
 }
 
 async function createNewsletter() {
-  const title = prompt("Titre de la campagne:");
+  const title = await showPrompt("Titre de la campagne");
   if (!title) return;
 
-  let contentText = prompt("Contenu:");
+  const contentText = await showPrompt("Contenu (HTML accepté)");
   if (!contentText) return;
 
   try {
@@ -183,10 +257,7 @@ async function createNewsletter() {
         ...buildAuthHeaders(),
       },
       credentials: "include",
-      body: JSON.stringify({
-        title,
-        content: contentText,
-      }),
+      body: JSON.stringify({ title, content: contentText }),
     });
 
     if (!response.ok) throw new Error("Erreur");
@@ -199,7 +270,7 @@ async function createNewsletter() {
 }
 
 async function sendNewsletter(campaignId) {
-  if (!confirm("Envoyer cette campagne à tous les abonnés?")) return;
+  if (!confirm("Envoyer cette campagne à tous les abonnés ?")) return;
 
   try {
     const response = await fetch(
@@ -224,7 +295,6 @@ async function sendNewsletter(campaignId) {
 const AdminNewsletter = {
   loadSubscribers: loadNewsletterSubscribers,
   loadCampaigns: loadNewsletterCampaigns,
-  // Alias pour compatibilité avec un ancien appel mal orthographié
   loadNewslettterCampaigns: loadNewsletterCampaigns,
   unsubscribeUser,
   createCampaign: createNewsletter,
@@ -232,5 +302,4 @@ const AdminNewsletter = {
 };
 
 window.AdminNewsletter = AdminNewsletter;
-// Alias global supplémentaire pour les appels éventuels externes
 window.loadNewslettterCampaigns = loadNewsletterCampaigns;

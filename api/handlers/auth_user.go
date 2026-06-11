@@ -368,11 +368,20 @@ func RemoveWebAuthn(w http.ResponseWriter, r *http.Request) {
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Cache hit
-	if cached := cache.AdminCache.Get(cache.KeyAdminUsers); cached != nil {
-		w.Write(cached)
-		return
+	// Pagination
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if page < 1 {
+		page = 1
 	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	// Compter le total
+	var total int
+	config.DB.QueryRow(`SELECT COUNT(*) FROM utilisateur`).Scan(&total)
 
 	rows, err := config.DB.Query(
 		`SELECT u.id_utilisateur, u.email,
@@ -385,7 +394,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		     FROM user_roles ur
 		     JOIN roles r ON ur.id_role = r.id_role
 		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur`)
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 ORDER BY u.id_utilisateur DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -410,10 +420,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
-	// Mise en cache + réponse
-	cache.SetJSON(cache.AdminCache, cache.KeyAdminUsers, users)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(map[string]interface{}{"users": users, "total": total, "page": page, "limit": limit})
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {

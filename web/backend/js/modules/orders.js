@@ -11,42 +11,7 @@ const AdminOrders = (() => {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const STATUS_CONFIG = {
-    en_attente: {
-      label: "En attente",
-      cls: "bg-warning text-dark",
-      icon: "bi-clock-history",
-    },
-    confirmee: {
-      label: "Confirmée",
-      cls: "bg-info text-dark",
-      icon: "bi-check-circle",
-    },
-    en_cours: { label: "En cours", cls: "bg-primary", icon: "bi-arrow-repeat" },
-    livree: { label: "Livrée", cls: "bg-success", icon: "bi-bag-check-fill" },
-    annulee: { label: "Annulée", cls: "bg-danger", icon: "bi-x-circle" },
-    remboursee: {
-      label: "Remboursée",
-      cls: "bg-secondary",
-      icon: "bi-arrow-counterclockwise",
-    },
-    devis_demande: {
-      label: "Devis demandé",
-      cls: "bg-info text-dark",
-      icon: "bi-file-earmark-text",
-    },
-    devis_envoye: { label: "Devis envoyé", cls: "bg-primary", icon: "bi-send" },
-    devis_accepte: {
-      label: "Devis accepté",
-      cls: "bg-success",
-      icon: "bi-check2-all",
-    },
-    devis_refuse: {
-      label: "Devis refusé",
-      cls: "bg-danger",
-      icon: "bi-x-circle-fill",
-    },
-  };
+  // STATUS_CONFIG is defined in utils.js (shared canonical config)
 
   function statusBadge(s) {
     const cfg = STATUS_CONFIG[s] || {
@@ -165,7 +130,7 @@ const AdminOrders = (() => {
     }
 
     try {
-      const data = await apiGet("/admin/api/commandes");
+      const data = await apiGet("/admin/api/commandes?limit=9999");
       allOrders = Array.isArray(data) ? data : data.commandes || [];
       renderTable(allOrders);
     } catch (err) {
@@ -349,51 +314,13 @@ const AdminOrders = (() => {
   }
 
   // ── Facture HTML ───────────────────────────────────────────────────
+  // Uses generateInvoiceHTML from utils.js (shared template)
   function generateInvoice(id) {
     const order = allOrders.find((o) => o.id === id);
     if (!order) return;
 
-    const ht = order.totalAmount / 1.2;
-    const tva = order.totalAmount - ht;
-    const items = Array.isArray(order.items) ? order.items : [];
-    const today = new Date().toLocaleDateString("fr-FR");
+    const html = generateInvoiceHTML(order, false);
     const ref = `F-${String(id).padStart(6, "0")}`;
-
-    const itemsRows = items.length
-      ? items
-          .map((it) => {
-            const q = Number(it.quantity || it.qty || 1);
-            const p = Number(it.price || 0);
-            return `<tr><td>${it.product_name || it.productName || "Produit"}</td><td class="text-center">${q}</td><td class="text-end">${p.toFixed(2)} €</td><td class="text-end">${(p * q).toFixed(2)} €</td></tr>`;
-          })
-          .join("")
-      : `<tr><td colspan="4">Aucun article</td></tr>`;
-
-    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Facture ${ref} | CYNA</title><style>
-      *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',system-ui,sans-serif;padding:40px 50px;color:#1a1a2e;max-width:800px;margin:0 auto}
-      h1{color:#7602F9;font-size:1.8em}.header{display:flex;justify-content:space-between;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #7602F9}
-      .header .logo{color:#7602F9;font-weight:700;font-size:1.5em}.header .ref{text-align:right}
-      .ref .num{font-size:1.4em;font-weight:700;color:#5610C0}.ref .date{color:#888;font-size:.85em}
-      .info{margin:25px 0;display:flex;gap:30px}.info>div{flex:1}.info h3{color:#5610C0;font-size:.9em;margin-bottom:8px;text-transform:uppercase}.info p{font-size:.85em;line-height:1.6}
-      table{width:100%;border-collapse:collapse;margin:25px 0}th{background:#0a1628;color:#00d4aa;padding:10px 12px;text-align:left;font-size:.85em}td{padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:.85em}.totals{float:right;width:300px;margin-top:20px}
-      .totals tr td:last-child{text-align:right;font-weight:600}.totals .grand{font-size:1.2em;color:#7602F9}
-      .footer{margin-top:60px;padding-top:20px;border-top:1px solid #e2e8f0;font-size:.75em;color:#888}
-      @media print{.print-btn{display:none}}
-    </style></head><body>
-
-    <div class="header">
-      <div class="logo">🛡️ CYNA</div>
-      <div class="ref"><div class="num">${ref}</div><div class="date">${today}</div></div>
-    </div>
-    <div class="info">
-      <div><h3>Émetteur</h3><p>CYNA SAS<br>123 Rue de la Cybersécurité<br>75000 Paris<br>SIRET: 123 456 789 00010</p></div>
-      <div><h3>Client</h3><p>Client ID: ${order.userId || "—"}<br>Commande N° ${order.id}<br>Date: ${fmtDate(order.orderDate)}</p></div>
-    </div>
-    <table><thead><tr><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Sous-total</th></tr></thead><tbody>${itemsRows}</tbody></table>
-    <div class="totals"><table><tr><td>Sous-total HT</td><td>${money(ht)}</td></tr><tr><td>TVA (20%)</td><td>${money(tva)}</td></tr><tr class="grand"><td>Total TTC</td><td>${money(order.totalAmount)}</td></tr></table></div>
-    <div class="footer">CYNA SAS — Capital social 50 000€ — RCS Paris — TVA FR12345678900<br>Facture générée le ${today}</div>
-  </body></html>`;
-
     const w = window.open("", `Facture-${ref}`, "width=900,height=700");
     w.document.write(html);
     w.document.close();

@@ -86,11 +86,11 @@
                 font-weight: 700;
                 letter-spacing: 1.2px;
                 text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.35);
+                color: rgba(255, 255, 255, 0.75);
                 padding: 12px 8px 6px;
             }
             .admin-sidebar .nav-link {
-                color: rgba(255, 255, 255, 0.65);
+                color: rgba(255, 255, 255, 0.85);
                 padding: 9px 12px;
                 border-radius: 8px;
                 margin-bottom: 2px;
@@ -120,10 +120,13 @@
             }
             .sidebar-footer {
                 padding: 16px 12px;
-                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                border-top: 1px solid rgba(255, 255, 255, 0.15);
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
+            }
+            .sidebar-footer small {
+                color: rgba(255, 255, 255, 0.75);
             }
             .btn-back-site {
                 background: rgba(118, 2, 249, 0.2);
@@ -345,6 +348,14 @@
     </head>
 
     <body>
+        <!-- Skip-link pour navigation clavier -->
+        <a
+            href="#main-content"
+            class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-light shadow"
+            style="z-index: 99999"
+            >Aller au contenu principal</a
+        >
+
         <!-- ── Mobile topbar (visible < 768px) ── -->
         <div class="mobile-topbar">
             <div class="d-flex align-items-center gap-2">
@@ -542,6 +553,7 @@
             <nav
                 class="admin-sidebar d-none d-md-flex flex-column"
                 style="width: 240px; flex-shrink: 0; min-width: 240px"
+                aria-label="Navigation principale"
             >
                 <div class="sidebar-brand d-flex align-items-center gap-2">
                     <img
@@ -551,8 +563,10 @@
                         onerror="this.style.display = 'none'"
                     />
                     <div>
-                        <h4 class="text-white mb-0">CYNA</h4>
-                        <small>Back-Office</small>
+                        <span class="h2 text-white mb-0 fs-5 fw-bold d-block"
+                            >CYNA</span
+                        >
+                        <small class="text-white-50">Back-Office</small>
                     </div>
                 </div>
 
@@ -668,6 +682,7 @@
 
             <!-- Main Content -->
             <main
+                id="main-content"
                 class="admin-content flex-grow-1"
                 style="min-width: 0; overflow-x: hidden"
             >
@@ -1017,14 +1032,19 @@
                                     <table
                                         class="table table-hover table-sm mb-0"
                                     >
+                                        <caption class="visually-hidden">
+                                            Utilisateurs récemment inscrits
+                                        </caption>
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="ps-3">#</th>
-                                                <th>Nom</th>
-                                                <th>Email</th>
-                                                <th>Rôle</th>
-                                                <th>Inscrit le</th>
-                                                <th>Statut</th>
+                                                <th scope="col" class="ps-3">
+                                                    #
+                                                </th>
+                                                <th scope="col">Nom</th>
+                                                <th scope="col">Email</th>
+                                                <th scope="col">Rôle</th>
+                                                <th scope="col">Inscrit le</th>
+                                                <th scope="col">Statut</th>
                                             </tr>
                                         </thead>
                                         <tbody id="dash-recent-users">
@@ -1060,13 +1080,18 @@
                                     <table
                                         class="table table-hover table-sm mb-0"
                                     >
+                                        <caption class="visually-hidden">
+                                            Produits récemment ajoutés
+                                        </caption>
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="ps-3">#</th>
-                                                <th>Nom</th>
-                                                <th>Catégorie</th>
-                                                <th>Prix</th>
-                                                <th>Statut</th>
+                                                <th scope="col" class="ps-3">
+                                                    #
+                                                </th>
+                                                <th scope="col">Nom</th>
+                                                <th scope="col">Catégorie</th>
+                                                <th scope="col">Prix</th>
+                                                <th scope="col">Statut</th>
                                             </tr>
                                         </thead>
                                         <tbody id="dash-recent-products">
@@ -1311,6 +1336,7 @@
                                 <div class="col-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="orderStatusFilter"
                                         >Statut :</label
                                     >
                                 </div>
@@ -1409,6 +1435,7 @@
                                 <div class="col-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="quotesStatusFilter"
                                         >Statut :</label
                                     >
                                 </div>
@@ -1436,6 +1463,7 @@
                                 <div class="col-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="quotesStripeFilter"
                                         >Stripe :</label
                                     >
                                 </div>
@@ -1893,6 +1921,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logLevelFilter"
                                         >Niveau</label
                                     >
                                     <select
@@ -1914,6 +1943,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logMethodFilter"
                                         >Méthode HTTP</label
                                     >
                                     <select
@@ -1931,6 +1961,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logStatusFilter"
                                         >Statut HTTP</label
                                     >
                                     <select
@@ -1955,6 +1986,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logLimitSelect"
                                         >Afficher</label
                                     >
                                     <select
@@ -1986,6 +2018,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logDateFrom"
                                         >Du</label
                                     >
                                     <input
@@ -1998,6 +2031,7 @@
                                 <div class="col-6 col-sm-auto">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logDateTo"
                                         >Au</label
                                     >
                                     <input
@@ -2010,6 +2044,7 @@
                                 <div class="col">
                                     <label
                                         class="form-label mb-0 small fw-semibold"
+                                        for="logSearchInput"
                                         >Recherche</label
                                     >
                                     <input
@@ -2039,26 +2074,49 @@
                                         class="table table-sm table-hover mb-0 align-middle"
                                         style="font-size: 0.8rem"
                                     >
+                                        <caption class="visually-hidden">
+                                            Logs système
+                                        </caption>
                                         <thead class="table-dark">
                                             <tr>
-                                                <th style="width: 145px">
+                                                <th
+                                                    scope="col"
+                                                    style="width: 145px"
+                                                >
                                                     Horodatage
                                                 </th>
-                                                <th style="width: 95px">
+                                                <th
+                                                    scope="col"
+                                                    style="width: 95px"
+                                                >
                                                     Niveau
                                                 </th>
-                                                <th>Méthode / Route</th>
-                                                <th style="width: 70px">
+                                                <th scope="col">
+                                                    Méthode / Route
+                                                </th>
+                                                <th
+                                                    scope="col"
+                                                    style="width: 70px"
+                                                >
                                                     Status
                                                 </th>
-                                                <th>Message</th>
-                                                <th style="width: 110px">
+                                                <th scope="col">Message</th>
+                                                <th
+                                                    scope="col"
+                                                    style="width: 110px"
+                                                >
                                                     IP source
                                                 </th>
-                                                <th style="width: 65px">
+                                                <th
+                                                    scope="col"
+                                                    style="width: 65px"
+                                                >
                                                     Durée
                                                 </th>
-                                                <th style="width: 80px">
+                                                <th
+                                                    scope="col"
+                                                    style="width: 80px"
+                                                >
                                                     Utilisateur
                                                 </th>
                                             </tr>
@@ -2320,14 +2378,19 @@
                                 <table
                                     class="table table-sm table-hover align-middle mb-0"
                                 >
+                                    <caption class="visually-hidden">
+                                        Planifications de sauvegarde
+                                    </caption>
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Type</th>
-                                            <th>Intervalle</th>
-                                            <th>Statut</th>
-                                            <th>Dernier / Prochain</th>
-                                            <th>Snapshot ID</th>
-                                            <th></th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Intervalle</th>
+                                            <th scope="col">Statut</th>
+                                            <th scope="col">
+                                                Dernier / Prochain
+                                            </th>
+                                            <th scope="col">Snapshot ID</th>
+                                            <th scope="col"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="schedule-rules-body">
@@ -2361,13 +2424,18 @@
                                 <table
                                     class="table table-hover align-middle mb-0"
                                 >
+                                    <caption class="visually-hidden">
+                                        Snapshots disponibles
+                                    </caption>
                                     <thead class="table-light">
                                         <tr>
-                                            <th>ID</th>
-                                            <th>Date</th>
-                                            <th>Type</th>
-                                            <th>Hôte</th>
-                                            <th class="text-end">Actions</th>
+                                            <th scope="col">ID</th>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Hôte</th>
+                                            <th scope="col" class="text-end">
+                                                Actions
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="backup-files-tbody">
@@ -2403,20 +2471,22 @@
             class="modal fade"
             id="viewUserModal"
             tabindex="-1"
-            aria-labelledby="viewUserModalLabel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="viewUserModalTitle"
             aria-hidden="true"
         >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="viewUserModalLabel">
+                        <h5 class="modal-title" id="viewUserModalTitle">
                             Détails de l'utilisateur
                         </h5>
                         <button
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Close"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -2449,12 +2519,15 @@
             class="modal fade"
             id="userAccessModal"
             tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="userAccessModalTitle"
             aria-hidden="true"
         >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="userAccessModalTitle">
                             <i class="bi bi-people-fill"></i> Rôles &
                             Permissions —
                             <span
@@ -2466,6 +2539,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -2532,7 +2606,15 @@
         </div>
 
         <!-- Modal pour Ajouter/Éditer Image -->
-        <div class="modal fade" id="imageModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="imageModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="imageModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -2544,6 +2626,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -2681,7 +2764,15 @@
         </div>
 
         <!-- Modal pour Ajouter/Éditer Catégorie -->
-        <div class="modal fade" id="categoryModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="categoryModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="categoryModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -2695,6 +2786,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -2883,7 +2975,15 @@
         </div>
 
         <!-- Modal pour Ajouter/Éditer Produit -->
-        <div class="modal fade" id="productModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="productModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="productModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -2897,6 +2997,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -3349,12 +3450,15 @@
             class="modal fade"
             id="userDetailsModal"
             tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="userDetailsModalTitle"
             aria-hidden="true"
         >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="userDetailsModalTitle">
                             <i class="bi bi-person-circle"></i> Détails
                             Utilisateur
                         </h5>
@@ -3362,7 +3466,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Close"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body" id="userDetailsContent">
@@ -3382,11 +3486,19 @@
         </div>
 
         <!-- Modal pour Édition Utilisateur -->
-        <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="editUserModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editUserModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="editUserModalTitle">
                             <i class="bi bi-person-gear"></i> Modifier
                             Utilisateur
                         </h5>
@@ -3394,6 +3506,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -3605,18 +3718,22 @@
             class="modal fade"
             id="createUserModal"
             tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="createUserModalTitle"
             aria-hidden="true"
         >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="createUserModalTitle">
                             <i class="bi bi-person-plus"></i> Nouveau compte
                         </h5>
                         <button
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -3728,12 +3845,15 @@
             class="modal fade"
             id="rolePermissionsModal"
             tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rolePermissionsModalTitle"
             aria-hidden="true"
         >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="rolePermissionsModalTitle">
                             <i class="bi bi-shield-check"></i> Permissions du
                             rôle
                             <span
@@ -3745,6 +3865,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -3768,17 +3889,26 @@
         </div>
 
         <!-- Modal Création Code Promo -->
-        <div class="modal fade" id="discountCreateModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="discountCreateModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="discountCreateModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="discountCreateModalTitle">
                             <i class="bi bi-percent me-2"></i>Nouveau code promo
                         </h5>
                         <button
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body">
@@ -3878,11 +4008,19 @@
         </div>
 
         <!-- Modal Détails Commande -->
-        <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="orderDetailsModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="orderDetailsModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="orderDetailsModalTitle">
                             <i class="bi bi-bag-check me-2"></i>Détails de la
                             commande
                         </h5>
@@ -3890,6 +4028,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
                     <div class="modal-body" id="orderDetailsBody">
@@ -3897,7 +4036,9 @@
                     </div>
                     <div class="modal-footer">
                         <div class="me-auto d-flex gap-2 align-items-center">
-                            <label class="form-label mb-0 small fw-semibold"
+                            <label
+                                class="form-label mb-0 small fw-semibold"
+                                for="orderStatusChange"
                                 >Changer statut :</label
                             >
                             <select
@@ -3970,11 +4111,19 @@
         <script src="/js/cookie-consent.js"></script>
 
         <!-- Modal Import Produits -->
-        <div class="modal fade" id="importProductsModal" tabindex="-1">
+        <div
+            class="modal fade"
+            id="importProductsModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="importProductsModalTitle"
+            aria-hidden="true"
+        >
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">
+                        <h5 class="modal-title" id="importProductsModalTitle">
                             <i class="bi bi-upload me-2"></i>Import en masse de
                             produits
                         </h5>
@@ -3982,6 +4131,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="modal"
+                            aria-label="Fermer"
                         ></button>
                     </div>
 
@@ -3992,7 +4142,9 @@
                         ></div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold"
+                            <label
+                                class="form-label fw-semibold"
+                                for="importProductsFile"
                                 >Fichier</label
                             >
                             <input
@@ -4007,7 +4159,11 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Mode</label>
+                            <label
+                                class="form-label fw-semibold"
+                                for="importProductsMode"
+                                >Mode</label
+                            >
                             <select class="form-select" id="importProductsMode">
                                 <option value="upsert" selected>
                                     Creer ou mettre a jour
@@ -4017,7 +4173,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold"
+                            <label
+                                class="form-label fw-semibold"
+                                for="importProductsCategoryMode"
                                 >Categorie</label
                             >
                             <select
@@ -4088,6 +4246,51 @@
                             id="confirmImportProductsBtn"
                         >
                             <i class="bi bi-upload me-1"></i>Importer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal prompt générique (remplace prompt()) -->
+        <div
+            class="modal fade"
+            id="genericPromptModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="genericPromptModalTitle"
+            aria-hidden="true"
+        >
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5
+                            class="modal-title"
+                            id="genericPromptModalTitle"
+                        ></h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Fermer"
+                        ></button>
+                    </div>
+                    <div class="modal-body">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="genericPromptInput"
+                            placeholder=""
+                        />
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Annuler</button
+                        ><button class="btn btn-primary" id="genericPromptSave">
+                            Valider
                         </button>
                     </div>
                 </div>

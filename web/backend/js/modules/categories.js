@@ -92,9 +92,6 @@ async function fixDuplicateCategoryOrders(categories) {
   if (needsUpdate && updatePromises.length > 0) {
     try {
       await Promise.all(updatePromises);
-      console.log(
-        `Ordres d'affichage recalculés pour ${updatePromises.length} catégories (séquence 1-2-3...)`,
-      );
     } catch (error) {
       console.warn("Erreur lors de la correction des ordres:", error);
     }

@@ -191,12 +191,31 @@ func GetCommandes(w http.ResponseWriter, r *http.Request) {
 	}
 	role, _ := r.Context().Value(models.UserRoleKey).(string)
 
+	// Pagination
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	// Compter le total
+	var total int
+	if role == "admin" {
+		config.DB.QueryRow("SELECT COUNT(*) FROM commande").Scan(&total)
+	} else {
+		config.DB.QueryRow("SELECT COUNT(*) FROM commande WHERE id_utilisateur = $1", userID).Scan(&total)
+	}
+
 	var rows *sql.Rows
 	var err error
 	if role == "admin" {
-		rows, err = config.DB.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, ''), COALESCE(items, '[]'::jsonb) FROM commande")
+		rows, err = config.DB.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, ''), COALESCE(items, '[]'::jsonb) FROM commande ORDER BY id_commande DESC LIMIT $1 OFFSET $2", limit, offset)
 	} else {
-		rows, err = config.DB.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, ''), COALESCE(items, '[]'::jsonb) FROM commande WHERE id_utilisateur = $1", userID)
+		rows, err = config.DB.Query("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code, ''), COALESCE(items, '[]'::jsonb) FROM commande WHERE id_utilisateur = $1 ORDER BY id_commande DESC LIMIT $2 OFFSET $3", userID, limit, offset)
 	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -219,7 +238,7 @@ func GetCommandes(w http.ResponseWriter, r *http.Request) {
 		commandes = append(commandes, c)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(commandes)
+	json.NewEncoder(w).Encode(map[string]interface{}{"commandes": commandes, "total": total, "page": page, "limit": limit})
 }
 
 func GetCommande(w http.ResponseWriter, r *http.Request) {
