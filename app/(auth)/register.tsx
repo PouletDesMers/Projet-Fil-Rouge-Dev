@@ -91,24 +91,27 @@ export default function RegisterScreen() {
   if (step === 'done') {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={[styles.container, { justifyContent: 'center', flex: 1 }]}>
-          <View style={styles.successBox}>
-            <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={64} color="#16a34a" />
-            </View>
-            <ThemedText style={styles.successTitle}>Compte créé !</ThemedText>
-            <ThemedText style={styles.successText}>
-              Bienvenue chez CYNA. Vous pouvez maintenant vous connecter.
-            </ThemedText>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => router.replace('/(auth)/login')}
-              activeOpacity={0.8}
-            >
-              <ThemedText style={styles.buttonText}>Se connecter</ThemedText>
-            </TouchableOpacity>
+        <View style={styles.topSection}>
+          <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
+          <ThemedText style={styles.logo}>CYNA</ThemedText>
+          <ThemedText style={styles.tagline}>Bienvenue dans la famille</ThemedText>
+        </View>
+        <View style={[styles.card, styles.successCard]}>
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark-circle" size={64} color="#16a34a" />
           </View>
-        </ScrollView>
+          <ThemedText style={styles.successTitle}>Compte créé !</ThemedText>
+          <ThemedText style={styles.successText}>
+            Bienvenue chez CYNA. Vous pouvez maintenant vous connecter et découvrir nos services.
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.button, { width: '100%', marginTop: 8 }]}
+            onPress={() => router.replace('/(auth)/login')}
+            activeOpacity={0.8}
+          >
+            <ThemedText style={styles.buttonText}>Se connecter</ThemedText>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -117,111 +120,117 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-            <ThemedText style={styles.backText}>Retour</ThemedText>
-          </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.topSection}>
+            <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
+            <ThemedText style={styles.logo}>CYNA</ThemedText>
+            <ThemedText style={styles.tagline}>Rejoignez nos clients protégés</ThemedText>
+          </View>
 
-          <ThemedText style={styles.logo}>CYNA</ThemedText>
-          <ThemedText style={styles.title}>Créer un compte</ThemedText>
-          <ThemedText style={styles.subtitle}>Rejoignez Cyna dès aujourd'hui</ThemedText>
+          <View style={styles.card}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={22} color="#3b12a3" />
+              <ThemedText style={styles.backText}>Retour</ThemedText>
+            </TouchableOpacity>
 
-          <View style={styles.form}>
-            {/* Prénom / Nom */}
-            <View style={styles.row}>
+            <ThemedText style={styles.title}>Créer un compte</ThemedText>
+            <ThemedText style={styles.subtitle}>Rejoignez CYNA dès aujourd'hui</ThemedText>
+
+            <View style={styles.form}>
+              {/* Prénom / Nom */}
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, styles.halfInput, fieldErrors.firstName && styles.inputError]}
+                  placeholder="Prénom *"
+                  placeholderTextColor="#888"
+                  value={firstName}
+                  onChangeText={v => { setFirstName(v); clearField('firstName'); }}
+                />
+                <TextInput
+                  style={[styles.input, styles.halfInput, fieldErrors.lastName && styles.inputError]}
+                  placeholder="Nom *"
+                  placeholderTextColor="#888"
+                  value={lastName}
+                  onChangeText={v => { setLastName(v); clearField('lastName'); }}
+                />
+              </View>
+
+              {/* Email */}
               <TextInput
-                style={[styles.input, styles.halfInput, fieldErrors.firstName && styles.inputError]}
-                placeholder="Prénom *"
+                style={[styles.input, fieldErrors.email && styles.inputError]}
+                placeholder="Adresse e-mail *"
                 placeholderTextColor="#888"
-                value={firstName}
-                onChangeText={v => { setFirstName(v); clearField('firstName'); }}
+                value={email}
+                onChangeText={v => { setEmail(v); clearField('email'); }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
               />
-              <TextInput
-                style={[styles.input, styles.halfInput, fieldErrors.lastName && styles.inputError]}
-                placeholder="Nom *"
-                placeholderTextColor="#888"
-                value={lastName}
-                onChangeText={v => { setLastName(v); clearField('lastName'); }}
-              />
-            </View>
 
-            {/* Email */}
-            <TextInput
-              style={[styles.input, fieldErrors.email && styles.inputError]}
-              placeholder="Adresse e-mail *"
-              placeholderTextColor="#888"
-              value={email}
-              onChangeText={v => { setEmail(v); clearField('email'); }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-            />
+              {/* Mot de passe */}
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput, fieldErrors.password && styles.inputError]}
+                  placeholder="Mot de passe *"
+                  placeholderTextColor="#888"
+                  value={password}
+                  onChangeText={v => { setPassword(v); clearField('password'); }}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+                </TouchableOpacity>
+              </View>
 
-            {/* Mot de passe */}
-            <View style={styles.passwordRow}>
+              {/* Critères mot de passe */}
+              {password.length > 0 && (
+                <View style={styles.requirements}>
+                  {PWD_RULES.map(({ test, label }) => {
+                    const ok = test(password);
+                    return (
+                      <View key={label} style={styles.reqRow}>
+                        <Ionicons
+                          name={ok ? 'checkmark-circle' : 'ellipse-outline'}
+                          size={14}
+                          color={ok ? '#16a34a' : '#9ca3af'}
+                        />
+                        <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Confirmation */}
               <TextInput
-                style={[styles.input, styles.passwordInput, fieldErrors.password && styles.inputError]}
-                placeholder="Mot de passe *"
+                style={[styles.input, fieldErrors.confirmPassword && styles.inputError]}
+                placeholder="Confirmer le mot de passe *"
                 placeholderTextColor="#888"
-                value={password}
-                onChangeText={v => { setPassword(v); clearField('password'); }}
+                value={confirmPassword}
+                onChangeText={v => { setConfirmPassword(v); clearField('confirmPassword'); }}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+
+              <FormError message={error} />
+
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleRegister}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isLoading ? 'Inscription...' : "S'inscrire"}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.link}>
+                <ThemedText style={styles.linkSubText}>
+                  Déjà un compte ?{' '}
+                  <ThemedText style={styles.linkText}>Se connecter</ThemedText>
+                </ThemedText>
               </TouchableOpacity>
             </View>
-
-            {/* Critères mot de passe */}
-            {password.length > 0 && (
-              <View style={styles.requirements}>
-                {PWD_RULES.map(({ test, label }) => {
-                  const ok = test(password);
-                  return (
-                    <View key={label} style={styles.reqRow}>
-                      <Ionicons
-                        name={ok ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={14}
-                        color={ok ? '#16a34a' : '#9ca3af'}
-                      />
-                      <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* Confirmation */}
-            <TextInput
-              style={[styles.input, fieldErrors.confirmPassword && styles.inputError]}
-              placeholder="Confirmer le mot de passe *"
-              placeholderTextColor="#888"
-              value={confirmPassword}
-              onChangeText={v => { setConfirmPassword(v); clearField('confirmPassword'); }}
-              secureTextEntry={!showPassword}
-            />
-
-            {/* Bannière erreur */}
-            <FormError message={error} />
-
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <ThemedText style={styles.buttonText}>
-                {isLoading ? 'Inscription...' : "S'inscrire"}
-              </ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.link}>
-              <ThemedText style={styles.linkSubText}>
-                Déjà un compte ?{' '}
-                <ThemedText style={styles.linkText}>Se connecter</ThemedText>
-              </ThemedText>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -230,16 +239,41 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: '#fff' },
-  flex:      { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: 30, paddingVertical: 30 },
+  safe:          { flex: 1, backgroundColor: '#3b12a3' },
+  flex:          { flex: 1 },
+  scrollContent: { flexGrow: 1 },
 
-  backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  topSection: {
+    alignItems: 'center',
+    paddingTop: 44,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  logo:    { fontSize: 34, fontWeight: '900', color: '#fff', letterSpacing: 4 },
+  tagline: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+
+  card: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    paddingBottom: 40,
+  },
+  successCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingTop: 48,
+  },
+
+  backBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   backText: { color: '#3b12a3', fontSize: 15 },
 
-  logo:     { fontSize: 36, fontWeight: '900', color: '#3b12a3', textAlign: 'center', letterSpacing: 4, marginBottom: 20, lineHeight: 46 },
-  title:    { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 6 },
-  subtitle: { fontSize: 15, textAlign: 'center', color: '#666', marginBottom: 28 },
+  title:    { fontSize: 24, fontWeight: '700', textAlign: 'center', color: '#1a1a1a', marginBottom: 4 },
+  subtitle: { fontSize: 15, textAlign: 'center', color: '#666', marginBottom: 20 },
 
   form: { gap: 12 },
   row:  { flexDirection: 'row', gap: 10 },
@@ -269,8 +303,7 @@ const styles = StyleSheet.create({
   linkText:    { color: '#3b12a3', fontWeight: '600', fontSize: 14 },
   linkSubText: { color: '#555', fontSize: 14 },
 
-  successBox:   { alignItems: 'center', gap: 16, paddingTop: 20 },
   successIcon:  { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
   successTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' },
-  successText:  { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
+  successText:  { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22, paddingHorizontal: 8 },
 });

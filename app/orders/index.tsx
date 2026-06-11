@@ -99,7 +99,7 @@ export default function OrdersScreen() {
             day: '2-digit', month: 'long',
           });
           return (
-            <TouchableOpacity style={styles.orderCard} activeOpacity={0.8} onPress={() => router.push(`/orders/${order.id}` as any)}>
+            <TouchableOpacity style={styles.orderCard} activeOpacity={0.8} onPress={() => router.push(`/orders/${order.id}` as never)}>
               <View style={styles.orderRow}>
                 <View style={styles.orderLeft}>
                   <ThemedText style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</ThemedText>

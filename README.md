@@ -130,29 +130,36 @@ CYNA est composé de **trois services** qui communiquent ensemble, plus une **ap
 
 ## Lancer le projet
 
-### Site web & API (Docker)
+### Pour les développeurs
 
-Un seul outil est nécessaire : **Docker**. Go et Node.js n'ont pas besoin d'être installés séparément.
+#### Prérequis
+
+Un seul outil est nécessaire : **Docker**. Go et Node.js n'ont pas besoin d'être installés sur votre machine.
 
 - [Télécharger Docker](https://docs.docker.com/get-docker/)
 
-**1. Récupérer le projet**
+#### 1. Cloner le projet
 
 ```bash
 git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
 cd Projet-Fil-Rouge-Dev
 ```
 
-**2. Configurer les variables d'environnement**
+#### 2. Configurer les variables d'environnement
 
-Copiez `.env.example` en `.env` et remplissez vos clés Stripe :
+Copiez le fichier `.env.example` en `.env` et remplissez vos clés :
+
+```bash
+cp .env.example .env
+```
 
 ```env
+# Stripe — nécessaire pour les paiements
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
-**3. Lancer tous les services**
+#### 3. Lancer le projet
 
 ```bash
 docker-compose up --build
@@ -166,7 +173,7 @@ Les services démarrent automatiquement dans le bon ordre (base de données → 
 | API REST | http://localhost:8080 |
 | Documentation API (Swagger) | http://localhost:8080/swagger |
 
-**Commandes utiles**
+#### Commandes utiles
 
 ```bash
 # Lancer en arrière-plan
@@ -175,11 +182,17 @@ docker-compose up -d --build
 # Voir les logs en temps réel
 docker-compose logs -f
 
+# Logs d'un seul service
+docker-compose logs -f api
+
 # Arrêter les services
 docker-compose down
 
 # Tout réinitialiser (repart de zéro)
 docker-compose down -v
+
+# Rebuilder un seul service
+docker-compose up -d --build api
 ```
 
 ---
@@ -188,7 +201,12 @@ docker-compose down -v
 
 L'application mobile fonctionne indépendamment des conteneurs Docker.
 
-**Prérequis :** [Node.js](https://nodejs.org/) + l'app **Expo Go** sur votre téléphone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
+#### Prérequis
+
+- [Node.js](https://nodejs.org/) installé
+- L'application **Expo Go** sur votre téléphone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
+
+#### Lancement
 
 ```bash
 # Installer les dépendances
@@ -198,26 +216,26 @@ npm install
 npx expo start
 ```
 
-Scannez le QR code avec **Expo Go** pour ouvrir l'app sur votre téléphone.
+Scannez le QR code affiché dans le terminal avec **Expo Go** pour ouvrir l'app sur votre téléphone.
 
-Ajoutez aussi ces variables dans votre `.env` pour que l'app se connecte à l'API :
+Pour que l'app se connecte à l'API, créez un fichier `.env` à la racine :
 
 ```env
 EXPO_PUBLIC_API_URL=http://<votre-ip-locale>:8080
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
-> Remplacez `<votre-ip-locale>` par l'IP de votre machine (ex: `192.168.1.42`). `localhost` ne fonctionne pas depuis un vrai téléphone.
+> Remplacez `<votre-ip-locale>` par l'adresse IP de votre machine (ex: `192.168.1.42`). `localhost` ne fonctionnera pas depuis un vrai téléphone.
 
 ---
 
 ## Sécurité
 
-| Mesure | Détail |
+| Mesure de sécurité | Détail |
 |---|---|
-| JWT | Chaque requête nécessite un token signé |
+| Authentification JWT | Chaque requête nécessite un token signé |
 | Double authentification (2FA) | Code TOTP compatible Google Authenticator |
-| Mots de passe | Hashés avec bcrypt — jamais stockés en clair |
+| Mots de passe | Hashés avec bcrypt (jamais stockés en clair) |
 | Anti-spam | Rate limiting par adresse IP |
 | En-têtes HTTP | Protection contre les attaques web courantes |
 | Sauvegardes | Chiffrées avec Restic (AES-256) |
@@ -236,7 +254,7 @@ cd web
 npm test
 ```
 
-La CI/CD (GitHub Actions) lance ces tests automatiquement à chaque modification du code.
+La pipeline CI/CD (GitHub Actions) lance ces tests automatiquement à chaque modification du code.
 
 ---
 
@@ -259,7 +277,7 @@ Projet-Fil-Rouge-Dev/
 │   ├── product/            # Fiches produits
 │   └── checkout/           # Tunnel de paiement
 ├── db/                     # Scripts SQL d'initialisation
-├── assets/                 # Images et ressources de l'app
+├── assets/                 # Images et ressources de l'app mobile
 ├── .github/workflows/      # CI/CD GitHub Actions
 └── docker-compose.yml      # Orchestration des services
 ```

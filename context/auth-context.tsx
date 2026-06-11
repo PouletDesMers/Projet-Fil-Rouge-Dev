@@ -16,7 +16,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
-  token: string | null;
   login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => void;
 }
@@ -33,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
   // Restaurer le token au démarrage
   useEffect(() => {
@@ -42,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedToken = await SecureStore.getItemAsync(TOKEN_KEY);
         if (savedToken) {
           setAuthToken(savedToken);
-          setToken(savedToken);
           const profile = await api.get<UserProfile>('/api/user/profile');
           setUser({
             id:        String(profile.id_utilisateur),
@@ -74,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setAuthToken(data.token);
-      setToken(data.token);
       await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
       const profile = await api.get<UserProfile>('/api/user/profile');
@@ -87,7 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticated(true);
     } catch (err) {
       setAuthToken(null);
-      setToken(null);
       await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
       throw err;
     }
@@ -95,15 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     setAuthToken(null);
-    setToken(null);
     setUser(null);
     setIsAuthenticated(false);
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
   }, []);
 
   const contextValue = useMemo(
-    () => ({ isAuthenticated, isLoading, user, token, login, logout }),
-    [isAuthenticated, isLoading, user, token, login, logout]
+    () => ({ isAuthenticated, isLoading, user, login, logout }),
+    [isAuthenticated, isLoading, user, login, logout]
   );
 
   return (

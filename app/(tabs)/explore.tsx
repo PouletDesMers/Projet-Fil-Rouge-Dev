@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    Image,
     StyleSheet,
-    Text,
     TextInput,
     TouchableOpacity,
     View,
@@ -16,15 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
-interface SearchParams {
-  q?: string;
-}
-
 export default function CatalogueScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<SearchParams>();
+  const params = useLocalSearchParams();
+  const initialQ = Array.isArray(params.q) ? params.q[0] : (params.q ?? '');
 
-  const [search, setSearch] = useState(params.q ?? '');
+  const [search, setSearch] = useState(initialQ);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
@@ -82,11 +78,9 @@ export default function CatalogueScreen() {
         qp.set('q', search.trim());
         if (minPrice) qp.append('minPrice', minPrice);
         if (maxPrice) qp.append('maxPrice', maxPrice);
-        raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
-      } else {
-        if (selectedCat) qp.append('category', selectedCat);
-        raw = await api.get<Record<string, unknown>[]>(`/api/produits?${qp.toString()}`);
       }
+      if (selectedCat) qp.append('category', selectedCat);
+      raw = await api.get<Record<string, unknown>[]>(`/api/public/search?${qp.toString()}`);
 
       let fetched = (raw || []).map(normalizeProduct);
 
@@ -134,7 +128,7 @@ export default function CatalogueScreen() {
       onPress={() => router.push(`/product/${item.id}` as never)}
     >
       {item.image ? (
-        <Image source={{ uri: item.image }} style={styles.productImage} resizeMode="cover" />
+        <Image source={{ uri: item.image }} style={styles.productImage} contentFit="cover" />
       ) : (
         <View style={styles.productImagePlaceholder}>
           <Ionicons name="cube-outline" size={36} color="#3b12a3" />
@@ -151,7 +145,7 @@ export default function CatalogueScreen() {
           </ThemedText>
           {!item.disponible && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Épuisé</Text>
+              <ThemedText style={styles.badgeText}>Épuisé</ThemedText>
             </View>
           )}
         </View>
@@ -274,12 +268,19 @@ export default function CatalogueScreen() {
               <View style={styles.listLoader}>
                 <ActivityIndicator size="small" color="#3b12a3" />
               </View>
+            ) : !hasMore && products.length > 0 ? (
+              <View style={styles.listEnd}>
+                <ThemedText style={styles.listEndText}>— Fin des résultats —</ThemedText>
+              </View>
             ) : null
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={48} color="#ccc" />
               <ThemedText style={styles.emptyText}>Aucun résultat</ThemedText>
+              <ThemedText style={styles.emptySubtext}>
+                {search.trim() ? 'Essayez avec d\'autres mots-clés' : 'Aucun service dans cette catégorie'}
+              </ThemedText>
             </View>
           }
         />
@@ -338,6 +339,9 @@ const styles = StyleSheet.create({
   badge:         { backgroundColor: '#ff4444', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   badgeText:     { color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  empty:     { flex: 1, alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 16, color: '#aaa' },
+  empty:       { flex: 1, alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText:   { fontSize: 16, color: '#aaa' },
+  emptySubtext:{ fontSize: 13, color: '#bbb', textAlign: 'center' },
+  listEnd:     { paddingVertical: 20, alignItems: 'center' },
+  listEndText: { fontSize: 12, color: '#bbb', letterSpacing: 0.5 },
 });

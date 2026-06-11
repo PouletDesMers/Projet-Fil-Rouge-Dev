@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export type Duration = '1_month' | '1_year' | '2_years';
 
@@ -44,8 +45,24 @@ export function useCart() {
   return ctx;
 }
 
+const CART_STORAGE_KEY = 'cyna_cart';
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Restaurer le panier au démarrage
+  useEffect(() => {
+    AsyncStorage.getItem(CART_STORAGE_KEY)
+      .then(raw => {
+        if (raw) setItems(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Persister le panier à chaque modification
+  useEffect(() => {
+    AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items)).catch(() => {});
+  }, [items]);
 
   const addItem = useCallback((newItem: Omit<CartItem, 'id' | 'quantity'>) => {
     const id = `${newItem.productId}_${newItem.duration}`;
@@ -69,12 +86,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateDuration = useCallback((id: string, duration: Duration) => {
-    setItems(prev =>
-      prev.map(i => {
-        if (i.id !== id) return i;
-        return { ...i, id: `${i.productId}_${duration}`, duration };
-      })
-    );
+    setItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      const newId = `${item.productId}_${duration}`;
+      if (newId === id) return prev;
+      const duplicate = prev.find(i => i.id === newId);
+      if (duplicate) {
+        // Fusionner les quantités dans l'item existant et supprimer l'item courant
+        return prev
+          .map(i => i.id === newId ? { ...i, quantity: i.quantity + item.quantity } : i)
+          .filter(i => i.id !== id);
+      }
+      return prev.map(i => i.id === id ? { ...i, id: newId, duration } : i);
+    });
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
