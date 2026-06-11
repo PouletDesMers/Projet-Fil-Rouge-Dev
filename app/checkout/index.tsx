@@ -17,8 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
+import { useStripe } from '@stripe/stripe-react-native';
 import { api } from '@/services/api';
-import { createStripeToken } from '@/services/stripe';
 
 type Step = 'recap' | 'address' | 'payment' | 'confirm';
 
@@ -33,6 +33,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { createToken } = useStripe();
   const [step, setStep] = useState<Step>('recap');
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -114,18 +115,28 @@ export default function CheckoutScreen() {
     if (!validatePayment()) return;
     setSubmitting(true);
     try {
-      const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
-      const [expMonth, expYear] = cardExpiry.split('/');
+      const [expMonth = '', expRaw = ''] = cardExpiry.split('/');
+      const expYear = expRaw.trim().length === 2 ? `20${expRaw.trim()}` : expRaw.trim();
 
-      // 1. Tokenisation de la carte via Stripe
-      const tokenId = await createStripeToken(
-        { number: cardNumber, expMonth: expMonth ?? '', expYear: expYear ?? '', cvc: cardCvc, name: cardName },
-        publishableKey,
-      );
+      // 1. Tokenisation via le SDK Stripe officiel
+      const { token, error: tokenError } = await createToken({
+        type: 'Card',
+        name: cardName,
+        number: cardNumber.replace(/\s/g, ''),
+        expMonth: parseInt(expMonth, 10),
+        expYear:  parseInt(expYear, 10),
+        cvc: cardCvc,
+        currency: 'eur',
+      } as Parameters<typeof createToken>[0]);
 
-      // 2. Débit via le backend
+      if (tokenError) {
+        Alert.alert('Paiement refusé', tokenError.message ?? 'Erreur de tokenisation');
+        return;
+      }
+
+      // 2. Débit via le backend avec le token Stripe
       const amountCents = Math.round(total * 1.2 * 100);
-      await api.post('/api/payments/charge', { tokenId, amount: amountCents, currency: 'eur' });
+      await api.post('/api/payments/charge', { tokenId: token!.id, amount: amountCents, currency: 'eur' });
 
       // 3. Création de la commande + enregistrement du paiement
       const created = await api.post<{ id: number }>('/api/commandes', {

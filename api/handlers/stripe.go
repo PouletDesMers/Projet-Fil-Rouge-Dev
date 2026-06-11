@@ -11,18 +11,17 @@ import (
 )
 
 type stripeChargeReq struct {
-	TokenID  string  `json:"tokenId"`
-	Amount   int64   `json:"amount"`
-	Currency string  `json:"currency"`
+	TokenID  string `json:"tokenId"`
+	Amount   int64  `json:"amount"`
+	Currency string `json:"currency"`
 }
 
 func CreateStripeCharge(w http.ResponseWriter, r *http.Request) {
-	userID, ok := getUserID(r)
+	_, ok := getUserID(r)
 	if !ok {
 		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	_ = userID
 
 	var req stripeChargeReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TokenID == "" || req.Amount <= 0 {
