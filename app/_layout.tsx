@@ -19,20 +19,8 @@ function AppShell() {
 
   return (
     <View style={styles.root}>
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="checkout/index" options={{ headerShown: false }} />
-        <Stack.Screen name="orders/index" options={{ headerShown: false }} />
-        <Stack.Screen name="contact" options={{ headerShown: false }} />
-        <Stack.Screen name="about" options={{ headerShown: false }} />
-        <Stack.Screen name="cgu" options={{ headerShown: false }} />
-        <Stack.Screen name="legal" options={{ headerShown: false }} />
-        <Stack.Screen name="menu" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="chat" options={{ headerShown: false }} />
-        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="menu" options={{ presentation: 'modal' }} />
       </Stack>
       {showFAB && <ChatFAB />}
     </View>

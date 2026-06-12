@@ -22,42 +22,89 @@ func GetAbonnements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const q = "SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement"
-
 	var role string
 	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
 
-	var rows *sql.Rows
-	var err error
+	w.Header().Set("Content-Type", "application/json")
+
 	if role == "admin" {
-		rows, err = config.DB.Query(q)
-	} else {
-		// Filtrer par l'entreprise de l'utilisateur connecté
-		var entrepriseID sql.NullInt64
-		config.DB.QueryRow("SELECT id_entreprise FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&entrepriseID)
-		if !entrepriseID.Valid {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode([]models.Abonnement{})
+		const q = "SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement"
+		rows, err := config.DB.Query(q)
+		if err != nil {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		rows, err = config.DB.Query(q+" WHERE id_entreprise = $1", entrepriseID.Int64)
+		defer rows.Close()
+		items := []models.Abonnement{}
+		for rows.Next() {
+			var a models.Abonnement
+			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
+			items = append(items, a)
+		}
+		json.NewEncoder(w).Encode(items)
+		return
 	}
+
+	// Utilisateur normal : vérifier s'il a une entreprise
+	var entrepriseID sql.NullInt64
+	config.DB.QueryRow("SELECT id_entreprise FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&entrepriseID)
+
+	if entrepriseID.Valid {
+		// Abonnements via entreprise
+		rows, err := config.DB.Query("SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement WHERE id_entreprise = $1", entrepriseID.Int64)
+		if err != nil {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+		items := []models.Abonnement{}
+		for rows.Next() {
+			var a models.Abonnement
+			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
+			items = append(items, a)
+		}
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+
+	// Pas d'entreprise : retourner les commandes confirmées comme abonnements
+	rows, err := config.DB.Query(
+		"SELECT id_commande, date_commande, montant_total, statut FROM commande WHERE id_utilisateur = $1 AND statut = 'confirmed' ORDER BY date_commande DESC",
+		userID,
+	)
 	if err != nil {
-		jsonErr(w, "Internal server error", http.StatusInternalServerError)
+		json.NewEncoder(w).Encode([]models.Abonnement{})
 		return
 	}
 	defer rows.Close()
 
-	items := []models.Abonnement{}
-	for rows.Next() {
-		var a models.Abonnement
-		if err := rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification); err != nil {
-			jsonErr(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		items = append(items, a)
+	type AbonnementDTO struct {
+		ID        int     `json:"id"`
+		StartDate string  `json:"startDate"`
+		EndDate   *string `json:"endDate"`
+		Status    string  `json:"status"`
+		AutoRenewal bool  `json:"autoRenewal"`
+		Quantity  int     `json:"quantity"`
 	}
-	w.Header().Set("Content-Type", "application/json")
+
+	items := []AbonnementDTO{}
+	for rows.Next() {
+		var id int
+		var dateCommande string
+		var montant float64
+		var statut string
+		if err := rows.Scan(&id, &dateCommande, &montant, &statut); err != nil {
+			continue
+		}
+		items = append(items, AbonnementDTO{
+			ID:          id,
+			StartDate:   dateCommande,
+			EndDate:     nil,
+			Status:      "active",
+			AutoRenewal: false,
+			Quantity:    1,
+		})
+	}
 	json.NewEncoder(w).Encode(items)
 }
 
