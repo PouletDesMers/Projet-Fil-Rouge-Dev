@@ -71,6 +71,11 @@ Projet-Fil-Rouge-Dev/
 
 L'API suit un modèle de conception en couches :
 
+Pour la liste exhaustive de toutes les routes API, voir le document dédié :
+🔗 xref:API_ROUTES.md[Documentation complète des routes API] (103 routes documentées)
+
+L'API suit un modèle de conception en couches :
+
 `Routes` → `Middlewares` → `Handlers` → `Services` → `Repositories` → `PostgreSQL`
 
 Les middlewares s'exécutent dans cet ordre :
