@@ -14,10 +14,10 @@
 **Exécutez ces scripts :**
 ```bash
 # Vérifier les services
-check-services.bat
+scripts/check-services.bat
 
 # Tester l'API
-test-api.bat
+scripts/test-api.bat
 ```
 
 ### 2. Trouver votre adresse IP locale
@@ -30,7 +30,7 @@ Cherchez "Adresse IPv4" (exemple: `192.168.1.100`)
 
 **Ou utilisez le script :**
 ```bash
-check-services.bat
+scripts/check-services.bat
 ```
 
 ### 3. Configurer l'app mobile
@@ -66,9 +66,9 @@ Puis scannez le QR code avec **Expo Go** sur votre smartphone.
 ## 📱 Fichiers Créés
 
 ### Scripts de test (Windows)
-- **start-dev.bat** - Démarre tous les services Docker
-- **check-services.bat** - Vérifie que tout fonctionne
-- **test-api.bat** - Teste les endpoints de l'API
+- **scripts/start-dev.bat** - Démarre tous les services Docker
+- **scripts/check-services.bat** - Vérifie que tout fonctionne
+- **scripts/test-api.bat** - Teste les endpoints de l'API
 
 ### Configuration mobile
 - **services/api.ts** - Client API principal utilisé par l'app Expo
@@ -77,8 +77,8 @@ Puis scannez le QR code avec **Expo Go** sur votre smartphone.
 - **constants/config.example.ts** - Configuration d'exemple
 
 ### Documentation
-- **TEST_GUIDE.md** - Guide de test détaillé
-- **START_HERE.md** - Ce fichier
+- **docs/TEST_GUIDE.md** - Guide de test détaillé
+- **docs/START_HERE.md** - Ce fichier
 
 ## 🧪 Tests Rapides
 
@@ -145,8 +145,8 @@ docker-compose up -d
 ## 📚 Documentation Complète
 
 Pour plus de détails, consultez :
-- **TEST_GUIDE.md** - Guide de test complet
-- **GUIDE_BACKEND_GO.md** - Documentation du backend
+- **docs/TEST_GUIDE.md** - Guide de test complet
+- **docs/GUIDE_BACKEND_GO.md** - Documentation du backend
 
 ## 🎉 Workflow de Développement
 
@@ -154,7 +154,7 @@ Pour plus de détails, consultez :
 ```bash
 docker-compose up
 # ou
-start-dev.bat
+scripts/start-dev.bat
 ```
 
 **Terminal 2 - Logs API :**
@@ -183,7 +183,7 @@ POST   /api/support/tickets    - Créer un ticket
 
 ## 🔑 Utilisateurs de Test
 
-Après avoir exécuté `test-api.bat`, vous aurez un utilisateur de test :
+Après avoir exécuté `scripts/test-api.bat`, vous aurez un utilisateur de test :
 - Email: `test@example.com`
 - Password: `Test123!`
 
@@ -191,12 +191,12 @@ Après avoir exécuté `test-api.bat`, vous aurez un utilisateur de test :
 
 ```bash
 # Démarrer
-start-dev.bat                    # Démarre tout
+scripts/start-dev.bat                    # Démarre tout
 npm start                        # Démarre l'app mobile
 
 # Tester
-check-services.bat               # Vérifie les services
-test-api.bat                     # Teste l'API
+scripts/check-services.bat               # Vérifie les services
+scripts/test-api.bat                     # Teste l'API
 
 # Logs
 docker-compose logs -f           # Tous les logs

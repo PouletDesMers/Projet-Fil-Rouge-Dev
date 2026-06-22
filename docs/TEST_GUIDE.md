@@ -323,8 +323,8 @@ curl http://localhost:8080/api/categories -H "Authorization: Bearer VOTRE_TOKEN"
 # Vérifier si le script d'initialisation a été exécuté
 docker-compose exec db psql -U postgres -d mydb -c "\dt"
 
-# Si vide, vérifier le fichier init.sql
-cat db/init.sql
+# Si vide, vérifier les scripts d'initialisation
+cat db/01_schema.sql db/02_seed.sql
 
 # Recréer la base de données
 docker-compose down -v
