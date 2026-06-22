@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 
@@ -57,6 +56,80 @@ func GetAbonnements(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		items = append(items, a)
+	}
+	if items == nil {
+		items = []AbonnementAdmin{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+			var a models.Abonnement
+			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
+			items = append(items, a)
+		}
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+
+	// Utilisateur normal : vérifier s'il a une entreprise
+	var entrepriseID sql.NullInt64
+	config.DB.QueryRow("SELECT id_entreprise FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&entrepriseID)
+
+	if entrepriseID.Valid {
+		// Abonnements via entreprise
+		rows, err := config.DB.Query("SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement WHERE id_entreprise = $1", entrepriseID.Int64)
+		if err != nil {
+			jsonErr(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+		items := []models.Abonnement{}
+		for rows.Next() {
+			var a models.Abonnement
+			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
+			items = append(items, a)
+		}
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+
+	// Pas d'entreprise : retourner les commandes confirmées comme abonnements
+	rows, err := config.DB.Query(
+		"SELECT id_commande, date_commande, montant_total, statut FROM commande WHERE id_utilisateur = $1 AND statut = 'confirmed' ORDER BY date_commande DESC",
+		userID,
+	)
+	if err != nil {
+		json.NewEncoder(w).Encode([]models.Abonnement{})
+		return
+	}
+	defer rows.Close()
+
+	type AbonnementDTO struct {
+		ID        int     `json:"id"`
+		StartDate string  `json:"startDate"`
+		EndDate   *string `json:"endDate"`
+		Status    string  `json:"status"`
+		AutoRenewal bool  `json:"autoRenewal"`
+		Quantity  int     `json:"quantity"`
+	}
+
+	items := []AbonnementDTO{}
+	for rows.Next() {
+		var id int
+		var dateCommande string
+		var montant float64
+		var statut string
+		if err := rows.Scan(&id, &dateCommande, &montant, &statut); err != nil {
+			continue
+		}
+		items = append(items, AbonnementDTO{
+			ID:          id,
+			StartDate:   dateCommande,
+			EndDate:     nil,
+			Status:      "active",
+			AutoRenewal: false,
+			Quantity:    1,
+		})
 	}
 	if items == nil {
 		items = []AbonnementAdmin{}
@@ -266,36 +339,19 @@ func CreateAbonnementFromPurchase(w http.ResponseWriter, r *http.Request) {
 // ===== STATS =====
 
 func GetTopProductsLast3Months(w http.ResponseWriter, r *http.Request) {
-	cutoff := time.Now().AddDate(0, -3, 0)
-
 	rows, err := config.DB.Query(`
-		WITH top AS (
-			SELECT
-				COALESCE(item->>'product_slug', item->>'productName', item->>'product_name', 'n/a') AS slug,
-				COALESCE(item->>'product_name', item->>'productName', 'Produit')                    AS name,
-				COUNT(*)                                                                           AS total_sales,
-				SUM(COALESCE((item->>'quantity')::int, 1))                                         AS total_quantity,
-				SUM(COALESCE((item->>'price')::numeric, 0) * COALESCE((item->>'quantity')::int, 1)) AS total_amount
-			FROM commande c
-			CROSS JOIN LATERAL jsonb_array_elements(COALESCE(c.items, '[]'::jsonb)) AS item
-			WHERE c.date_commande >= $1 AND (c.statut = 'confirmee' OR c.statut = 'paye')
-			GROUP BY slug, name
-		)
-		SELECT
-			t.slug,
-			t.name,
-			t.total_sales,
-			t.total_quantity,
-			t.total_amount,
-			COALESCE(p.images::text, '[]') AS images,
-			p.prix,
-			COALESCE(p.devise, 'EUR') AS devise,
-			COALESCE(p.duree, '')     AS duree,
-			COALESCE(p.tag, '')       AS tag
-		FROM top t
-		LEFT JOIN produits p ON p.slug = t.slug
-		ORDER BY t.total_quantity DESC, t.total_amount DESC, t.name ASC
-		LIMIT 3`, cutoff)
+		SELECT p.id_produit, p.nom, p.slug,
+		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
+		       COALESCE(p.description_html,''), COALESCE(p.images::text,'[]'),
+		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,'mois'),
+		       COALESCE(p.tag,''), COALESCE(p.statut,'Disponible'), COALESCE(p.type_achat,'panier'),
+		       COALESCE(p.ordre_affichage,0), p.id_categorie,
+		       COALESCE(c.nom,''), COALESCE(c.slug,'')
+		FROM produits p
+		LEFT JOIN categories c ON c.id_categorie = p.id_categorie
+		WHERE p.actif = TRUE
+		ORDER BY p.ordre_affichage DESC, p.id_produit ASC
+		LIMIT 8`)
 	if err != nil {
 		log.Printf("top products query error: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -303,46 +359,34 @@ func GetTopProductsLast3Months(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	items := []models.TopProductSales{}
+	items := []models.ProduitWeb{}
 	for rows.Next() {
-		var item models.TopProductSales
-		var slug string
-		var images sql.NullString
-		var devise sql.NullString
-		var duree sql.NullString
-		var tag sql.NullString
-		var prix sql.NullFloat64
-		if err := rows.Scan(&slug, &item.Nom, &item.TotalSales, &item.TotalQuantity, &item.TotalAmount, &images, &prix, &devise, &duree, &tag); err != nil {
+		var p models.ProduitWeb
+		var descHTML sql.NullString
+		var catID sql.NullInt64
+		var catNom, catSlug string
+		var prix float64
+		if err := rows.Scan(&p.ID, &p.Nom, &p.Slug, &p.DescriptionCourte, &p.DescriptionLongue,
+			&descHTML, &p.Images, &prix, &p.Devise, &p.Duree, &p.Tag, &p.Statut,
+			&p.TypeAchat, &p.OrdreAffichage, &catID, &catNom, &catSlug); err != nil {
 			log.Printf("scan top products error: %v", err)
-			jsonErr(w, "Internal server error", http.StatusInternalServerError)
-			return
+			continue
 		}
-		item.ID = 0
-		item.Slug = slug
-		if images.Valid {
-			item.Images = images.String
+		p.Prix = &prix
+		if descHTML.Valid {
+			p.DescriptionHTML = descHTML.String
 		}
-		if prix.Valid {
-			val := prix.Float64
-			item.Prix = &val
+		p.Actif = true
+		if catID.Valid {
+			p.IDCategorie = int(catID.Int64)
 		}
-		if devise.Valid {
-			item.Devise = devise.String
-		}
-		if duree.Valid {
-			item.Duree = duree.String
-		}
-		if tag.Valid {
-			item.Tag = tag.String
-		}
-		items = append(items, item)
+		_ = catNom
+		_ = catSlug
+		items = append(items, p)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"from":         cutoff.Format(time.RFC3339),
-		"top_products": items,
-	})
+	json.NewEncoder(w).Encode(items)
 }
 
 // ===== COMMANDES =====
@@ -389,16 +433,12 @@ func GetCommandes(w http.ResponseWriter, r *http.Request) {
 	commandes := []models.Commande{}
 	for rows.Next() {
 		var c models.Commande
-		var itemsData []byte
-		if err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode, &itemsData); err != nil {
+		if err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode); err != nil {
 			log.Printf("Error scanning commande: %v", err)
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		if len(itemsData) == 0 {
-			itemsData = []byte("[]")
-		}
-		json.Unmarshal(itemsData, &c.Items)
+		c.Items = []models.OrderItem{}
 		commandes = append(commandes, c)
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -416,16 +456,12 @@ func GetCommande(w http.ResponseWriter, r *http.Request) {
 	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
 
 	var c models.Commande
-	var itemsData []byte
-	if err := config.DB.QueryRow("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code,''), COALESCE(items, '[]'::jsonb) FROM commande WHERE id_commande = $1", id).Scan(
-		&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode, &itemsData); err != nil {
+	if err := config.DB.QueryRow("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code,'') FROM commande WHERE id_commande = $1", id).Scan(
+		&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode); err != nil {
 		jsonErr(w, "Order not found", http.StatusNotFound)
 		return
 	}
-	if len(itemsData) == 0 {
-		itemsData = []byte("[]")
-	}
-	json.Unmarshal(itemsData, &c.Items)
+	c.Items = []models.OrderItem{}
 	if role != "admin" && c.IDUtilisateur != userID {
 		jsonErr(w, "Forbidden", http.StatusForbidden)
 		return
@@ -443,18 +479,17 @@ func CreateCommande(w http.ResponseWriter, r *http.Request) {
 	userID, _ := getUserID(r)
 	c.IDUtilisateur = userID
 
-	itemsJSON, _ := json.Marshal(c.Items)
-
 	var promoCode *string
 	if c.PromoCode != "" {
 		pc := c.PromoCode
 		promoCode = &pc
 	}
-	if err := config.DB.QueryRow("INSERT INTO commande (montant_total, statut, id_utilisateur, promo_code, items) VALUES ($1,$2,$3,$4,$5) RETURNING id_commande",
-		c.MontantTotal, c.Statut, c.IDUtilisateur, promoCode, itemsJSON).Scan(&c.ID); err != nil {
+	if err := config.DB.QueryRow("INSERT INTO commande (montant_total, statut, id_utilisateur, promo_code) VALUES ($1,$2,$3,$4) RETURNING id_commande",
+		c.MontantTotal, c.Statut, c.IDUtilisateur, promoCode).Scan(&c.ID); err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	c.Items = []models.OrderItem{}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(c)
@@ -493,7 +528,25 @@ func DeleteCommande(w http.ResponseWriter, r *http.Request) {
 // ===== FACTURES =====
 
 func GetFactures(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id_facture, date_facture, montant, lien_pdf, id_commande FROM facture")
+	userID, ok := getUserID(r)
+	if !ok {
+		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var role string
+	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+
+	var rows *sql.Rows
+	var err error
+	if role == "admin" {
+		rows, err = config.DB.Query("SELECT id_facture, date_facture, montant, lien_pdf, id_commande FROM facture")
+	} else {
+		rows, err = config.DB.Query(`
+			SELECT f.id_facture, f.date_facture, f.montant, f.lien_pdf, f.id_commande
+			FROM facture f
+			JOIN commande c ON f.id_commande = c.id_commande
+			WHERE c.id_utilisateur = $1`, userID)
+	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -562,7 +615,25 @@ func DeleteFacture(w http.ResponseWriter, r *http.Request) {
 // ===== PAIEMENTS =====
 
 func GetPaiements(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id_paiement, moyen, statut, date_paiement, reference_externe, id_commande FROM paiement")
+	userID, ok := getUserID(r)
+	if !ok {
+		jsonErr(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var role string
+	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+
+	var rows *sql.Rows
+	var err error
+	if role == "admin" {
+		rows, err = config.DB.Query("SELECT id_paiement, moyen, statut, date_paiement, reference_externe, id_commande FROM paiement")
+	} else {
+		rows, err = config.DB.Query(`
+			SELECT p.id_paiement, p.moyen, p.statut, p.date_paiement, p.reference_externe, p.id_commande
+			FROM paiement p
+			JOIN commande c ON p.id_commande = c.id_commande
+			WHERE c.id_utilisateur = $1`, userID)
+	}
 	if err != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return

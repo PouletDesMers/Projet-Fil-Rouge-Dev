@@ -33,6 +33,11 @@ services:
       RESTIC_PASSWORD: ${RESTIC_PASSWORD}
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-/backups/restic-repo}
       LOG_FILE_PATH: /var/log/api/api.log
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     volumes:
       - backups_data:/backups
       - api_logs:/var/log/api
@@ -45,7 +50,8 @@ services:
       - api
     environment:
       API_SECRET: ${API_KEY}
-      RESEND_API_KEY: ${RESEND_API_KEY}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       UPLOADS_DIR: /app/uploads

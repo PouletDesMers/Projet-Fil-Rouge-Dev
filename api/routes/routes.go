@@ -21,6 +21,7 @@ func Register(r *mux.Router) {
 
 	// ── Public ─────────────────────────────────────────────────────────────────
 	r.Handle("/api/login", mw.RateLimitLogin(http.HandlerFunc(handlers.Login))).Methods("POST")
+	r.Handle("/api/password-reset/request", mw.RateLimitRegister(http.HandlerFunc(handlers.RequestPasswordReset))).Methods("POST")
 	r.Handle("/api/password-reset", mw.RateLimitRegister(http.HandlerFunc(handlers.ResetPassword))).Methods("POST")
 	r.Handle("/api/verify-email", mw.RateLimitRegister(http.HandlerFunc(handlers.VerifyEmail))).Methods("POST")
 	r.Handle("/api/save-verification-token", mw.RateLimitRegister(http.HandlerFunc(handlers.SaveVerificationToken))).Methods("POST")
@@ -33,8 +34,10 @@ func Register(r *mux.Router) {
 	r.HandleFunc("/api/public/carousel-images", handlers.GetActiveCarouselImages).Methods("GET")
 	r.HandleFunc("/api/public/categories", handlers.GetActiveCategories).Methods("GET")
 	r.HandleFunc("/api/public/products/{slug}", handlers.GetActiveProduitsByCategory).Methods("GET")
+	r.HandleFunc("/api/public/produits/{id}", handlers.GetProduit).Methods("GET")
 	r.HandleFunc("/api/public/search", handlers.SearchProduits).Methods("GET")
 	r.HandleFunc("/api/public/top-products", handlers.GetTopProductsLast3Months).Methods("GET")
+	r.HandleFunc("/api/public/contact", handlers.CreateTicketSupport).Methods("POST")
 
 	// ── Categories ─────────────────────────────────────────────────────────────
 	r.Handle("/api/categories", auth(http.HandlerFunc(handlers.GetCategories))).Methods("GET")
@@ -51,6 +54,7 @@ func Register(r *mux.Router) {
 	// ── Produits ───────────────────────────────────────────────────────────────
 	r.Handle("/api/produits", auth(http.HandlerFunc(handlers.GetProduits))).Methods("GET")
 	r.Handle("/api/produits", auth(http.HandlerFunc(handlers.CreateProduit))).Methods("POST")
+	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.GetProduit))).Methods("GET")
 	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.UpdateProduit))).Methods("PUT")
 	r.Handle("/api/produits/{id}", auth(http.HandlerFunc(handlers.DeleteProduit))).Methods("DELETE")
 
@@ -173,6 +177,9 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/backup/download", adminLim(http.HandlerFunc(handlers.DownloadBackup))).Methods("GET")
 	r.Handle("/api/admin/backup/restore", adminLim(http.HandlerFunc(handlers.RestoreBackup))).Methods("POST")
 	r.Handle("/api/admin/backup", adminRaw(http.HandlerFunc(handlers.DeleteBackup))).Methods("DELETE")
+
+	// ── Stripe ─────────────────────────────────────────────────────────
+	r.Handle("/api/payments/charge", auth(http.HandlerFunc(handlers.CreateStripeCharge))).Methods("POST")
 
 	// ── Newsletter ──────────────────────────────────────────────────
 	r.HandleFunc("/api/newsletter/subscribe", handlers.SubscribeNewsletter).Methods("POST")

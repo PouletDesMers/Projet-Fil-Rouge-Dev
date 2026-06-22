@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"image/png"
 	"log"
 	"net/http"
@@ -56,26 +57,14 @@ func encodeHex(dst, src []byte) {
 }
 
 func userHasRole(userID int, roleName string) bool {
-	var exists bool
-	err := config.DB.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM user_roles ur
-			JOIN roles r ON ur.id_role = r.id_role
-			WHERE ur.id_utilisateur = $1 AND LOWER(r.nom) = LOWER($2)
-		)`, userID, roleName).Scan(&exists)
-	return err == nil && exists
+	var r string
+	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&r)
+	return err == nil && r == strings.ToLower(roleName)
 }
 
 func primaryRole(userID int) string {
 	var role string
-	err := config.DB.QueryRow(`
-		SELECT LOWER(r.nom)
-		FROM user_roles ur
-		JOIN roles r ON ur.id_role = r.id_role
-		WHERE ur.id_utilisateur = $1
-		ORDER BY r.id_role
-		LIMIT 1`, userID).Scan(&role)
+	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&role)
 	if err != nil {
 		return ""
 	}
@@ -435,14 +424,8 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		`SELECT u.id_utilisateur, u.email,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
-		        COALESCE(r.primary_role, '')
+		        COALESCE(LOWER(u.role),'client')
 		 FROM utilisateur u
-		 LEFT JOIN (
-		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		     FROM user_roles ur
-		     JOIN roles r ON ur.id_role = r.id_role
-		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
 		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role)
@@ -529,14 +512,34 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	if isAdminPanel && requestedRole == "admin" {
 		roleName = "admin"
 	}
-	_, _ = config.DB.Exec(`
-		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
-		SELECT $1, r.id_role, NOW()
-		FROM roles r
-		WHERE LOWER(r.nom) = $2
-		ON CONFLICT DO NOTHING`, u.ID, roleName)
-	u.Role = primaryRole(u.ID)
+	_, _ = config.DB.Exec(`UPDATE utilisateur SET role = $1 WHERE id_utilisateur = $2`, roleName, u.ID)
+	u.Role = roleName
 	u.MotDePasse = ""
+
+	// Mobile : envoyer email de vérification avec lien accessible depuis le téléphone (IP LAN)
+	// Web : le service Node.js gère la vérification de son côté
+	if r.Header.Get("X-Source") != "web" {
+		capturedEmail := u.Email
+		capturedPrenom := u.Prenom
+		capturedID := u.ID
+		go func() {
+			token := generateRandomToken()
+			if token == "" {
+				log.Printf("[CreateUser] generateRandomToken a échoué pour %s", capturedEmail)
+				return
+			}
+			if _, err := config.DB.Exec(`
+				INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+				VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
+				capturedEmail, token, capturedID); err != nil {
+				log.Printf("[CreateUser] DB insert token error pour %s: %v", capturedEmail, err)
+				return
+			}
+			sendEmailVerification(capturedEmail, capturedPrenom, token)
+			log.Printf("[CreateUser] email de vérification envoyé à %s", capturedEmail)
+		}()
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	cache.InvalidateAdminUsers()
@@ -564,15 +567,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err := config.DB.QueryRow(
 		`SELECT u.id_utilisateur, u.email, u.mot_de_passe,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
-		        u.id_entreprise,
-		        COALESCE(r.primary_role, '')
+		        u.id_entreprise, COALESCE(LOWER(u.role),'client')
 		 FROM utilisateur u
-		 LEFT JOIN (
-		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		     FROM user_roles ur
-		     JOIN roles r ON ur.id_role = r.id_role
-		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Statut, &cur.IDEntreprise, &cur.Role); err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
@@ -730,14 +726,8 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		       COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
 		       totp_secret, COALESCE(u.totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter,
-		       COALESCE(r.primary_role, '')
+		       COALESCE(LOWER(u.role),'client')
 		FROM utilisateur u
-		LEFT JOIN (
-		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
-		    FROM user_roles ur
-		    JOIN roles r ON ur.id_role = r.id_role
-		    GROUP BY ur.id_utilisateur
-		) r ON r.id_utilisateur = u.id_utilisateur
 		WHERE u.id_utilisateur = $1`, userID).Scan(
 		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise, &totpSecretPtr, &u.TotpEnabled,
@@ -821,9 +811,18 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := config.DB.Exec(
-		"UPDATE utilisateur SET prenom=$1, nom=$2, email=$3, telephone=$4 WHERE id_utilisateur=$5",
-		data.FirstName, data.LastName, data.Email, data.Phone, userID); err != nil {
+	// Ne jamais écraser l'email avec une chaîne vide
+	var execErr error
+	if data.Email != "" {
+		_, execErr = config.DB.Exec(
+			"UPDATE utilisateur SET prenom=$1, nom=$2, email=$3, telephone=$4 WHERE id_utilisateur=$5",
+			data.FirstName, data.LastName, data.Email, data.Phone, userID)
+	} else {
+		_, execErr = config.DB.Exec(
+			"UPDATE utilisateur SET prenom=$1, nom=$2, telephone=$3 WHERE id_utilisateur=$4",
+			data.FirstName, data.LastName, data.Phone, userID)
+	}
+	if execErr != nil {
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -833,10 +832,74 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 // ===== PASSWORD RESET =====
 
+// RequestPasswordReset — étape 1 : génère un OTP 6 chiffres et le stocke en base.
+// Répond toujours 200 pour éviter l'énumération d'emails.
+func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		jsonErr(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
+	if data.Email == "" {
+		jsonErr(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Exécuté de façon silencieuse : aucun retour différencié pour ne pas énumérer les emails.
+	func() {
+		var userID int
+		if err := config.DB.QueryRow(
+			"SELECT id_utilisateur FROM utilisateur WHERE email = $1", data.Email,
+		).Scan(&userID); err != nil {
+			log.Printf("[RequestPasswordReset] email non trouvé en base: %s (%v)", data.Email, err)
+			return
+		}
+		log.Printf("[RequestPasswordReset] utilisateur trouvé id=%d pour %s", userID, data.Email)
+
+		// Invalider les codes en attente pour cet email
+		config.DB.Exec(`
+			UPDATE email_verification_tokens
+			SET used = TRUE, used_at = NOW()
+			WHERE email = $1 AND used = FALSE AND token LIKE 'pwr_%'`,
+			data.Email)
+
+		// Générer un OTP à 6 chiffres via crypto/rand
+		b := make([]byte, 4)
+		if _, err := rand.Read(b); err != nil {
+			log.Printf("[RequestPasswordReset] rand.Read error: %v", err)
+			return
+		}
+		n := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])) % 1_000_000
+		codeStr := fmt.Sprintf("%06d", n)
+		log.Printf("[RequestPasswordReset] OTP généré pour %s, envoi email en cours...", data.Email)
+
+		if _, err := config.DB.Exec(`
+			INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+			VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes')`,
+			data.Email, "pwr_"+codeStr, userID); err != nil {
+			log.Printf("[RequestPasswordReset] DB insert error: %v", err)
+			return
+		}
+
+		go sendEmailPasswordReset(data.Email, codeStr)
+		log.Printf("[RequestPasswordReset] email OTP lancé pour %s", data.Email)
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "If this email is registered, a reset code has been sent.",
+	})
+}
+
+// ResetPassword — étape 2 : valide le code OTP puis met à jour le mot de passe.
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		Token    string `json:"token"`
 		Email    string `json:"email"`
+		Code     string `json:"code"`
 		Password string `json:"password"`
 	}
 
@@ -853,8 +916,9 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
-	if data.Email == "" || data.Password == "" {
-		jsonErr(w, "Email and password are required", http.StatusBadRequest)
+	data.Code = strings.TrimSpace(data.Code)
+	if data.Email == "" || data.Code == "" || data.Password == "" {
+		jsonErr(w, "Email, code, and password are required", http.StatusBadRequest)
 		return
 	}
 
@@ -902,6 +966,13 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Failed to update password", http.StatusInternalServerError)
 		return
 	}
+
+	// Marquer le token comme utilisé
+	config.DB.Exec(`
+		UPDATE email_verification_tokens
+		SET used = TRUE, used_at = NOW()
+		WHERE email = $1 AND token = $2`,
+		data.Email, "pwr_"+data.Code)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -1030,8 +1101,15 @@ func ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Generate token and send email
-	// This would integrate with the Node.js email service
+	// Générer un nouveau token de vérification et envoyer l'email
+	token := generateRandomToken()
+	if token != "" {
+		config.DB.Exec(`
+			INSERT INTO email_verification_tokens (email, token, id_utilisateur, expires_at)
+			VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
+			data.Email, token, userID)
+		go sendEmailVerification(data.Email, firstName, token)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
