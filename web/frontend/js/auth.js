@@ -148,7 +148,8 @@ function showStep(step) {
   registerForm.classList.toggle("d-none", step !== "register");
 
   // Reset form fields when switching steps to prevent data leakage
-  if (step !== "login") {
+  // Keep password for 2FA step: the TOTP verification re-sends password alongside the code
+  if (step !== "login" && step !== "twofa") {
     loginPassword.value = "";
   }
   if (step !== "register") {

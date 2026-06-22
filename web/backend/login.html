@@ -68,6 +68,18 @@
         <button type="submit" class="btn btn-admin w-100">Se connecter</button>
       </form>
 
+      <form id="twoFAForm" class="d-none">
+        <h2 class="h5 fw-bold mb-2">Authentification à deux facteurs</h2>
+        <p class="text-muted mb-3">Saisissez le code à 6 chiffres généré par votre application d'authentification.</p>
+
+        <div class="mb-3">
+          <label for="totpCode" class="form-label">Code 2FA</label>
+          <input id="totpCode" type="text" class="form-control" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required />
+        </div>
+        <button type="submit" class="btn btn-admin w-100">Vérifier</button>
+        <button type="button" id="backToLoginFrom2fa" class="btn btn-outline-secondary w-100 mt-2">Retour</button>
+      </form>
+
       <form id="forcePasswordForm" class="d-none">
         <h2 class="h5 fw-bold mb-2">Nouveau mot de passe requis</h2>
         <p class="text-muted mb-3">Première connexion détectée. Définissez un nouveau mot de passe pour continuer.</p>
@@ -99,9 +111,11 @@
       const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
 
       let lastLoginPassword = '';
+      let currentEmail = '';
+      let currentPassword = '';
 
       function showAlert(message, type = 'danger') {
-        alertBox.className = `alert alert-${type}`;
+        alertBox.className = `alert alert-${type === 'info' ? 'info' : type}`;
         alertBox.textContent = message;
         alertBox.classList.remove('d-none');
       }
@@ -124,6 +138,8 @@
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         lastLoginPassword = password;
+        currentEmail = email;
+        currentPassword = password;
 
         try {
           const response = await fetch('/auth/login', {
@@ -136,6 +152,15 @@
 
           if (!response.ok) {
             throw new Error(payload.error || 'Connexion impossible');
+          }
+
+          // 2FA required — show TOTP input
+          if (payload.requires_2fa) {
+            form.classList.add('d-none');
+            document.getElementById('twoFAForm').classList.remove('d-none');
+            document.getElementById('totpCode').focus();
+            showAlert('Saisissez votre code d\'authentification à deux facteurs.', 'info');
+            return;
           }
 
           // Stocker le token en fallback (pour HTTP)
@@ -216,6 +241,65 @@
         } catch (error) {
           showAlert(error.message || 'Erreur lors de la mise à jour du mot de passe');
         }
+      });
+
+      // 2FA form submit
+      document.getElementById('twoFAForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const code = document.getElementById('totpCode').value.replace(/\s/g, '');
+        if (code.length !== 6) {
+          showAlert('Veuillez saisir un code à 6 chiffres.');
+          return;
+        }
+
+        try {
+          const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email: currentEmail, password: currentPassword, totpCode: code })
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || 'Code 2FA invalide');
+          }
+
+          if (payload.token) {
+            localStorage.setItem('token', payload.token);
+          }
+
+          const token = localStorage.getItem('token');
+          const profileResponse = await fetch('/auth/profile', { 
+            credentials: 'include',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (!profileResponse.ok) {
+            throw new Error('Session invalide après connexion');
+          }
+
+          const user = await profileResponse.json();
+          if (user.role !== 'admin') {
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            throw new Error('Accès refusé : compte administrateur requis');
+          }
+
+          window.location.href = redirectTo;
+        } catch (error) {
+          showAlert(error.message || 'Erreur de vérification 2FA');
+          document.getElementById('totpCode').value = '';
+          document.getElementById('totpCode').focus();
+        }
+      });
+
+      // Back to login from 2FA
+      document.getElementById('backToLoginFrom2fa').addEventListener('click', () => {
+        document.getElementById('twoFAForm').classList.add('d-none');
+        form.classList.remove('d-none');
+        document.getElementById('totpCode').value = '';
+        alertBox.classList.add('d-none');
       });
 
       ensureAdmin();
