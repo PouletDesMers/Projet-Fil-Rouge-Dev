@@ -49,6 +49,7 @@ services:
       - api
     environment:
       API_SECRET: ${API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
       SMTP_FROM: ${SMTP_FROM}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
