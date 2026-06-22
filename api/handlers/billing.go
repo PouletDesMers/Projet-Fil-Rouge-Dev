@@ -63,80 +63,6 @@ func GetAbonnements(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
-			var a models.Abonnement
-			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
-			items = append(items, a)
-		}
-		json.NewEncoder(w).Encode(items)
-		return
-	}
-
-	// Utilisateur normal : vérifier s'il a une entreprise
-	var entrepriseID sql.NullInt64
-	config.DB.QueryRow("SELECT id_entreprise FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&entrepriseID)
-
-	if entrepriseID.Valid {
-		// Abonnements via entreprise
-		rows, err := config.DB.Query("SELECT id_abonnement, date_debut, date_fin, quantite, statut, renouvellement_auto, id_entreprise, id_produit, id_tarification FROM abonnement WHERE id_entreprise = $1", entrepriseID.Int64)
-		if err != nil {
-			jsonErr(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		defer rows.Close()
-		items := []models.Abonnement{}
-		for rows.Next() {
-			var a models.Abonnement
-			rows.Scan(&a.ID, &a.DateDebut, &a.DateFin, &a.Quantite, &a.Statut, &a.RenouvellementAuto, &a.IDEntreprise, &a.IDProduit, &a.IDTarification)
-			items = append(items, a)
-		}
-		json.NewEncoder(w).Encode(items)
-		return
-	}
-
-	// Pas d'entreprise : retourner les commandes confirmées comme abonnements
-	rows, err := config.DB.Query(
-		"SELECT id_commande, date_commande, montant_total, statut FROM commande WHERE id_utilisateur = $1 AND statut = 'confirmed' ORDER BY date_commande DESC",
-		userID,
-	)
-	if err != nil {
-		json.NewEncoder(w).Encode([]models.Abonnement{})
-		return
-	}
-	defer rows.Close()
-
-	type AbonnementDTO struct {
-		ID        int     `json:"id"`
-		StartDate string  `json:"startDate"`
-		EndDate   *string `json:"endDate"`
-		Status    string  `json:"status"`
-		AutoRenewal bool  `json:"autoRenewal"`
-		Quantity  int     `json:"quantity"`
-	}
-
-	items := []AbonnementDTO{}
-	for rows.Next() {
-		var id int
-		var dateCommande string
-		var montant float64
-		var statut string
-		if err := rows.Scan(&id, &dateCommande, &montant, &statut); err != nil {
-			continue
-		}
-		items = append(items, AbonnementDTO{
-			ID:          id,
-			StartDate:   dateCommande,
-			EndDate:     nil,
-			Status:      "active",
-			AutoRenewal: false,
-			Quantity:    1,
-		})
-	}
-	if items == nil {
-		items = []AbonnementAdmin{}
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(items)
-}
 
 // GetMesAbonnements returns subscriptions for the authenticated user's company
 func GetMesAbonnements(w http.ResponseWriter, r *http.Request) {
@@ -433,12 +359,18 @@ func GetCommandes(w http.ResponseWriter, r *http.Request) {
 	commandes := []models.Commande{}
 	for rows.Next() {
 		var c models.Commande
-		if err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode); err != nil {
+		var itemsJSON string
+		if err := rows.Scan(&c.ID, &c.DateCommande, &c.MontantTotal, &c.Statut, &c.IDUtilisateur, &c.PromoCode, &itemsJSON); err != nil {
 			log.Printf("Error scanning commande: %v", err)
 			jsonErr(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		c.Items = []models.OrderItem{}
+		if itemsJSON != "" && itemsJSON != "[]" {
+			json.Unmarshal([]byte(itemsJSON), &c.Items)
+		}
+		if c.Items == nil {
+			c.Items = []models.OrderItem{}
+		}
 		commandes = append(commandes, c)
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -453,7 +385,15 @@ func GetCommande(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := getUserID(r)
 	var role string
-	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+	config.DB.QueryRow(`
+		SELECT COALESCE((
+			SELECT LOWER(r.nom)
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1
+			ORDER BY r.id_role
+			LIMIT 1
+		), '')`, userID).Scan(&role)
 
 	var c models.Commande
 	if err := config.DB.QueryRow("SELECT id_commande, date_commande, montant_total, statut, id_utilisateur, COALESCE(promo_code,'') FROM commande WHERE id_commande = $1", id).Scan(
@@ -534,7 +474,15 @@ func GetFactures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var role string
-	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+	config.DB.QueryRow(`
+		SELECT COALESCE((
+			SELECT LOWER(r.nom)
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1
+			ORDER BY r.id_role
+			LIMIT 1
+		), '')`, userID).Scan(&role)
 
 	var rows *sql.Rows
 	var err error
@@ -621,7 +569,15 @@ func GetPaiements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var role string
-	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
+	config.DB.QueryRow(`
+		SELECT COALESCE((
+			SELECT LOWER(r.nom)
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1
+			ORDER BY r.id_role
+			LIMIT 1
+		), '')`, userID).Scan(&role)
 
 	var rows *sql.Rows
 	var err error
