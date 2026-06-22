@@ -1217,6 +1217,16 @@ app.get("/admin/api/commandes/:id", proxyToApiWithAuth("/commandes/:id"));
 app.put("/admin/api/commandes/:id", proxyToApiWithAuth("/commandes/:id"));
 app.delete("/admin/api/commandes/:id", proxyToApiWithAuth("/commandes/:id"));
 
+// Abonnements (admin)
+app.get("/admin/api/abonnements", proxyToApiWithAuth("/abonnements"));
+app.post("/admin/api/abonnements", proxyToApiWithAuth("/abonnements"));
+app.get("/admin/api/abonnements/:id", proxyToApiWithAuth("/abonnements/:id"));
+app.put("/admin/api/abonnements/:id", proxyToApiWithAuth("/abonnements/:id"));
+app.delete(
+  "/admin/api/abonnements/:id",
+  proxyToApiWithAuth("/abonnements/:id"),
+);
+
 // Alias /orders → /commandes (dashboard.js + orders.js compatibility)
 app.get("/admin/api/orders", proxyToApiWithAuth("/commandes"));
 app.post("/admin/api/orders", proxyToApiWithAuth("/commandes"));
@@ -1646,7 +1656,9 @@ app.get("/api/mes-commandes", checkAuth, async (req, res) => {
     const response = await axios.get("http://api:8080/api/commandes", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const commandes = (response.data || []).filter((c) => c.userId === userId);
+    const commandes = Array.isArray(response.data)
+      ? response.data.filter((c) => c.userId === userId) // legacy flat array
+      : (response.data.commandes || []).filter((c) => c.userId === userId); // paginated format
     res.json(commandes);
   } catch (err) {
     console.error("Mes commandes error:", err.message);
@@ -1671,7 +1683,10 @@ app.get("/api/mes-devis", checkAuth, async (req, res) => {
       "devis_accepte",
       "devis_refuse",
     ];
-    const devis = (response.data || []).filter(
+    const all = Array.isArray(response.data)
+      ? response.data // legacy flat array
+      : response.data.commandes || []; // paginated format
+    const devis = all.filter(
       (c) => c.userId === userId && DEVIS_STATUTS.includes(c.status),
     );
 
@@ -1725,6 +1740,38 @@ app.get("/api/mes-devis", checkAuth, async (req, res) => {
   } catch (err) {
     console.error("[mes-devis]", err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/mes-abonnements — Abonnements de l'utilisateur connecté
+app.get("/api/mes-abonnements", checkAuth, async (req, res) => {
+  try {
+    const token = getAuthToken(req);
+    const response = await axios.get("http://api:8080/api/mes-abonnements", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    res.json(response.data);
+  } catch (err) {
+    console.error("[mes-abonnements]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/mes-abonnements/:id/cancel — Résilier un abonnement
+app.put("/api/mes-abonnements/:id/cancel", checkAuth, async (req, res) => {
+  try {
+    const token = getAuthToken(req);
+    const response = await axios.put(
+      `http://api:8080/api/mes-abonnements/${req.params.id}/cancel`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    res.json(response.data);
+  } catch (err) {
+    console.error("[mes-abonnements cancel]", err.message);
+    res
+      .status(err.response?.status || 500)
+      .json({ error: err.response?.data?.error || err.message });
   }
 });
 
@@ -2273,6 +2320,30 @@ app.post("/api/confirm-order", checkAuth, async (req, res) => {
       },
       { headers: { Authorization: `Bearer ${token}` } },
     );
+
+    // Creer automatiquement les abonnements pour chaque article
+    for (const item of normalized) {
+      const slug = item.product_slug || item.slug || "";
+      if (slug) {
+        try {
+          await axios.post(
+            "http://api:8080/api/abonnements/from-purchase",
+            {
+              product_slug: slug,
+              user_id: userId,
+              quantity: item.quantity || 1,
+            },
+            { headers: { Authorization: token } },
+          );
+        } catch (subErr) {
+          console.warn(
+            "[confirm-order] Abo non cree pour " + slug + ":",
+            subErr.message,
+          );
+        }
+      }
+    }
+
     res.status(201).json(r.data);
   } catch (e) {
     console.error("[confirm-order] Erreur:", e.message);
@@ -2358,6 +2429,11 @@ app.get("/recherche.html", (req, res) => {
 // Page protégée - mes commandes
 app.get("/mes-commandes.html", checkAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "mes-commandes.html"));
+});
+
+// Page protégée - mes abonnements
+app.get("/mes-abonnements.html", checkAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "mes-abonnements.html"));
 });
 
 // Error handling middleware

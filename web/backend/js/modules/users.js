@@ -61,7 +61,11 @@ async function loadUsers() {
       throw new Error("Erreur lors de la récupération des utilisateurs");
 
     allUsersCache = await response.json();
-    const filteredUsers = filterUsersByCurrentTab(allUsersCache);
+    // Support both legacy flat array and paginated {users: [...], total: ...} format
+    const allUsers = Array.isArray(allUsersCache)
+      ? allUsersCache
+      : allUsersCache.users || [];
+    const filteredUsers = filterUsersByCurrentTab(allUsers);
 
     if (!filteredUsers || filteredUsers.length === 0) {
       usersContainer.innerHTML =
@@ -113,14 +117,28 @@ async function loadUsers() {
                   </td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
-                      <button class="btn btn-outline-primary" onclick="AdminUsers.editUser(${user.id_utilisateur})">
+                      <button class="btn btn-outline-primary" onclick="AdminUsers.viewUser(${user.id_utilisateur})" title="Voir">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-primary" onclick="AdminUsers.editUser(${user.id_utilisateur})" title="Éditer">
                         <i class="bi bi-pencil"></i>
                       </button>
-                      <button class="btn btn-outline-secondary" onclick="AdminUsers.openUserAccessModal(${user.id_utilisateur})" title="Rôles & permissions">
+                      ${
+                        normalizeUserRole(user) !== "admin"
+                          ? `<button class="btn btn-outline-success" onclick="AdminUsers.promoteUser(${user.id_utilisateur})" title="Promouvoir admin"><i class="bi bi-arrow-up-circle"></i></button>`
+                          : `<button class="btn btn-outline-secondary" onclick="AdminUsers.demoteUser(${user.id_utilisateur})" title="Rétrograder"><i class="bi bi-arrow-down-circle"></i></button>`
+                      }
+                      <button class="btn btn-outline-warning" onclick="AdminUsers.resetPassword(${user.id_utilisateur})" title="Réinitialiser MDP">
+                        <i class="bi bi-key"></i>
+                      </button>
+                      <button class="btn btn-outline-info" onclick="AdminUsers.openUserAccessModal(${user.id_utilisateur})" title="Rôles & permissions">
                         <i class="bi bi-shield-lock"></i>
                       </button>
-                      <button class="btn btn-outline-${user.est_actif ? "danger" : "success"}" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, ${!user.est_actif})">
+                      <button class="btn btn-outline-${user.est_actif ? "danger" : "success"}" onclick="AdminUsers.toggleUserStatus(${user.id_utilisateur}, ${!user.est_actif})" title="${user.est_actif ? "Désactiver" : "Activer"}">
                         <i class="bi bi-${user.est_actif ? "pause" : "play"}"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="AdminUsers.deleteUser(${user.id_utilisateur})" title="Supprimer">
+                        <i class="bi bi-trash"></i>
                       </button>
                     </div>
                   </td>
@@ -142,8 +160,8 @@ async function loadUsers() {
       );
     });
 
-    const totalUsers = allUsersCache.length;
-    const totalAdmins = allUsersCache.filter(
+    const totalUsers = allUsers.length;
+    const totalAdmins = allUsers.filter(
       (user) => normalizeUserRole(user) === "admin",
     ).length;
     const totalNormalUsers = totalUsers - totalAdmins;
@@ -775,6 +793,89 @@ async function openUserAccessModal(userId) {
   }
 }
 
+// Promote user to admin
+async function promoteUser(userId) {
+  if (!confirm("Promouvoir cet utilisateur en administrateur ?")) return;
+  try {
+    const res = await apiFetch(`/admin/api/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ role: "admin" }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la promotion");
+    AdminUtils.showAlert("Utilisateur promu administrateur", "success");
+    loadUsers();
+  } catch (e) {
+    console.error("promoteUser error:", e);
+    AdminUtils.showAlert("Erreur: " + e.message, "danger");
+  }
+}
+
+// Demote admin to client
+async function demoteUser(userId) {
+  if (!confirm("Rétrograder cet administrateur en client ?")) return;
+  try {
+    const res = await apiFetch(`/admin/api/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ role: "client" }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la rétrogradation");
+    AdminUtils.showAlert("Administrateur rétrogradé en client", "success");
+    loadUsers();
+  } catch (e) {
+    console.error("demoteUser error:", e);
+    AdminUtils.showAlert("Erreur: " + e.message, "danger");
+  }
+}
+
+// Delete user
+async function deleteUser(userId) {
+  if (
+    !confirm(
+      "Supprimer définitivement cet utilisateur ? Cette action est irréversible.",
+    )
+  )
+    return;
+  try {
+    const res = await apiFetch(`/admin/api/users/${userId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Erreur lors de la suppression");
+    AdminUtils.showAlert("Utilisateur supprimé", "success");
+    loadUsers();
+  } catch (e) {
+    console.error("deleteUser error:", e);
+    AdminUtils.showAlert("Erreur: " + e.message, "danger");
+  }
+}
+
+// Reset user password (admin side)
+async function resetPassword(userId) {
+  if (!confirm("Générer un nouveau mot de passe pour cet utilisateur ?"))
+    return;
+  try {
+    // Generate a secure random password
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
+    let pwd = "";
+    for (let i = 0; i < 12; i++)
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+
+    const res = await apiFetch(`/admin/api/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ password: pwd }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la réinitialisation");
+    AdminUtils.showAlert(
+      "Nouveau mot de passe : <strong>" +
+        pwd +
+        "</strong><br><small>Communiquez-le à l'utilisateur de manière sécurisée.</small>",
+      "success",
+    );
+  } catch (e) {
+    console.error("resetPassword error:", e);
+    AdminUtils.showAlert("Erreur: " + e.message, "danger");
+  }
+}
+
 // Export functions
 window.AdminUsers = {
   loadUsers,
@@ -785,4 +886,8 @@ window.AdminUsers = {
   reset2FA,
   refreshUserRolesSection,
   openUserAccessModal,
+  promoteUser,
+  demoteUser,
+  deleteUser,
+  resetPassword,
 };

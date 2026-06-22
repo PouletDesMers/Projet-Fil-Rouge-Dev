@@ -488,6 +488,15 @@
                             ><i class="bi bi-envelope-fill"></i> Newsletter</a
                         >
                     </li>
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            href="#"
+                            data-section="subscriptions"
+                            data-bs-dismiss="offcanvas"
+                            ><i class="bi bi-arrow-repeat"></i> Abonnements</a
+                        >
+                    </li>
                 </ul>
                 <div class="sidebar-section-label">Système</div>
                 <ul class="nav flex-column">
@@ -628,6 +637,15 @@
                                 data-section="newsletter"
                             >
                                 <i class="bi bi-envelope-fill"></i> Newsletter
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link"
+                                href="#"
+                                data-section="subscriptions"
+                            >
+                                <i class="bi bi-arrow-repeat"></i> Abonnements
                             </a>
                         </li>
                     </ul>
@@ -1615,6 +1633,49 @@
                             role="tabpanel"
                         >
                             <div id="campaignsContainer">
+                                <div class="loading-spinner">
+                                    <div
+                                        class="spinner-border text-primary"
+                                        role="status"
+                                    >
+                                        <span class="visually-hidden"
+                                            >Chargement...</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Abonnements Section -->
+                <section
+                    id="subscriptions-section"
+                    class="section-content d-none"
+                >
+                    <div class="header-admin">
+                        <div>
+                            <h1>
+                                <i
+                                    class="bi bi-arrow-repeat text-primary me-2"
+                                ></i
+                                >Gestion des Abonnements
+                            </h1>
+                            <p class="text-muted mb-0">
+                                Suivi des abonnements actifs, suspendus et
+                                résiliés
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-primary"
+                            onclick="AdminSubscriptions.openModal()"
+                        >
+                            <i class="bi bi-plus-lg me-1"></i> Nouvel abonnement
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div id="abonnementsContainer">
                                 <div class="loading-spinner">
                                     <div
                                         class="spinner-border text-primary"
@@ -4073,6 +4134,159 @@
             </div>
         </div>
 
+        <!-- Modal Abonnement (create / edit) -->
+        <div
+            class="modal fade"
+            id="subModal"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="subModalLabel"
+            aria-hidden="true"
+        >
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="subModalLabel">
+                            Nouvel abonnement
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Fermer"
+                        ></button>
+                    </div>
+                    <div class="modal-body">
+                        <form
+                            id="subForm"
+                            onsubmit="
+                                event.preventDefault();
+                                AdminSubscriptions.save(
+                                    document.getElementById('subId').value ||
+                                        null,
+                                );
+                            "
+                        >
+                            <input type="hidden" id="subId" />
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="subCompany"
+                                        >Entreprise *</label
+                                    >
+                                    <select
+                                        class="form-select"
+                                        id="subCompany"
+                                        required
+                                    ></select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="subProduct"
+                                        >Produit *</label
+                                    >
+                                    <select
+                                        class="form-select"
+                                        id="subProduct"
+                                        required
+                                    ></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="subPricing"
+                                        >Tarification</label
+                                    >
+                                    <select
+                                        class="form-select"
+                                        id="subPricing"
+                                    ></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="subQuantity"
+                                        >Quantité (licences)</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="subQuantity"
+                                        min="1"
+                                    />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="subStatus"
+                                        >Statut</label
+                                    >
+                                    <select class="form-select" id="subStatus">
+                                        <option value="actif">Actif</option>
+                                        <option value="suspendu">
+                                            Suspendu
+                                        </option>
+                                        <option value="resilie">Résilié</option>
+                                        <option value="expire">Expiré</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="subStartDate"
+                                        >Date de début *</label
+                                    >
+                                    <input
+                                        type="date"
+                                        class="form-control"
+                                        id="subStartDate"
+                                        required
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="subEndDate"
+                                        >Date de fin</label
+                                    >
+                                    <input
+                                        type="date"
+                                        class="form-control"
+                                        id="subEndDate"
+                                    />
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="subAutoRenewal"
+                                            checked
+                                        />
+                                        <label
+                                            class="form-check-label"
+                                            for="subAutoRenewal"
+                                            >Renouvellement automatique</label
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            onclick="
+                                AdminSubscriptions.save(
+                                    document.getElementById('subId').value ||
+                                        null,
+                                )
+                            "
+                        >
+                            Enregistrer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast Container -->
         <div
             class="toast-container position-fixed top-0 end-0 p-3"
@@ -4107,6 +4321,7 @@
         <script src="js/modules/discounts.js"></script>
         <script src="js/modules/logs.js"></script>
         <script src="js/modules/newsletter.js"></script>
+        <script src="js/modules/abonnements.js"></script>
         <script src="js/modules/roles.js"></script>
         <script src="/js/cookie-consent.js"></script>
 

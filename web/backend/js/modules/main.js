@@ -208,6 +208,12 @@ function _doNavigate(sectionBase) {
     } else {
       console.error("Module newsletter indisponible");
     }
+  } else if (sectionId === "subscriptions-section") {
+    if (window.AdminSubscriptions) {
+      window.AdminSubscriptions.load();
+    } else {
+      console.error("Module abonnements indisponible");
+    }
   } else if (sectionId === "roles-section") {
     const roles = window.AdminRoles;
     if (roles) {
