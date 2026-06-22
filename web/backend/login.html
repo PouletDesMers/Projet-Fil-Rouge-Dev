@@ -138,7 +138,16 @@
             throw new Error(payload.error || 'Connexion impossible');
           }
 
-          const profileResponse = await fetch('/auth/profile', { credentials: 'include' });
+          // Stocker le token en fallback (pour HTTP)
+          if (payload.token) {
+            localStorage.setItem('token', payload.token);
+          }
+
+          const token = localStorage.getItem('token');
+          const profileResponse = await fetch('/auth/profile', { 
+            credentials: 'include',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
           if (!profileResponse.ok) {
             throw new Error('Session invalide après connexion');
           }

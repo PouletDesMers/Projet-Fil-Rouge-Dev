@@ -260,12 +260,22 @@ app.post("/auth/login", loginLimiter, async (req, res) => {
       // SÉCURISÉ: httpOnly cookie
       // sameSite: 'lax' permet l'accès depuis des IPs locales (192.168.x.x, etc.)
       // tout en protégeant contre le CSRF
+      // Cookie httpOnly (sécurisé, fonctionne en HTTPS)
       res.cookie("authToken", data.token, {
-        httpOnly: true, // Cannot be read by JavaScript (XSS protection)
-        secure: process.env.NODE_ENV === "production" || isRequestSecure(req),
-        sameSite: "lax", // lax = compatible réseau local, protège contre CSRF
-        maxAge: 8 * 60 * 60 * 1000, // 8 heures
-        path: "/", // Accessible sur tout le site
+        httpOnly: true,
+        secure: isRequestSecure(req),
+        sameSite: "lax",
+        maxAge: 8 * 60 * 60 * 1000,
+        path: "/",
+      });
+
+      // Cookie non-httpOnly (fallback pour HTTP — utilisable par JS)
+      res.cookie("token", data.token, {
+        httpOnly: false,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 8 * 60 * 60 * 1000,
+        path: "/",
       });
 
       // Récupérer les infos utilisateur avec le token
@@ -289,9 +299,10 @@ app.post("/auth/login", loginLimiter, async (req, res) => {
         `[SECURITY] User login: ${userProfile?.email || "unknown"} from IP: ${req.ip}`,
       );
 
-      // Return user info WITHOUT the token
+      // Return user info WITH the token (pour fallback Bearer en HTTP)
       return res.json({
         success: true,
+        token: data.token,
         user: userProfile,
         password_needs_change: !!data.password_needs_change,
         message: data.message || "Login successful",
