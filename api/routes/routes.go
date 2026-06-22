@@ -110,6 +110,17 @@ func Register(r *mux.Router) {
 	r.Handle("/api/commandes/{id}", auth(http.HandlerFunc(handlers.UpdateCommande))).Methods("PUT")
 	r.Handle("/api/commandes/{id}", auth(http.HandlerFunc(handlers.DeleteCommande))).Methods("DELETE")
 
+	// Client billing (mes abonnements)
+	r.Handle("/api/mes-abonnements", auth(http.HandlerFunc(handlers.GetMesAbonnements))).Methods("GET")
+	r.Handle("/api/mes-abonnements/{id}/cancel", auth(http.HandlerFunc(handlers.CancelAbonnement))).Methods("PUT")
+	r.Handle("/api/abonnements/from-purchase", auth(http.HandlerFunc(handlers.CreateAbonnementFromPurchase))).Methods("POST")
+
+	// Admin Billing (admin only)
+	r.Handle("/api/admin/abonnements", adminRaw(http.HandlerFunc(handlers.GetAbonnements))).Methods("GET")
+	r.Handle("/api/admin/abonnements", adminRaw(http.HandlerFunc(handlers.CreateAbonnement))).Methods("POST")
+	r.Handle("/api/admin/abonnements/{id}", adminRaw(http.HandlerFunc(handlers.UpdateAbonnement))).Methods("PUT")
+	r.Handle("/api/admin/abonnements/{id}", adminRaw(http.HandlerFunc(handlers.DeleteAbonnement))).Methods("DELETE")
+
 	r.Handle("/api/factures", auth(http.HandlerFunc(handlers.GetFactures))).Methods("GET")
 	r.Handle("/api/factures", auth(http.HandlerFunc(handlers.CreateFacture))).Methods("POST")
 	r.Handle("/api/factures/{id}", auth(http.HandlerFunc(handlers.GetFacture))).Methods("GET")

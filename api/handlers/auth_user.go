@@ -463,6 +463,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	
 
 	isAdminPanel := strings.EqualFold(r.Header.Get("X-Admin-Panel"), "true")
 	requestedRole := strings.ToLower(strings.TrimSpace(u.Role))

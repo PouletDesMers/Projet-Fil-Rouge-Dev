@@ -11,6 +11,19 @@ import (
 func ErrorHandler(w http.ResponseWriter, err error) {
 	isProd := os.Getenv("GO_ENV") == "production"
 
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error": map[string]interface{}{
+				"message": "Internal server error",
+				"code":    500,
+			},
+		})
+		return
+	}
+
 	if ae, ok := err.(apierrors.AppErrorer); ok {
 		appErr := ae.AppErr()
 		w.Header().Set("Content-Type", "application/json")
