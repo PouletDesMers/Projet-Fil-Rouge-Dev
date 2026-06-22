@@ -198,7 +198,7 @@ func CreateNewsletterCampaign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.Title = mw.SanitizeString(data.Title)
-	data.Content = mw.SanitizeString(data.Content)
+	// NOTA: content is HTML from Quill editor — ne pas sanitizer (conserver les balises)
 
 	var campaignID int
 	err := config.DB.QueryRow(`
@@ -282,6 +282,56 @@ func SendNewsletterCampaign(w http.ResponseWriter, r *http.Request) {
 		"message":   "Campaign sent",
 		"sentCount": sentCount,
 	})
+}
+
+// Delete newsletter campaign (admin)
+func DeleteNewsletterCampaign(w http.ResponseWriter, r *http.Request) {
+	campaignID, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		jsonErr(w, "Invalid campaign ID", http.StatusBadRequest)
+		return
+	}
+
+	result, err := config.DB.Exec(`
+		DELETE FROM newsletter_campaigns WHERE id_campaign = $1
+	`, campaignID)
+
+	if err != nil {
+		jsonErr(w, "Failed to delete campaign", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "Campaign not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Campaign deleted"})
+}
+
+// Delete newsletter subscriber (admin)
+func DeleteNewsletterSubscriber(w http.ResponseWriter, r *http.Request) {
+	email := mux.Vars(r)["email"]
+
+	result, err := config.DB.Exec(`
+		DELETE FROM newsletter_subscribers WHERE email = $1
+	`, email)
+
+	if err != nil {
+		jsonErr(w, "Failed to delete subscriber", http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "Subscriber not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Subscriber deleted"})
 }
 
 func atoi(s string) int {

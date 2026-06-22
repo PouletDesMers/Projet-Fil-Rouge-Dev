@@ -127,7 +127,7 @@ function setupEventListeners() {
   document
     .getElementById("createNewsletterBtn")
     ?.addEventListener("click", () => {
-      window.AdminNewsletter?.createCampaign();
+      window.AdminNewsletter?.openCampaignModal();
     });
 
   // Roles section handlers
@@ -203,8 +203,12 @@ function _doNavigate(sectionBase) {
   } else if (sectionId === "newsletter-section") {
     const newsletter = window.AdminNewsletter;
     if (newsletter) {
-      newsletter.loadSubscribers();
-      newsletter.loadCampaigns();
+      if (typeof newsletter.init === "function") {
+        newsletter.init();
+      } else {
+        newsletter.loadSubscribers();
+        newsletter.loadCampaigns();
+      }
     } else {
       console.error("Module newsletter indisponible");
     }

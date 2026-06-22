@@ -181,6 +181,8 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
 	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
 	r.Handle("/api/admin/newsletter/campaigns/{id}/send", adminRaw(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/campaigns/{id}", adminRaw(http.HandlerFunc(handlers.DeleteNewsletterCampaign))).Methods("DELETE")
+	r.Handle("/api/admin/newsletter/subscribers/{email}", adminRaw(http.HandlerFunc(handlers.DeleteNewsletterSubscriber))).Methods("DELETE")
 
 	// ── Stats & Analytics ────────────────────────────────────────────
 	r.Handle("/api/admin/stats/top-products", adminRaw(http.HandlerFunc(handlers.GetTopProductsLast3Months))).Methods("GET")

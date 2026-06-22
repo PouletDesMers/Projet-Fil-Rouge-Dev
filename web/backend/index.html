@@ -1554,99 +1554,331 @@
                     </div>
                 </section>
 
-                <!-- Newsletter Section -->
+                <!-- ═══════════════════════════ NEWSLETTER ═══════════════════════════ -->
                 <section id="newsletter-section" class="section-content d-none">
                     <div class="header-admin">
                         <div>
                             <h1>
-                                <i
-                                    class="bi bi-envelope-fill text-primary me-2"
-                                ></i
-                                >Gestion de la Newsletter
+                                <i class="bi bi-envelope-fill text-primary me-2"></i>
+                                Gestion de la Newsletter
                             </h1>
                             <p class="text-muted mb-0">
-                                Gérer les abonnés et envoyer des campagnes
+                                Gérez vos abonnés, créez et envoyez des campagnes email
                             </p>
                         </div>
-                        <button
-                            class="btn btn-primary"
-                            id="createNewsletterBtn"
-                        >
-                            <i class="bi bi-plus-circle"></i> Nouvelle Campagne
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary" id="nlAddSubscriberBtn">
+                                <i class="bi bi-person-plus"></i> Ajouter un abonné
+                            </button>
+                            <button class="btn btn-primary" id="createNewsletterBtn">
+                                <i class="bi bi-plus-circle"></i> Nouvelle Campagne
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Onglets Newsletter -->
-                    <ul class="nav nav-tabs mb-3" role="tablist">
+                    <!-- Stats rapides -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-xl-3">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-val" id="nl-stat-total">—</div>
+                                    <div class="stat-lbl">Abonnés totaux</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-3">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background:rgba(16,185,129,0.12);color:#059669;">
+                                    <i class="bi bi-person-check-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-val" id="nl-stat-active">—</div>
+                                    <div class="stat-lbl">Abonnés actifs</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-3">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                                    <i class="bi bi-send-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-val" id="nl-stat-campaigns">—</div>
+                                    <div class="stat-lbl">Campagnes</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-xl-3">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background:rgba(118,2,249,0.12);color:#7602f9;">
+                                    <i class="bi bi-graph-up"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-val" id="nl-stat-sent">—</div>
+                                    <div class="stat-lbl">Emails envoyés</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglets -->
+                    <ul class="nav nav-tabs mb-3" role="tablist" id="nlTabs">
                         <li class="nav-item" role="presentation">
-                            <button
-                                class="nav-link active"
-                                id="newsletter-subscribers-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#newsletter-subscribers-pane"
-                                type="button"
-                                role="tab"
-                            >
+                            <button class="nav-link active" id="nl-subscribers-tab"
+                                data-bs-toggle="tab" data-bs-target="#nl-subscribers-pane" type="button" role="tab">
                                 <i class="bi bi-people me-1"></i>Abonnés
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button
-                                class="nav-link"
-                                id="newsletter-campaigns-tab"
-                                data-bs-toggle="tab"
-                                data-bs-target="#newsletter-campaigns-pane"
-                                type="button"
-                                role="tab"
-                            >
+                            <button class="nav-link" id="nl-campaigns-tab"
+                                data-bs-toggle="tab" data-bs-target="#nl-campaigns-pane" type="button" role="tab">
                                 <i class="bi bi-send me-1"></i>Campagnes
                             </button>
                         </li>
                     </ul>
 
-                    <!-- Tab Content -->
                     <div class="tab-content">
-                        <!-- Abonnés Tab -->
-                        <div
-                            class="tab-pane fade show active"
-                            id="newsletter-subscribers-pane"
-                            role="tabpanel"
-                        >
+                        <!-- ═══ Abonnés ═══ -->
+                        <div class="tab-pane fade show active" id="nl-subscribers-pane" role="tabpanel">
+                            <!-- Barre d'outils abonnés -->
+                            <div class="card mb-3">
+                                <div class="card-body py-2 px-3">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control form-control-sm" id="nlSubSearch"
+                                                placeholder="🔍 Rechercher par email..." oninput="AdminNewsletter.filterSubscribers()">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select form-select-sm" id="nlSubStatusFilter" onchange="AdminNewsletter.filterSubscribers()">
+                                                <option value="all">Tous les abonnés</option>
+                                                <option value="active">Actifs uniquement</option>
+                                                <option value="unsubscribed">Désabonnés</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-auto ms-auto d-flex gap-2">
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="AdminNewsletter.exportSubscribers()" title="Exporter en CSV">
+                                                <i class="bi bi-download me-1"></i>Export CSV
+                                            </button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('nlImportFile').click()" title="Importer un CSV">
+                                                <i class="bi bi-upload me-1"></i>Import CSV
+                                            </button>
+                                            <input type="file" id="nlImportFile" accept=".csv" style="display:none" onchange="AdminNewsletter.importSubscribers(this)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div id="newsletterContainer">
                                 <div class="loading-spinner">
-                                    <div
-                                        class="spinner-border text-primary"
-                                        role="status"
-                                    >
-                                        <span class="visually-hidden"
-                                            >Chargement...</span
-                                        >
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Campagnes Tab -->
-                        <div
-                            class="tab-pane fade"
-                            id="newsletter-campaigns-pane"
-                            role="tabpanel"
-                        >
+                        <!-- ═══ Campagnes ═══ -->
+                        <div class="tab-pane fade" id="nl-campaigns-pane" role="tabpanel">
                             <div id="campaignsContainer">
                                 <div class="loading-spinner">
-                                    <div
-                                        class="spinner-border text-primary"
-                                        role="status"
-                                    >
-                                        <span class="visually-hidden"
-                                            >Chargement...</span
-                                        >
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
+
+                <!-- ═══ Modal : Créer/Éditer une campagne ═══ -->
+                <div class="modal fade" id="nlCampaignModal" tabindex="-1" role="dialog"
+                    aria-modal="true" aria-labelledby="nlCampaignModalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="nlCampaignModalTitle">
+                                    <i class="bi bi-envelope-paper me-2"></i>
+                                    <span id="nlCampaignModalLabel">Nouvelle campagne</span>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="nlCampaignAlert" class="alert d-none" role="alert"></div>
+                                <form id="nlCampaignForm">
+                                    <input type="hidden" id="nlCampaignId">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-8">
+                                            <label for="nlCampaignTitle" class="form-label fw-semibold">
+                                                Titre de la campagne <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="nlCampaignTitle"
+                                                placeholder="Ex: Nouveaux services CYNA — Juin 2026" required maxlength="200">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="nlCampaignSubject" class="form-label fw-semibold">
+                                                Objet de l'email <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="nlCampaignSubject"
+                                                placeholder="Ex: Découvrez nos nouveautés !" required maxlength="200">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">
+                                            Contenu de l'email <span class="text-danger">*</span>
+                                        </label>
+                                        <ul class="nav nav-tabs mb-0" id="nlEditorTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="nl-tab-rich" data-bs-toggle="tab"
+                                                    data-bs-target="#nl-pane-rich" type="button" role="tab">
+                                                    <i class="bi bi-pencil-square me-1"></i>Éditeur visuel
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="nl-tab-html" data-bs-toggle="tab"
+                                                    data-bs-target="#nl-pane-html" type="button" role="tab">
+                                                    <i class="bi bi-code-slash me-1"></i>HTML
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="nl-tab-preview" data-bs-toggle="tab"
+                                                    data-bs-target="#nl-pane-preview" type="button" role="tab">
+                                                    <i class="bi bi-eye me-1"></i>Aperçu
+                                                </button>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content border border-top-0 rounded-bottom">
+                                            <div class="tab-pane fade show active" id="nl-pane-rich" role="tabpanel">
+                                                <div id="nl-quill-toolbar" style="border:none;border-bottom:1px solid #dee2e6;">
+                                                    <span class="ql-formats">
+                                                        <select class="ql-header"><option selected></option><option value="1">Titre</option><option value="2">Sous-titre</option><option value="3">Section</option></select>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <button class="ql-bold"></button><button class="ql-italic"></button>
+                                                        <button class="ql-underline"></button><button class="ql-strike"></button>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <select class="ql-color"></select><select class="ql-background"></select>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <button class="ql-list" value="ordered"></button>
+                                                        <button class="ql-list" value="bullet"></button>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <button class="ql-link"></button><button class="ql-image"></button>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <button class="ql-blockquote"></button>
+                                                        <button class="ql-code-block"></button>
+                                                    </span>
+                                                    <span class="ql-formats">
+                                                        <button class="ql-align" value=""></button>
+                                                        <button class="ql-align" value="center"></button>
+                                                        <button class="ql-align" value="right"></button>
+                                                    </span>
+                                                    <span class="ql-formats"><button class="ql-clean"></button></span>
+                                                </div>
+                                                <div id="nl-quill-editor" style="min-height:320px;max-height:500px;overflow-y:auto;font-size:14px;"></div>
+                                            </div>
+                                            <div class="tab-pane fade" id="nl-pane-html" role="tabpanel">
+                                                <textarea class="form-control border-0 rounded-0 font-monospace" id="nlCampaignHtml"
+                                                    rows="18" style="font-size:13px;resize:vertical;"
+                                                    placeholder="<h1>Bonjour</h1><p>Contenu de votre newsletter...</p>"></textarea>
+                                            </div>
+                                            <div class="tab-pane fade p-3" id="nl-pane-preview" role="tabpanel">
+                                                <div id="nl-preview-frame" style="max-width:600px;margin:0 auto;padding:20px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
+                                                    <p class="text-muted text-center">Rédigez du contenu pour voir l'aperçu</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info small mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Le pied de page (lien de désabonnement) sera automatiquement ajouté à chaque envoi.
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-danger me-auto" id="nlCampaignDeleteBtn" style="display:none;">
+                                    <i class="bi bi-trash me-1"></i>Supprimer
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="nlCampaignSaveDraftBtn">
+                                    <i class="bi bi-save me-1"></i>Brouillon
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-primary" id="nlCampaignSaveSendBtn">
+                                    <i class="bi bi-send me-1"></i>Créer et envoyer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Modal : Ajouter un abonné ═══ -->
+                <div class="modal fade" id="nlAddSubModal" tabindex="-1" role="dialog"
+                    aria-modal="true" aria-labelledby="nlAddSubModalTitle" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="nlAddSubModalTitle">
+                                    <i class="bi bi-person-plus me-2"></i>Ajouter un abonné
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="nlAddSubAlert" class="alert d-none" role="alert"></div>
+                                <form id="nlAddSubForm" onsubmit="event.preventDefault(); AdminNewsletter.addSubscriber();">
+                                    <div class="mb-3">
+                                        <label for="nlAddSubEmail" class="form-label fw-semibold">
+                                            Adresse email <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="email" class="form-control" id="nlAddSubEmail"
+                                            placeholder="ex: contact@entreprise.fr" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="nlAddSubName" class="form-label">Nom (optionnel)</label>
+                                        <input type="text" class="form-control" id="nlAddSubName"
+                                            placeholder="ex: Jean Dupont">
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="nlAddSubSendWelcome" checked>
+                                        <label class="form-check-label" for="nlAddSubSendWelcome">
+                                            Envoyer un email de bienvenue
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-primary" onclick="AdminNewsletter.addSubscriber()">
+                                    <i class="bi bi-person-check me-1"></i>Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Modal : Aperçu campagne ═══ -->
+                <div class="modal fade" id="nlPreviewModal" tabindex="-1" role="dialog"
+                    aria-modal="true" aria-labelledby="nlPreviewModalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="nlPreviewModalTitle">
+                                    <i class="bi bi-eye me-2"></i>Aperçu de la campagne
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body" id="nlPreviewContent"
+                                style="max-width:620px;margin:0 auto;padding:24px;background:#fff;">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Abonnements Section -->
                 <section

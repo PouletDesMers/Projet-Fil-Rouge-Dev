@@ -243,6 +243,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadCategoriesForProducts().then(() => {
           loadProducts();
         });
+      } else if (sectionId === "newsletter-section") {
+        if (typeof AdminNewsletter !== "undefined" && AdminNewsletter.init) {
+          AdminNewsletter.init();
+        }
       }
     });
   });

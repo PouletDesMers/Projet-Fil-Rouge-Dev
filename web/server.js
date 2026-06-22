@@ -1268,6 +1268,29 @@ app.delete(
   proxyToApiWithAuth("/admin/roles/:id/permissions/:code"),
 );
 
+// POST /api/newsletter/send-welcome — Envoi email de bienvenue via Resend
+app.post("/api/newsletter/send-welcome", async (req, res) => {
+  const { email, name } = req.body;
+  if (!email) return res.status(400).json({ error: "Email requis" });
+  try {
+    await sendNewsletterEmail(
+      email,
+      "Bienvenue dans notre newsletter ! 🎉",
+      `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+        <h2>Bienvenue${name ? " " + name : ""} !</h2>
+        <p>Merci de vous être abonné à notre newsletter.</p>
+        <p>Vous recevrez désormais nos actualités, offres exclusives et nouveautés en avant-première.</p>
+        <p>À très bientôt !</p>
+      </div>`,
+      `${process.env.FRONTEND_URL || "http://localhost:3000"}/unsubscribe?email=${encodeURIComponent(email)}`,
+    );
+    res.json({ message: "Email de bienvenue envoyé" });
+  } catch (err) {
+    console.error("Welcome email error:", err.message);
+    res.status(500).json({ error: "Erreur d'envoi de l'email de bienvenue" });
+  }
+});
+
 // Newsletter (admin)
 app.get(
   "/admin/api/newsletter/subscribers",
@@ -1280,6 +1303,44 @@ app.get(
 app.post(
   "/admin/api/newsletter/campaigns",
   proxyToApiWithAuth("/admin/newsletter/campaigns"),
+);
+// DELETE /admin/api/newsletter/campaigns/:id
+app.delete(
+  "/admin/api/newsletter/campaigns/:id",
+  checkAdminAuth,
+  async (req, res) => {
+    const token = getAuthToken(req);
+    const campaignId = parseInt(req.params.id);
+    try {
+      const resp = await axios.delete(
+        `http://api:8080/api/admin/newsletter/campaigns/${campaignId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      res.json(resp.data);
+    } catch (error) {
+      console.error("Delete campaign error:", error.message);
+      res.status(error.response?.status || 500).json({ error: error.message });
+    }
+  },
+);
+// DELETE /admin/api/newsletter/subscribers/:email
+app.delete(
+  "/admin/api/newsletter/subscribers/:email",
+  checkAdminAuth,
+  async (req, res) => {
+    const token = getAuthToken(req);
+    const email = req.params.email;
+    try {
+      const resp = await axios.delete(
+        `http://api:8080/api/admin/newsletter/subscribers/${encodeURIComponent(email)}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      res.json(resp.data);
+    } catch (error) {
+      console.error("Delete subscriber error:", error.message);
+      res.status(error.response?.status || 500).json({ error: error.message });
+    }
+  },
 );
 // POST /admin/api/newsletter/campaigns/:id/send — Envoi réel via Resend
 app.post(
@@ -1296,18 +1357,19 @@ app.post(
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const campaigns = campaignResp.data || [];
-      const campaign = campaigns.find((c) => c.id_campaign === campaignId);
+      const campaign = campaigns.find((c) => c.id === campaignId);
       if (!campaign) {
         return res.status(404).json({ error: "Campagne non trouvée" });
       }
 
       // 2. Récupérer les abonnés
       const subResp = await axios.get(
-        `http://api:8080/api/admin/newsletter/subscribers`,
+        `http://api:8080/api/admin/newsletter/subscribers?limit=500`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const subscribers = subResp.data || [];
-      const activeSubs = subscribers.filter((s) => s.is_subscribed);
+      const subData = subResp.data || {};
+      const subscribers = subData.subscribers || [];
+      const activeSubs = subscribers.filter((s) => s.isSubscribed !== false);
 
       if (activeSubs.length === 0) {
         return res.json({ sent: 0, total: 0, message: "Aucun abonné actif" });
@@ -1316,10 +1378,10 @@ app.post(
       // 3. Envoyer les emails via Resend
       let sentCount = 0;
       let errorCount = 0;
-      const unsubscribeLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/unsubscribe`;
 
       for (const sub of activeSubs) {
         try {
+          const unsubscribeLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/unsubscribe?email=${encodeURIComponent(sub.email)}`;
           await sendNewsletterEmail(
             sub.email,
             campaign.title,
@@ -2407,6 +2469,11 @@ app.get("/", (req, res) => {
 
 app.get("/auth.html", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "auth.html"));
+});
+
+// Newsletter unsubscribe (page publique)
+app.get("/unsubscribe", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "unsubscribe.html"));
 });
 
 // Pages publiques
