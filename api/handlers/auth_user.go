@@ -368,11 +368,20 @@ func RemoveWebAuthn(w http.ResponseWriter, r *http.Request) {
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Cache hit
-	if cached := cache.AdminCache.Get(cache.KeyAdminUsers); cached != nil {
-		w.Write(cached)
-		return
+	// Pagination
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if page < 1 {
+		page = 1
 	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	// Compter le total
+	var total int
+	config.DB.QueryRow(`SELECT COUNT(*) FROM utilisateur`).Scan(&total)
 
 	rows, err := config.DB.Query(
 		`SELECT u.id_utilisateur, u.email,
@@ -385,7 +394,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		     FROM user_roles ur
 		     JOIN roles r ON ur.id_role = r.id_role
 		     GROUP BY ur.id_utilisateur
-		 ) r ON r.id_utilisateur = u.id_utilisateur`)
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 ORDER BY u.id_utilisateur DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -410,10 +420,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
-	// Mise en cache + réponse
-	cache.SetJSON(cache.AdminCache, cache.KeyAdminUsers, users)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(map[string]interface{}{"users": users, "total": total, "page": page, "limit": limit})
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
@@ -455,6 +463,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	
 
 	isAdminPanel := strings.EqualFold(r.Header.Get("X-Admin-Panel"), "true")
 	requestedRole := strings.ToLower(strings.TrimSpace(u.Role))
@@ -826,6 +835,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var data struct {
+		Token    string `json:"token"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
@@ -835,22 +845,45 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Sans token, on refuse (ne doit passer que par le flux Node.js avec token email)
+	if data.Token == "" {
+		log.Printf("SECURITY: Password reset attempt without token for email: %s", data.Email)
+		jsonErr(w, "Reset token is required. Use the password reset flow via email.", http.StatusUnauthorized)
+		return
+	}
+
 	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
 	if data.Email == "" || data.Password == "" {
 		jsonErr(w, "Email and password are required", http.StatusBadRequest)
 		return
 	}
 
-	// Vérifier que l'email existe
-	var userID int
-	row := config.DB.QueryRow(
-		"SELECT id_utilisateur FROM utilisateur WHERE email = $1",
-		data.Email)
-
-	if err := row.Scan(&userID); err != nil {
-		jsonErr(w, "User not found", http.StatusNotFound)
+	if !mw.IsValidPassword(data.Password) {
+		jsonErr(w, "Password must be at least 8 characters with uppercase, lowercase, digit and special character", http.StatusBadRequest)
 		return
 	}
+
+	// Vérifier que le token de réinitialisation est valide (table reset_tokens)
+	var userID int
+	var tokenEmail string
+	err := config.DB.QueryRow(
+		`SELECT user_id, email FROM reset_tokens
+		 WHERE token = $1 AND expires_at > NOW() AND used = FALSE
+		 LIMIT 1`, data.Token).Scan(&userID, &tokenEmail)
+	if err != nil {
+		log.Printf("SECURITY: Invalid/expired reset token used for email: %s", data.Email)
+		jsonErr(w, "Invalid or expired reset token", http.StatusUnauthorized)
+		return
+	}
+
+	if tokenEmail != data.Email {
+		log.Printf("SECURITY: Reset token email mismatch: token=%s, request=%s", tokenEmail, data.Email)
+		jsonErr(w, "Email does not match the reset token", http.StatusUnauthorized)
+		return
+	}
+
+	// Marquer le token comme utilisé
+	config.DB.Exec("UPDATE reset_tokens SET used = TRUE WHERE token = $1", data.Token)
 
 	// Hash le nouveau mot de passe
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
@@ -858,6 +891,9 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Failed to process password", http.StatusInternalServerError)
 		return
 	}
+
+	// Invalider toutes les sessions existantes
+	config.DB.Exec("DELETE FROM session_utilisateur WHERE id_utilisateur = $1", userID)
 
 	// Mettre à jour le mot de passe
 	if _, err := config.DB.Exec(

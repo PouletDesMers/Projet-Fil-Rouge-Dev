@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Mes abonnements</title>
+
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+
+    <style>
+      .sub-card { border-left: 4px solid #7602f9; transition: box-shadow .2s; }
+      .sub-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.10) !important; }
+      .sub-card.status-actif    { border-left-color: #198754; }
+      .sub-card.status-suspendu { border-left-color: #ffc107; }
+      .sub-card.status-resilie  { border-left-color: #dc3545; }
+      .sub-card.status-expire   { border-left-color: #6c757d; }
+      .empty-state { padding: 5rem 0; }
+      .empty-state i { font-size: 4rem; opacity: .25; }
+    </style>
+  </head>
+
+  <body>
+    <div id="navbar-container"></div>
+
+    <main class="container my-5" id="main-content">
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/index.html">Accueil</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Mes abonnements</li>
+        </ol>
+      </nav>
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <button onclick="history.back()" class="btn btn-outline-secondary btn-sm px-3">
+          <i class="bi bi-arrow-left me-1"></i>Retour
+        </button>
+        <h1 class="h3 mb-0 fw-bold">
+          <i class="bi bi-arrow-repeat me-2 text-primary"></i>Mes abonnements
+        </h1>
+      </div>
+
+      <div id="subsContainer">
+        <div class="d-flex justify-content-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+    <script src="js/navbar.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var STATUS_LABELS = {
+          actif: "Actif", suspendu: "Suspendu", resilie: "Résilié", expire: "Expiré"
+        };
+        var STATUS_CLASS = {
+          actif: "bg-success", suspendu: "bg-warning text-dark", resilie: "bg-danger", expire: "bg-secondary"
+        };
+
+        function fmtDate(d) {
+          if (!d) return "—";
+          return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+        }
+
+        function fmtPrice(p, unit) {
+          if (p == null) return "—";
+          return parseFloat(p).toFixed(2).replace(".", ",") + " €" + (unit ? " / " + unit : "");
+        }
+
+        function renderSubs(subs) {
+          var container = document.getElementById("subsContainer");
+          if (!container) return;
+
+          if (!subs || !subs.length) {
+            container.innerHTML =
+              '<div class="empty-state text-center text-muted">' +
+              '<i class="bi bi-inbox d-block mb-3"></i>' +
+              '<p class="fs-5 fw-semibold mb-1">Aucun abonnement</p>' +
+              '<p class="small">Vous n\'avez pas encore d\'abonnement actif.</p>' +
+              '<a href="/categories.html" class="btn btn-primary mt-2">Découvrir nos offres</a>' +
+              '</div>';
+            return;
+          }
+
+          var html = '<div class="d-flex flex-column gap-3">';
+          for (var i = 0; i < subs.length; i++) {
+            var s = subs[i];
+            var statusLabel = STATUS_LABELS[s.status] || s.status;
+            var statusCls = STATUS_CLASS[s.status] || "bg-secondary";
+            var canCancel = s.status === "actif" || s.status === "suspendu";
+
+            html +=
+              '<div class="card border-0 shadow-sm sub-card status-' + (s.status || "") + '">' +
+              '<div class="card-body">' +
+              '<div class="row align-items-center">' +
+              '<div class="col-md-4">' +
+              '<h5 class="fw-bold mb-1">' + (s.productName || "Produit #" + s.productId) + '</h5>' +
+              '<small class="text-muted">' + (s.companyName || "") + '</small>' +
+              '</div>' +
+              '<div class="col-md-2">' +
+              '<span class="fw-semibold">' + fmtPrice(s.price, s.periodicity) + '</span>' +
+              '<br><small class="text-muted">Qté: ' + (s.quantity != null ? s.quantity : "—") + '</small>' +
+              '</div>' +
+              '<div class="col-md-2">' +
+              '<small class="text-muted d-block">Début</small>' +
+              '<span>' + fmtDate(s.startDate) + '</span>' +
+              '<br><small class="text-muted d-block mt-1">Fin</small>' +
+              '<span>' + fmtDate(s.endDate) + '</span>' +
+              '</div>' +
+              '<div class="col-md-2">' +
+              '<span class="badge ' + statusCls + '">' + statusLabel + '</span>' +
+              '<br><small class="text-muted">' + (s.autoRenewal ? '<i class="bi bi-arrow-repeat me-1"></i>Auto' : 'Manuel') + '</small>' +
+              '</div>' +
+              '<div class="col-md-2 text-end">' +
+              (canCancel
+                ? '<button class="btn btn-outline-danger btn-sm" onclick="cancelSub(' + s.id + ', \'' + (s.productName || "").replace(/'/g, "\\'") + '\')">' +
+                  '<i class="bi bi-x-circle me-1"></i>Résilier</button>'
+                : '<span class="text-muted small">—</span>') +
+              '</div>' +
+              '</div></div></div>';
+          }
+          html += '</div>';
+          container.innerHTML = html;
+        }
+
+        window.cancelSub = function (id, productName) {
+          if (!confirm("Résilier l'abonnement « " + productName + " » ?\n\nCette action désactivera le renouvellement automatique.")) return;
+          fetch("/api/mes-abonnements/" + id + "/cancel", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+          })
+            .then(function (r) {
+              if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || "Erreur serveur"); });
+              return r.json();
+            })
+            .then(function () {
+              var toast = document.createElement("div");
+              toast.className = "alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3";
+              toast.style.zIndex = "9999";
+              toast.innerHTML = 'Abonnement résilié avec succès. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>';
+              document.body.appendChild(toast);
+              setTimeout(function () { toast.remove(); }, 4000);
+              loadSubs();
+            })
+            .catch(function (err) {
+              alert("Erreur : " + err.message);
+            });
+        };
+
+        function loadSubs() {
+          fetch("/api/mes-abonnements", { credentials: "include" })
+            .then(function (r) {
+              if (r.status === 401) { window.location.href = "/auth.html?redirect=/mes-abonnements.html"; return []; }
+              if (!r.ok) throw new Error("Erreur HTTP " + r.status);
+              return r.json();
+            })
+            .then(function (subs) { renderSubs(Array.isArray(subs) ? subs : []); })
+            .catch(function (err) {
+              var c = document.getElementById("subsContainer");
+              if (c) c.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill me-2"></i>Impossible de charger vos abonnements. <a href="#" onclick="location.reload()">Réessayer</a></div>';
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadSubs);
+      })();
+    </script>
+  </body>
+</html>

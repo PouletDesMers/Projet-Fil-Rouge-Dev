@@ -4,75 +4,92 @@
  */
 
 (function () {
-  'use strict';
+  "use strict";
 
   const STATUS_CONFIG = {
-    en_attente:  { label: 'En attente',  cls: 'badge-en_attente' },
-    confirmee:   { label: 'Confirmée',   cls: 'badge-confirmee' },
-    en_cours:    { label: 'En cours',    cls: 'badge-en_cours' },
-    livree:      { label: 'Livrée',      cls: 'badge-livree' },
-    annulee:     { label: 'Annulée',     cls: 'badge-annulee' },
-    remboursee:  { label: 'Remboursée',  cls: 'badge-remboursee' },
+    en_attente: { label: "En attente", cls: "badge-en_attente" },
+    confirmee: { label: "Confirmée", cls: "badge-confirmee" },
+    en_cours: { label: "En cours", cls: "badge-en_cours" },
+    livree: { label: "Livrée", cls: "badge-livree" },
+    annulee: { label: "Annulée", cls: "badge-annulee" },
+    remboursee: { label: "Remboursée", cls: "badge-remboursee" },
   };
 
-  const DEVIS_STATUTS = ['devis_demande', 'devis_envoye', 'devis_accepte', 'devis_refuse'];
+  const DEVIS_STATUTS = [
+    "devis_demande",
+    "devis_envoye",
+    "devis_accepte",
+    "devis_refuse",
+  ];
 
   const DEVIS_STATUS_CONFIG = {
     devis_demande: {
-      cls:    'devis-status-demande',
-      icon:   'bi-hourglass-split',
-      label:  'En attente de notre équipe',
-      detail: 'Votre demande a bien été reçue. Notre équipe étudie votre besoin et vous enverra un devis personnalisé sous 24–48h.',
+      cls: "devis-status-demande",
+      icon: "bi-hourglass-split",
+      label: "En attente de notre équipe",
+      detail:
+        "Votre demande a bien été reçue. Notre équipe étudie votre besoin et vous enverra un devis personnalisé sous 24–48h.",
     },
     devis_envoye: {
-      cls:    'devis-status-envoye status-envoye',
-      icon:   'bi-envelope-check-fill',
-      label:  'Devis envoyé — en attente de votre réponse',
-      detail: 'Vous avez reçu notre devis par email. Consultez-le, acceptez-le ou contactez-nous pour négocier.',
+      cls: "devis-status-envoye status-envoye",
+      icon: "bi-envelope-check-fill",
+      label: "Devis envoyé — en attente de votre réponse",
+      detail:
+        "Vous avez reçu notre devis par email. Consultez-le, acceptez-le ou contactez-nous pour négocier.",
     },
     devis_accepte: {
-      cls:    'devis-status-accepte status-accepte',
-      icon:   'bi-check-circle-fill',
-      label:  'Devis accepté',
-      detail: 'Merci ! Votre accord a bien été enregistré. Notre équipe vous contactera pour les prochaines étapes.',
+      cls: "devis-status-accepte status-accepte",
+      icon: "bi-check-circle-fill",
+      label: "Devis accepté",
+      detail:
+        "Merci ! Votre accord a bien été enregistré. Notre équipe vous contactera pour les prochaines étapes.",
     },
     devis_refuse: {
-      cls:    'devis-status-refuse status-refuse',
-      icon:   'bi-x-circle-fill',
-      label:  'Devis refusé',
-      detail: 'Vous avez refusé ce devis. N’hésitez pas à nous contacter pour discuter d’une autre solution.',
+      cls: "devis-status-refuse status-refuse",
+      icon: "bi-x-circle-fill",
+      label: "Devis refusé",
+      detail:
+        "Vous avez refusé ce devis. N’hésitez pas à nous contacter pour discuter d’une autre solution.",
     },
   };
 
   function statusBadge(s) {
-    const cfg = STATUS_CONFIG[s] || { label: s || 'Inconnu', cls: 'bg-secondary text-white' };
+    const cfg = STATUS_CONFIG[s] || {
+      label: s || "Inconnu",
+      cls: "bg-secondary text-white",
+    };
     return `<span class="badge ${cfg.cls} px-2 py-1 rounded-pill">${cfg.label}</span>`;
   }
 
   function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'long', year: 'numeric',
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
   }
 
   function showOrderDetail(order) {
-    const totalTTC   = Number(order.totalAmount || 0);
-    const totalHT    = totalTTC / 1.2;
-    const tva        = totalTTC - totalHT;
-    const items      = Array.isArray(order.items) ? order.items : [];
-    const promoLine  = order.promoCode
+    const totalTTC = Number(order.totalAmount || 0);
+    const totalHT = totalTTC / 1.2;
+    const tva = totalTTC - totalHT;
+    const items = Array.isArray(order.items) ? order.items : [];
+    const promoLine = order.promoCode
       ? `<tr><td class="text-muted"><i class="bi bi-tag-fill me-1 text-success"></i>Code promo</td>
              <td class="text-end fw-semibold text-success">${order.promoCode}</td></tr>`
-      : '';
+      : "";
     const itemsRows = items.length
-      ? items.map((it) => {
-          const qty = Number(it.quantity || 1);
-          const price = Number(it.price || 0);
-          const lineTotal = price * qty;
-          const name = it.product_name || it.productName || 'Produit';
-          const duration = it.duration ? `<div class="small text-muted">${it.duration}</div>` : '';
-          return `<tr>
+      ? items
+          .map((it) => {
+            const qty = Number(it.quantity || 1);
+            const price = Number(it.price || 0);
+            const lineTotal = price * qty;
+            const name = it.product_name || it.productName || "Produit";
+            const duration = it.duration
+              ? `<div class="small text-muted">${it.duration}</div>`
+              : "";
+            return `<tr>
             <td>
               <div class="fw-semibold">${name}</div>
               ${duration}
@@ -81,10 +98,11 @@
             <td class="text-end">${price.toFixed(2)} €</td>
             <td class="text-end fw-semibold">${lineTotal.toFixed(2)} €</td>
           </tr>`;
-        }).join('')
+          })
+          .join("")
       : `<tr><td colspan="4" class="text-muted text-center">Détails non disponibles</td></tr>`;
 
-    document.getElementById('orderDetailBody').innerHTML = `
+    document.getElementById("orderDetailBody").innerHTML = `
       <table class="table table-borderless mb-0">
         <tbody>
           <tr><td class="text-muted">N° commande</td>        <td class="text-end fw-semibold">#${order.id}</td></tr>
@@ -101,7 +119,7 @@
         </tbody>
       </table>`;
 
-    const itemsTable = document.getElementById('orderDetailItems');
+    const itemsTable = document.getElementById("orderDetailItems");
     if (itemsTable) {
       itemsTable.innerHTML = `
         <div class="mt-3">
@@ -122,13 +140,15 @@
         </div>`;
     }
 
-    const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+    const modal = new bootstrap.Modal(
+      document.getElementById("orderDetailModal"),
+    );
     modal.show();
   }
 
   function renderOrders(container, commandes) {
     // Exclure les devis — ils ont leur propre onglet
-    const orders = commandes.filter(c => !DEVIS_STATUTS.includes(c.status));
+    const orders = commandes.filter((c) => !DEVIS_STATUTS.includes(c.status));
 
     if (!orders || orders.length === 0) {
       container.innerHTML = `
@@ -143,15 +163,19 @@
       return;
     }
 
-    const rows = orders.map((c) => `
+    const rows = orders
+      .map(
+        (c) => `
       <tr style="cursor:pointer" onclick="window._showOrderDetail(${c.id})">
         <td class="fw-semibold text-muted ps-4">#${c.id}</td>
         <td>${formatDate(c.orderDate)}</td>
         <td class="fw-semibold">${Number(c.totalAmount || 0).toFixed(2)} €</td>
         <td>${statusBadge(c.status)}</td>
         <td>${c.promoCode ? `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-tag-fill me-1"></i>${c.promoCode}</span>` : '<span class="text-muted">—</span>'}</td>
-        <td><button class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation();window._showOrderDetail(${c.id})"><i class="bi bi-eye me-1"></i>Détail</button></td>
-      </tr>`).join('');
+        <td><button class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation();window._showOrderDetail(${c.id})"><i class="bi bi-eye me-1"></i>Détail</button> <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation();window._printInvoice(${c.id})" title="Facture PDF"><i class="bi bi-file-earmark-pdf"></i></button></td>
+      </tr>`,
+      )
+      .join("");
 
     container.innerHTML = `
       <div class="card shadow-sm border-0 order-card">
@@ -173,10 +197,11 @@
           </div>
         </div>
       </div>
-      <p class="text-muted small mt-3 text-end">${orders.length} commande${orders.length > 1 ? 's' : ''}</p>`;
+      <p class="text-muted small mt-3 text-end">${orders.length} commande${orders.length > 1 ? "s" : ""}</p>`;
 
     // Expose showOrderDetail globally with the orders data
-    const ordersMap = Object.fromEntries(orders.map(o => [o.id, o]));
+    const ordersMap = Object.fromEntries(orders.map((o) => [o.id, o]));
+    window._ordersMap = ordersMap;
     window._showOrderDetail = (id) => showOrderDetail(ordersMap[id]);
   }
 
@@ -194,33 +219,47 @@
           </a>
         </div>`;
       // Update badge
-      const badge = document.getElementById('devisBadgeCount');
-      if (badge) { badge.textContent = '0'; badge.classList.add('d-none'); }
+      const badge = document.getElementById("devisBadgeCount");
+      if (badge) {
+        badge.textContent = "0";
+        badge.classList.add("d-none");
+      }
       return;
     }
 
     // Update badge
-    const badge = document.getElementById('devisBadgeCount');
-    if (badge) { badge.textContent = devis.length; badge.classList.remove('d-none'); }
+    const badge = document.getElementById("devisBadgeCount");
+    if (badge) {
+      badge.textContent = devis.length;
+      badge.classList.remove("d-none");
+    }
 
-    const cards = devis.map(d => {
-      const cfg     = DEVIS_STATUS_CONFIG[d.status] || { cls: 'bg-secondary text-white', icon: 'bi-question-circle', label: d.status, detail: '' };
-      const statusCls = cfg.cls.split(' ').find(c => c.startsWith('status-')) || '';
-      const amount  = d.amount > 0
-        ? `<span class="fw-bold fs-5">${Number(d.amount).toFixed(2)} €</span> <span class="text-muted small">TTC</span>`
-        : `<span class="text-muted fst-italic">Prix en cours de définition</span>`;
+    const cards = devis
+      .map((d) => {
+        const cfg = DEVIS_STATUS_CONFIG[d.status] || {
+          cls: "bg-secondary text-white",
+          icon: "bi-question-circle",
+          label: d.status,
+          detail: "",
+        };
+        const statusCls =
+          cfg.cls.split(" ").find((c) => c.startsWith("status-")) || "";
+        const amount =
+          d.amount > 0
+            ? `<span class="fw-bold fs-5">${Number(d.amount).toFixed(2)} €</span> <span class="text-muted small">TTC</span>`
+            : `<span class="text-muted fst-italic">Prix en cours de définition</span>`;
 
-      const ctaBtn = d.hostedUrl
-        ? `<a href="${d.hostedUrl}" target="_blank" class="quote-cta mt-3">
+        const ctaBtn = d.hostedUrl
+          ? `<a href="${d.hostedUrl}" target="_blank" class="quote-cta mt-3">
              <i class="bi bi-file-earmark-pdf-fill"></i>Voir et répondre au devis
            </a>`
-        : '';
+          : "";
 
-      const msgLine = d.message
-        ? `<p class="text-muted small mb-0 mt-2"><i class="bi bi-chat-left-text me-1"></i><em>${d.message}</em></p>`
-        : '';
+        const msgLine = d.message
+          ? `<p class="text-muted small mb-0 mt-2"><i class="bi bi-chat-left-text me-1"></i><em>${d.message}</em></p>`
+          : "";
 
-      return `
+        return `
         <div class="card border-0 shadow-sm devis-card ${statusCls} mb-3">
           <div class="card-body p-4">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
@@ -246,19 +285,25 @@
             </div>
           </div>
         </div>`;
-    }).join('');
+      })
+      .join("");
 
-    container.innerHTML = cards +
+    container.innerHTML =
+      cards +
       `<p class="text-muted small text-end mt-1">${devis.length} devis</p>`;
   }
 
-  window.loadDevis = async function() {
+  window.loadDevis = async function () {
     window._devisLoaded = true;
-    const container = document.getElementById('devisContainer');
+    const container = document.getElementById("devisContainer");
     if (!container) return;
     try {
-      const res = await fetch('/api/mes-devis', { credentials: 'include' });
-      if (res.status === 401) { window.location.href = '/auth.html?redirect=/mes-commandes.html?tab=devis'; return; }
+      const res = await fetch("/api/mes-devis", { credentials: "include" });
+      if (res.status === 401) {
+        window.location.href =
+          "/auth.html?redirect=/mes-commandes.html?tab=devis";
+        return;
+      }
       if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
       const devis = await res.json();
       renderDevis(container, Array.isArray(devis) ? devis : []);
@@ -268,12 +313,12 @@
   };
 
   async function loadCommandes() {
-    const container = document.getElementById('ordersContainer');
+    const container = document.getElementById("ordersContainer");
     try {
-      const res = await fetch('/api/mes-commandes', { credentials: 'include' });
+      const res = await fetch("/api/mes-commandes", { credentials: "include" });
 
       if (res.status === 401) {
-        window.location.href = '/auth.html?redirect=/mes-commandes.html';
+        window.location.href = "/auth.html?redirect=/mes-commandes.html";
         return;
       }
 
@@ -282,7 +327,7 @@
       const commandes = await res.json();
       renderOrders(container, Array.isArray(commandes) ? commandes : []);
     } catch (err) {
-      console.error('[Commandes]', err);
+      console.error("[Commandes]", err);
       container.innerHTML = `
         <div class="alert alert-warning d-flex align-items-center gap-2">
           <i class="bi bi-exclamation-triangle-fill"></i>
@@ -291,34 +336,64 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // Facture client
+  window._printInvoice = function (id) {
+    const order = window._ordersMap[id];
+    if (!order) return;
+    const ht = (order.totalAmount || 0) / 1.2;
+    const tva = (order.totalAmount || 0) - ht;
+    const items = Array.isArray(order.items) ? order.items : [];
+    const today = new Date().toLocaleDateString("fr-FR");
+    const ref = `F-${String(id).padStart(6, "0")}`;
+    const rows = items.length
+      ? items
+          .map(
+            (i) =>
+              `<tr><td>${i.product_name || i.productName || "Produit"}</td><td class='text-center'>${i.quantity || i.qty || 1}</td><td class='text-end'>${(i.price || 0).toFixed(2)} €</td><td class='text-end'>${((i.price || 0) * (i.quantity || i.qty || 1)).toFixed(2)} €</td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan='4'>Aucun article</td></tr>`;
+    const h = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Facture ${ref}</title><style>*{margin:0;padding:0}body{font-family:system-ui,sans-serif;padding:40px 50px;max-width:800px;margin:0 auto}.header{display:flex;justify-content:space-between;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #7602F9}.logo{color:#7602F9;font-weight:700;font-size:1.5em}.ref{text-align:right}.ref .num{font-size:1.4em;font-weight:700;color:#5610C0}.ref .date{color:#888;font-size:.85em}.info{margin:25px 0;display:flex;gap:30px}.info>div{flex:1}.info h3{color:#5610C0;font-size:.9em;margin-bottom:8px}.info p{font-size:.85em;line-height:1.6}table{width:100%;border-collapse:collapse;margin:25px 0}th{background:#0a1628;color:#00d4aa;padding:10px 12px;text-align:left}td{padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:.85em}.totals{float:right;width:300px}.totals td:last-child{text-align:right;font-weight:600}.grand{font-size:1.2em;color:#7602F9}.footer{margin-top:60px;padding-top:20px;border-top:1px solid #e2e8f0;font-size:.75em;color:#888}@media print{.print-btn{display:none}}</style></head><body><button class='print-btn' onclick='window.print()' style='background:#7602F9;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin-bottom:20px'>🖨️ Imprimer / PDF</button><div class='header'><div class='logo'>🛡️ CYNA</div><div class='ref'><div class='num'>${ref}</div><div class='date'>${today}</div></div></div><div class='info'><div><h3>Émetteur</h3><p>CYNA SAS<br>123 Rue de la Cybersécurité<br>75000 Paris</p></div><div><h3>Client</h3><p>Commande N° ${order.id}<br>Date: ${formatDate(order.orderDate)}</p></div></div><table><thead><tr><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Sous-total</th></tr></thead><tbody>${rows}</tbody></table><div class='totals'><table><tr><td>Sous-total HT</td><td>${ht.toFixed(2)} €</td></tr><tr><td>TVA (20%)</td><td>${tva.toFixed(2)} €</td></tr><tr class='grand'><td>Total TTC</td><td>${(order.totalAmount || 0).toFixed(2)} €</td></tr></table></div><div class='footer'>Facture générée le ${today} — CYNA SAS</div></body></html>`;
+    const w = window.open("", `Facture-${ref}`, "width=900,height=700");
+    w.document.write(h);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
     // Détecter le retour depuis Stripe checkout
     const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success') {
-      document.getElementById('checkoutSuccessBanner')?.classList.remove('d-none');
+    if (params.get("checkout") === "success") {
+      document
+        .getElementById("checkoutSuccessBanner")
+        ?.classList.remove("d-none");
 
       // Confirmer la commande en DB (une seule fois)
-      const pending = JSON.parse(sessionStorage.getItem('pendingOrder') || '{}');
-      sessionStorage.removeItem('pendingOrder');
+      const pending = JSON.parse(
+        sessionStorage.getItem("pendingOrder") || "{}",
+      );
+      sessionStorage.removeItem("pendingOrder");
 
-      fetch('/api/confirm-order', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/confirm-order", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: params.get('session_id') || null,
+          sessionId: params.get("session_id") || null,
           totalAmount: pending.totalAmount || 0,
-          demo: pending.demo || params.get('demo') === '1',
+          demo: pending.demo || params.get("demo") === "1",
           promoCode: pending.promoCode || null,
           items: Array.isArray(pending.items) ? pending.items : [],
         }),
-      }).catch(e => console.warn('[confirm-order]', e.message));
+      }).catch((e) => console.warn("[confirm-order]", e.message));
 
       // Vider le panier local
-      try { localStorage.removeItem('cartItems'); } catch (_) {}
+      try {
+        localStorage.removeItem("cartItems");
+      } catch (_) {}
 
       // Nettoyer l'URL (sans recharger)
-      history.replaceState({}, '', '/mes-commandes.html');
+      history.replaceState({}, "", "/mes-commandes.html");
     }
 
     loadCommandes();

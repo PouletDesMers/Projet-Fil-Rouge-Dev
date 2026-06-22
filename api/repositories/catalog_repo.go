@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"strings"
 
 	"api/models"
 )
@@ -142,22 +143,33 @@ func (r *CatalogRepo) FindActiveProduitsByCategory(slug string) ([]models.Produi
 	return produits, nil
 }
 
-func (r *CatalogRepo) SearchProduits(pattern string) ([]SearchResult, error) {
+func (r *CatalogRepo) SearchProduits(query string) ([]SearchResult, error) {
 	results := []SearchResult{}
-
-	// Produits correspondants
+	cleanQuery := strings.TrimSpace(strings.TrimPrefix(strings.TrimSuffix(query, "%"), "%"))
+	likePattern := "%" + cleanQuery + "%"
+	startsWith := cleanQuery + "%"
 	rows, err := r.DB.Query(`
-		SELECT p.id_produit, p.nom, p.slug,
-		       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
-		       COALESCE(p.description_html,''), COALESCE(p.images::text,'[]'),
-		       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
-		       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
-		       COALESCE(p.ordre_affichage,0),
-		       COALESCE(c.nom,''), COALESCE(c.slug,'')
-		FROM produits p JOIN categories c ON p.id_categorie=c.id_categorie
-		WHERE p.actif=TRUE AND c.actif=TRUE
-		  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1 OR p.tag ILIKE $1 OR c.nom ILIKE $1)
-		ORDER BY p.ordre_affichage ASC LIMIT 50`, pattern)
+			SELECT p.id_produit, p.nom, p.slug,
+			       COALESCE(p.description_courte,''), COALESCE(p.description_longue,''),
+			       COALESCE(p.description_html,''), COALESCE(p.images::text,'[]'),
+			       COALESCE(p.prix,0), COALESCE(p.devise,'EUR'), COALESCE(p.duree,''),
+			       COALESCE(p.tag,''), COALESCE(p.statut,'actif'), COALESCE(p.type_achat,''),
+			       COALESCE(p.ordre_affichage,0),
+			       COALESCE(c.nom,''), COALESCE(c.slug,'')
+			FROM produits p JOIN categories c ON p.id_categorie=c.id_categorie
+			WHERE p.actif=TRUE AND c.actif=TRUE
+			  AND (p.nom ILIKE $1 OR p.description_courte ILIKE $1
+			    OR p.description_longue ILIKE $1 OR p.tag ILIKE $1
+			    OR c.nom ILIKE $1 OR p.description_html ILIKE $1)
+			ORDER BY CASE
+						    WHEN LOWER(p.nom) = LOWER($2) THEN 1
+						    WHEN LOWER(p.nom) LIKE LOWER($3) THEN 2
+						    WHEN p.nom ILIKE $2 THEN 3
+						    WHEN p.tag ILIKE $2 THEN 4
+						    WHEN p.description_courte ILIKE $1 THEN 5
+						    WHEN c.nom ILIKE $1 THEN 6
+						    ELSE 7
+						END, p.ordre_affichage ASC LIMIT 50`, likePattern, cleanQuery, startsWith)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -177,7 +189,7 @@ func (r *CatalogRepo) SearchProduits(pattern string) ([]SearchResult, error) {
 		SELECT id_categorie, nom, slug, COALESCE(description,''), COALESCE(couleur,'')
 		FROM categories
 		WHERE actif = TRUE AND (nom ILIKE $1 OR slug ILIKE $1)
-		ORDER BY ordre_affichage ASC LIMIT 10`, pattern)
+		ORDER BY ordre_affichage ASC LIMIT 10`, likePattern)
 	if errCat == nil {
 		defer catRows.Close()
 		for catRows.Next() {

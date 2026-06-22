@@ -6,7 +6,20 @@ on:
   pull_request:
     branches: ["**"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
+  security-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run secret scan
+        run: bash scripts/secret-scan.sh
+
   test-go:
     name: Go Build & Test
     runs-on: ubuntu-latest
