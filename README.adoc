@@ -47,7 +47,7 @@ docker compose version    # Docker Compose v2
 git --version
 ----
 
-== Étape 1 : Récupération du projet
+== Étape 1 : Guide d'installation Front / Back
 
 === Cloner le dépôt
 
@@ -58,6 +58,122 @@ sudo git clone https://github.com/PouletDesMers/Projet-Fil-Rouge-Dev.git
 sudo chown -R $USER:$USER Projet-Fil-Rouge-Dev
 cd Projet-Fil-Rouge-Dev
 ----
+
+=== Installation du Backend (API Go + Base de données)
+
+Le backend est composé de l'API Go (port 8080) et de PostgreSQL (port 5432). L'ensemble est conteneurisé avec Docker.
+
+==== Prérequis backend
+
+[source,bash]
+----
+# Docker et Docker Compose doivent être installés
+docker --version          # Docker 24+
+docker compose version    # Docker Compose v2
+----
+
+==== Lancer le backend
+
+[source,bash]
+----
+# Construction et démarrage des conteneurs backend
+docker compose up --build -d api db
+
+# Vérifier que les services tournent
+docker compose ps
+
+# Vérifier la santé de l'API
+curl http://localhost:8080/health
+# Résultat attendu : {"status":"ok"}
+
+# Vérifier la base de données
+docker compose exec db pg_isready -U postgres
+----
+
+Les conteneurs suivants sont démarrés :
+
+[source,text]
+----
+api-1    Go backend (port 8080)
+db-1     PostgreSQL (port 5432)
+----
+
+Le schéma de base de données est automatiquement initialisé via le volume monté dans `db/`.
+
+==== Arrêter le backend
+
+[source,bash]
+----
+docker compose down
+----
+
+=== Installation du Frontend (Web + Mobile)
+
+Le frontend se compose du serveur web Node.js (port 3000) et de l'application mobile React Native / Expo.
+
+==== Serveur Web (Node.js)
+
+Le serveur web fait office de site public, d'interface d'administration et de proxy vers l'API Go.
+
+[source,bash]
+----
+# Démarrage du serveur web via Docker
+docker compose up --build -d web
+
+# Vérifier que le serveur répond
+curl -I http://localhost:3000
+# Résultat attendu : HTTP/1.1 200 OK
+
+# Sites accessibles :
+# - Site public     → http://localhost:3000
+# - Panel admin     → http://localhost:3000/backend/
+# - API Docs (Swagger) → http://localhost:3000/backend/#api-docs
+----
+
+==== Application mobile (React Native / Expo)
+
+L'application mobile nécessite Node.js et l'environnement Expo.
+
+===== Prérequis mobile
+
+[source,bash]
+----
+# Node.js 20+
+node --version    # 20+
+npm --version     # 10+
+
+# Installer les dépendances (à la racine du projet)
+npm install
+
+# Vérifier l'environnement Expo
+npx expo doctor
+----
+
+===== Configuration de l'API distante
+
+[source,env]
+----
+# Dans le fichier .env — adapter EXPO_PUBLIC_API_URL selon votre environnement
+# Émulateur Android       → http://10.0.2.2:8080/api
+# Simulateur iOS          → http://localhost:8080/api
+# Téléphone réel (Wi-Fi)  → http://<IP_LAN>:8080/api
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8080/api
+----
+
+===== Lancer l'application mobile
+
+[source,bash]
+----
+# Démarrer le serveur Metro (QR code dans le terminal)
+npx expo start
+
+# Scanner le QR code avec Expo Go (Android/iOS)
+# Ou lancer sur émulateur :
+npx expo start --android   # Android
+npx expo start --ios       # iOS (macOS uniquement)
+----
+
+Pour plus de détails sur l'application mobile, voir la section <<_étape_7_application_mobile>>.
 
 === Structure des fichiers
 
@@ -75,7 +191,7 @@ Projet-Fil-Rouge-Dev/
 │   ├── cache/              # Cache in-memory
 │   ├── config/             # Configuration
 │   └── rbac/               # Gestion des rôles
-├── web/                    # Serveur web Node.js
+├── web/                    # Serveur web Node.js (frontend web)
 │   ├── backend/            # Interface d'administration
 │   │   ├── index.html      # Panel admin complet
 │   │   ├── login.html      # Page de connexion
