@@ -57,14 +57,26 @@ func encodeHex(dst, src []byte) {
 }
 
 func userHasRole(userID int, roleName string) bool {
-	var r string
-	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&r)
-	return err == nil && r == strings.ToLower(roleName)
+	var exists bool
+	err := config.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1 AND LOWER(r.nom) = LOWER($2)
+		)`, userID, roleName).Scan(&exists)
+	return err == nil && exists
 }
 
 func primaryRole(userID int) string {
 	var role string
-	err := config.DB.QueryRow(`SELECT COALESCE(LOWER(role),'client') FROM utilisateur WHERE id_utilisateur = $1`, userID).Scan(&role)
+	err := config.DB.QueryRow(`
+		SELECT LOWER(r.nom)
+		FROM user_roles ur
+		JOIN roles r ON ur.id_role = r.id_role
+		WHERE ur.id_utilisateur = $1
+		ORDER BY r.id_role
+		LIMIT 1`, userID).Scan(&role)
 	if err != nil {
 		return ""
 	}
@@ -357,18 +369,34 @@ func RemoveWebAuthn(w http.ResponseWriter, r *http.Request) {
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Cache hit
-	if cached := cache.AdminCache.Get(cache.KeyAdminUsers); cached != nil {
-		w.Write(cached)
-		return
+	// Pagination
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if page < 1 {
+		page = 1
 	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	// Compter le total
+	var total int
+	config.DB.QueryRow(`SELECT COUNT(*) FROM utilisateur`).Scan(&total)
 
 	rows, err := config.DB.Query(
 		`SELECT u.id_utilisateur, u.email,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
-		        COALESCE(LOWER(u.role),'client')
-		 FROM utilisateur u`)
+		        COALESCE(r.primary_role, '')
+		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
+		 ORDER BY u.id_utilisateur DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		jsonErr(w, "Internal server error", http.StatusInternalServerError)
@@ -393,10 +421,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		u.DateInscription = u.DateCreation
 		users = append(users, u)
 	}
-	// Mise en cache + réponse
-	cache.SetJSON(cache.AdminCache, cache.KeyAdminUsers, users)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(map[string]interface{}{"users": users, "total": total, "page": page, "limit": limit})
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
@@ -410,8 +436,14 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		`SELECT u.id_utilisateur, u.email,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		        COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
-		        COALESCE(LOWER(u.role),'client')
+		        COALESCE(r.primary_role, '')
 		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut,
 		&u.TotpEnabled, &u.DateCreation, &u.DerniereConnexion, &u.IDEntreprise, &u.Role)
@@ -432,6 +464,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	
 
 	isAdminPanel := strings.EqualFold(r.Header.Get("X-Admin-Panel"), "true")
 	requestedRole := strings.ToLower(strings.TrimSpace(u.Role))
@@ -497,8 +530,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	if isAdminPanel && requestedRole == "admin" {
 		roleName = "admin"
 	}
-	_, _ = config.DB.Exec(`UPDATE utilisateur SET role = $1 WHERE id_utilisateur = $2`, roleName, u.ID)
-	u.Role = roleName
+	_, _ = config.DB.Exec(`
+		INSERT INTO user_roles (id_utilisateur, id_role, date_assignation)
+		SELECT $1, r.id_role, NOW()
+		FROM roles r
+		WHERE LOWER(r.nom) = $2
+		ON CONFLICT DO NOTHING`, u.ID, roleName)
+	u.Role = primaryRole(u.ID)
 	u.MotDePasse = ""
 
 	// Mobile : envoyer email de vérification avec lien accessible depuis le téléphone (IP LAN)
@@ -552,8 +590,14 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err := config.DB.QueryRow(
 		`SELECT u.id_utilisateur, u.email, u.mot_de_passe,
 		        COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
-		        u.id_entreprise, COALESCE(LOWER(u.role),'client')
+		        u.id_entreprise, COALESCE(r.primary_role, '')
 		 FROM utilisateur u
+		 LEFT JOIN (
+		     SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		     FROM user_roles ur
+		     JOIN roles r ON ur.id_role = r.id_role
+		     GROUP BY ur.id_utilisateur
+		 ) r ON r.id_utilisateur = u.id_utilisateur
 		 WHERE u.id_utilisateur = $1`,
 		id).Scan(&cur.ID, &cur.Email, &cur.MotDePasse, &cur.Nom, &cur.Prenom, &cur.Telephone, &cur.Statut, &cur.IDEntreprise, &cur.Role); err != nil {
 		jsonErr(w, "User not found", http.StatusNotFound)
@@ -711,8 +755,14 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''), COALESCE(u.statut,'actif'),
 		       COALESCE(u.date_creation,NOW()), u.derniere_connexion, u.id_entreprise,
 		       totp_secret, COALESCE(u.totp_enabled,false), webauthn_credential_id, webauthn_public_key, webauthn_counter,
-		       COALESCE(LOWER(u.role),'client')
+		       COALESCE(r.primary_role, '')
 		FROM utilisateur u
+		LEFT JOIN (
+		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		    FROM user_roles ur
+		    JOIN roles r ON ur.id_role = r.id_role
+		    GROUP BY ur.id_utilisateur
+		) r ON r.id_utilisateur = u.id_utilisateur
 		WHERE u.id_utilisateur = $1`, userID).Scan(
 		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone, &u.Statut, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise, &totpSecretPtr, &u.TotpEnabled,
@@ -882,6 +932,7 @@ func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 // ResetPassword — étape 2 : valide le code OTP puis met à jour le mot de passe.
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var data struct {
+		Token    string `json:"token"`
 		Email    string `json:"email"`
 		Code     string `json:"code"`
 		Password string `json:"password"`
@@ -892,6 +943,13 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Sans token, on refuse (ne doit passer que par le flux Node.js avec token email)
+	if data.Token == "" {
+		log.Printf("SECURITY: Password reset attempt without token for email: %s", data.Email)
+		jsonErr(w, "Reset token is required. Use the password reset flow via email.", http.StatusUnauthorized)
+		return
+	}
+
 	data.Email = strings.ToLower(strings.TrimSpace(data.Email))
 	data.Code = strings.TrimSpace(data.Code)
 	if data.Email == "" || data.Code == "" || data.Password == "" {
@@ -899,27 +957,32 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Vérifier le code OTP
+	if !mw.IsValidPassword(data.Password) {
+		jsonErr(w, "Password must be at least 8 characters with uppercase, lowercase, digit and special character", http.StatusBadRequest)
+		return
+	}
+
+	// Vérifier que le token de réinitialisation est valide (table reset_tokens)
 	var userID int
-	var usedAt sql.NullTime
-	err := config.DB.QueryRow(`
-		SELECT id_utilisateur, used_at
-		FROM email_verification_tokens
-		WHERE email = $1 AND token = $2 AND expires_at > NOW()`,
-		data.Email, "pwr_"+data.Code,
-	).Scan(&userID, &usedAt)
+	var tokenEmail string
+	err := config.DB.QueryRow(
+		`SELECT user_id, email FROM reset_tokens
+		 WHERE token = $1 AND expires_at > NOW() AND used = FALSE
+		 LIMIT 1`, data.Token).Scan(&userID, &tokenEmail)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			jsonErr(w, "Invalid or expired reset code", http.StatusUnauthorized)
-		} else {
-			jsonErr(w, "Internal server error", http.StatusInternalServerError)
-		}
+		log.Printf("SECURITY: Invalid/expired reset token used for email: %s", data.Email)
+		jsonErr(w, "Invalid or expired reset token", http.StatusUnauthorized)
 		return
 	}
-	if usedAt.Valid {
-		jsonErr(w, "Reset code already used", http.StatusUnauthorized)
+
+	if tokenEmail != data.Email {
+		log.Printf("SECURITY: Reset token email mismatch: token=%s, request=%s", tokenEmail, data.Email)
+		jsonErr(w, "Email does not match the reset token", http.StatusUnauthorized)
 		return
 	}
+
+	// Marquer le token comme utilisé
+	config.DB.Exec("UPDATE reset_tokens SET used = TRUE WHERE token = $1", data.Token)
 
 	// Hash le nouveau mot de passe
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
@@ -927,6 +990,9 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Failed to process password", http.StatusInternalServerError)
 		return
 	}
+
+	// Invalider toutes les sessions existantes
+	config.DB.Exec("DELETE FROM session_utilisateur WHERE id_utilisateur = $1", userID)
 
 	// Mettre à jour le mot de passe
 	if _, err := config.DB.Exec(

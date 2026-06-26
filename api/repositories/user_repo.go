@@ -28,19 +28,34 @@ func (r *UserRepo) FindStatutByID(id int) (string, error) {
 
 func (r *UserRepo) FindRoleByID(id int) (string, error) {
 	var role string
-	err := r.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", id).Scan(&role)
+	err := r.DB.QueryRow(`
+		SELECT COALESCE((
+			SELECT LOWER(r.nom)
+			FROM user_roles ur
+			JOIN roles r ON ur.id_role = r.id_role
+			WHERE ur.id_utilisateur = $1
+			ORDER BY r.id_role
+			LIMIT 1
+		), '')`, id).Scan(&role)
 	return role, err
 }
 
 func (r *UserRepo) FindByID(id int) (models.Utilisateur, error) {
 	var u models.Utilisateur
 	err := r.DB.QueryRow(`
-		SELECT id_utilisateur, email,
-		       COALESCE(nom,''), COALESCE(prenom,''), COALESCE(telephone,''),
-		       COALESCE(role,'client'), COALESCE(statut,'actif'),
-		       COALESCE(totp_enabled,false), COALESCE(date_creation,NOW()),
-		       derniere_connexion, id_entreprise
-		FROM utilisateur WHERE id_utilisateur = $1`, id).Scan(
+		SELECT u.id_utilisateur, u.email,
+		       COALESCE(u.nom,''), COALESCE(u.prenom,''), COALESCE(u.telephone,''),
+		       COALESCE(r.primary_role, ''), COALESCE(u.statut,'actif'),
+		       COALESCE(u.totp_enabled,false), COALESCE(u.date_creation,NOW()),
+		       u.derniere_connexion, u.id_entreprise
+		FROM utilisateur u
+		LEFT JOIN (
+		    SELECT ur.id_utilisateur, MIN(LOWER(r.nom)) AS primary_role
+		    FROM user_roles ur
+		    JOIN roles r ON ur.id_role = r.id_role
+		    GROUP BY ur.id_utilisateur
+		) r ON r.id_utilisateur = u.id_utilisateur
+		WHERE u.id_utilisateur = $1`, id).Scan(
 		&u.ID, &u.Email, &u.Nom, &u.Prenom, &u.Telephone,
 		&u.Role, &u.Statut, &u.TotpEnabled, &u.DateCreation,
 		&u.DerniereConnexion, &u.IDEntreprise)

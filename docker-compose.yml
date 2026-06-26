@@ -9,8 +9,6 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
-      - ./db/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -30,9 +28,10 @@ services:
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: mydb
-      API_SECRET: 0253fe33955b37ccdeae6e70f230d74a0161b0860f9a1bb17dadd733eea42066
-      RESTIC_PASSWORD: cyna-restic-AES256-secret
-      RESTIC_REPOSITORY: /backups/restic-repo
+      API_SECRET: ${API_SECRET}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-/backups/restic-repo}
+      LOG_FILE_PATH: /var/log/api/api.log
       SMTP_FROM: ${SMTP_FROM}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
@@ -40,6 +39,7 @@ services:
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     volumes:
       - backups_data:/backups
+      - api_logs:/var/log/api
 
   web:
     build: ./web
@@ -49,12 +49,13 @@ services:
       - api
     environment:
       API_SECRET: ${API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
       SMTP_FROM: ${SMTP_FROM}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       UPLOADS_DIR: /app/uploads
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     volumes:
       - uploads_data:/app/uploads
     # No bind mounts for production: use the files baked into the image (includes node_modules).
@@ -64,3 +65,4 @@ volumes:
   postgres_data:
   uploads_data:
   backups_data:
+  api_logs:

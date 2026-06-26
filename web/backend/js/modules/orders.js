@@ -11,48 +11,45 @@ const AdminOrders = (() => {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const STATUS_CONFIG = {
-    en_attente:     { label: 'En attente',     cls: 'bg-warning text-dark',  icon: 'bi-clock-history' },
-    confirmee:      { label: 'Confirmée',      cls: 'bg-info text-dark',     icon: 'bi-check-circle' },
-    en_cours:       { label: 'En cours',       cls: 'bg-primary',            icon: 'bi-arrow-repeat' },
-    livree:         { label: 'Livrée',         cls: 'bg-success',            icon: 'bi-bag-check-fill' },
-    annulee:        { label: 'Annulée',        cls: 'bg-danger',             icon: 'bi-x-circle' },
-    remboursee:     { label: 'Remboursée',     cls: 'bg-secondary',          icon: 'bi-arrow-counterclockwise' },
-    devis_demande:  { label: 'Devis demandé',  cls: 'bg-info text-dark',     icon: 'bi-file-earmark-text' },
-    devis_envoye:   { label: 'Devis envoyé',   cls: 'bg-primary',            icon: 'bi-send' },
-    devis_accepte:  { label: 'Devis accepté',  cls: 'bg-success',            icon: 'bi-check2-all' },
-    devis_refuse:   { label: 'Devis refusé',   cls: 'bg-danger',             icon: 'bi-x-circle-fill' },
-  };
+  // STATUS_CONFIG is defined in utils.js (shared canonical config)
 
   function statusBadge(s) {
-    const cfg = STATUS_CONFIG[s] || { label: s || '—', cls: 'bg-light text-dark', icon: 'bi-question' };
+    const cfg = STATUS_CONFIG[s] || {
+      label: s || "—",
+      cls: "bg-light text-dark",
+      icon: "bi-question",
+    };
     return `<span class="badge ${cfg.cls}"><i class="bi ${cfg.icon} me-1"></i>${cfg.label}</span>`;
   }
 
   function money(n) {
-    return `${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace('.', ',')} €`;
+    return `${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(".", ",")} €`;
   }
 
   function fmtDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   }
 
   // ── API calls ──────────────────────────────────────────────────────────────
 
   async function apiGet(url) {
-    const res = await fetch(url, { credentials: 'include' });
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
 
   async function apiPut(url, body) {
     const res = await fetch(url, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -62,7 +59,7 @@ const AdminOrders = (() => {
   // ── Render tableau ─────────────────────────────────────────────────────────
 
   function renderTable(orders) {
-    const container = document.getElementById('ordersContainer');
+    const container = document.getElementById("ordersContainer");
     if (!container) return;
 
     if (!orders.length) {
@@ -76,10 +73,12 @@ const AdminOrders = (() => {
       return;
     }
 
-    const rows = orders.map(o => `
+    const rows = orders
+      .map(
+        (o) => `
       <tr style="cursor:pointer" onclick="AdminOrders.showOrderDetails(${o.id})">
         <td class="ps-3 fw-semibold text-muted">#${o.id}</td>
-        <td>${o.userId || '—'}</td>
+        <td>${o.userId || "—"}</td>
         <td>${fmtDate(o.orderDate)}</td>
         <td class="fw-semibold">${money(o.totalAmount)}</td>
         <td>${statusBadge(o.status)}</td>
@@ -87,9 +86,14 @@ const AdminOrders = (() => {
           <button class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation(); AdminOrders.showOrderDetails(${o.id})">
             <i class="bi bi-eye"></i>
           </button>
+          <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); AdminOrders.generateInvoice(${o.id})" title="Générer la facture">
+            <i class="bi bi-file-earmark-pdf"></i>
+          </button>
         </td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join("");
 
     container.innerHTML = `
       <div class="card">
@@ -109,7 +113,7 @@ const AdminOrders = (() => {
           </table>
         </div>
         <div class="card-footer text-muted small">
-          ${orders.length} commande${orders.length > 1 ? 's' : ''}
+          ${orders.length} commande${orders.length > 1 ? "s" : ""}
         </div>
       </div>`;
   }
@@ -117,7 +121,7 @@ const AdminOrders = (() => {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   async function loadOrders() {
-    const container = document.getElementById('ordersContainer');
+    const container = document.getElementById("ordersContainer");
     if (container) {
       container.innerHTML = `
         <div class="d-flex justify-content-center py-5">
@@ -126,8 +130,8 @@ const AdminOrders = (() => {
     }
 
     try {
-      const data = await apiGet('/admin/api/commandes');
-      allOrders = Array.isArray(data) ? data : (data.commandes || []);
+      const data = await apiGet("/admin/api/commandes?limit=9999");
+      allOrders = Array.isArray(data) ? data : data.commandes || [];
       renderTable(allOrders);
     } catch (err) {
       if (container) {
@@ -144,15 +148,20 @@ const AdminOrders = (() => {
   // ── Filtre ─────────────────────────────────────────────────────────────────
 
   function filterOrders() {
-    const statusVal = document.getElementById('orderStatusFilter')?.value || '';
-    const search    = (document.getElementById('orderSearchInput')?.value || '').toLowerCase();
+    const statusVal = document.getElementById("orderStatusFilter")?.value || "";
+    const search = (
+      document.getElementById("orderSearchInput")?.value || ""
+    ).toLowerCase();
 
-    const filtered = allOrders.filter(o => {
+    const filtered = allOrders.filter((o) => {
       const matchStatus = !statusVal || o.status === statusVal;
-      const matchSearch = !search ||
+      const matchSearch =
+        !search ||
         String(o.id).includes(search) ||
-        String(o.userId || '').toLowerCase().includes(search) ||
-        (o.status || '').toLowerCase().includes(search);
+        String(o.userId || "")
+          .toLowerCase()
+          .includes(search) ||
+        (o.status || "").toLowerCase().includes(search);
       return matchStatus && matchSearch;
     });
 
@@ -162,29 +171,35 @@ const AdminOrders = (() => {
   // ── Modale détails ─────────────────────────────────────────────────────────
 
   function showOrderDetails(id) {
-    const order = allOrders.find(o => o.id === id);
+    const order = allOrders.find((o) => o.id === id);
     if (!order) return;
 
     currentOrder = order;
 
     // TVA simulée 20 %
-    const ht  = order.totalAmount / 1.2;
+    const ht = order.totalAmount / 1.2;
     const tva = order.totalAmount - ht;
     const items = Array.isArray(order.items) ? order.items : [];
-    const itemsRows = items.length ? items.map(it => {
-      const qty   = Number(it.quantity || it.qty || 1);
-      const price = Number(it.price || 0);
-      const name  = it.product_name || it.productName || 'Produit';
-      const dur   = it.duration ? `<div class="text-muted small">${it.duration}</div>` : '';
-      return `<tr>
+    const itemsRows = items.length
+      ? items
+          .map((it) => {
+            const qty = Number(it.quantity || it.qty || 1);
+            const price = Number(it.price || 0);
+            const name = it.product_name || it.productName || "Produit";
+            const dur = it.duration
+              ? `<div class="text-muted small">${it.duration}</div>`
+              : "";
+            return `<tr>
         <td><div class="fw-semibold">${name}</div>${dur}</td>
         <td class="text-center">${qty}</td>
         <td class="text-end">${price.toFixed(2)} €</td>
         <td class="text-end fw-semibold">${(price * qty).toFixed(2)} €</td>
       </tr>`;
-    }).join('') : `<tr><td colspan="4" class="text-muted text-center">Aucun article enregistré</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="4" class="text-muted text-center">Aucun article enregistré</td></tr>`;
 
-    const body = document.getElementById('orderDetailsBody');
+    const body = document.getElementById("orderDetailsBody");
     if (body) {
       body.innerHTML = `
         <div class="row g-3">
@@ -213,7 +228,7 @@ const AdminOrders = (() => {
                 <h6 class="card-title text-muted small text-uppercase mb-3">Client & Montant</h6>
                 <dl class="row mb-0 small">
                   <dt class="col-5">Client</dt>
-                  <dd class="col-7">ID ${order.userId || '—'}</dd>
+                  <dd class="col-7">ID ${order.userId || "—"}</dd>
                   <dt class="col-5">Montant HT</dt>
                   <dd class="col-7">${money(ht)}</dd>
                   <dt class="col-5">TVA (20%)</dt>
@@ -246,45 +261,50 @@ const AdminOrders = (() => {
         </div>`;
     }
 
-    const sel = document.getElementById('orderStatusChange');
-    if (sel) sel.value = order.status || 'en_attente';
+    const sel = document.getElementById("orderStatusChange");
+    if (sel) sel.value = order.status || "en_attente";
 
-    const saveBtn = document.getElementById('orderStatusSaveBtn');
+    const saveBtn = document.getElementById("orderStatusSaveBtn");
     if (saveBtn) saveBtn.onclick = () => saveOrderStatus();
 
-    new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+    new bootstrap.Modal(document.getElementById("orderDetailsModal")).show();
   }
 
   // ── Sauvegarder statut ─────────────────────────────────────────────────────
 
   async function saveOrderStatus() {
     if (!currentOrder) return;
-    const newStatus = document.getElementById('orderStatusChange')?.value;
-    const saveBtn   = document.getElementById('orderStatusSaveBtn');
+    const newStatus = document.getElementById("orderStatusChange")?.value;
+    const saveBtn = document.getElementById("orderStatusSaveBtn");
 
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+      saveBtn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-1"></span>…';
     }
 
     try {
       // Envoyer tous les champs (sinon Go met totalAmount et userId à 0)
       await apiPut(`/admin/api/commandes/${currentOrder.id}`, {
         totalAmount: currentOrder.totalAmount,
-        status:      newStatus,
-        userId:      currentOrder.userId,
+        status: newStatus,
+        userId: currentOrder.userId,
       });
 
-      const idx = allOrders.findIndex(o => o.id === currentOrder.id);
+      const idx = allOrders.findIndex((o) => o.id === currentOrder.id);
       if (idx >= 0) allOrders[idx].status = newStatus;
       currentOrder.status = newStatus;
 
-      bootstrap.Modal.getInstance(document.getElementById('orderDetailsModal'))?.hide();
+      bootstrap.Modal.getInstance(
+        document.getElementById("orderDetailsModal"),
+      )?.hide();
       filterOrders();
 
-      if (window.AdminUtils?.showToast) AdminUtils.showToast('Statut mis à jour', 'success');
+      if (window.AdminUtils?.showToast)
+        AdminUtils.showToast("Statut mis à jour", "success");
     } catch (err) {
-      if (window.AdminUtils?.showToast) AdminUtils.showToast('Erreur : ' + err.message, 'danger');
+      if (window.AdminUtils?.showToast)
+        AdminUtils.showToast("Erreur : " + err.message, "danger");
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
@@ -293,6 +313,24 @@ const AdminOrders = (() => {
     }
   }
 
-  // Ajouter /admin/api/commandes dans server.js si absent
-  return { loadOrders, filterOrders, showOrderDetails, saveOrderStatus };
+  // ── Facture HTML ───────────────────────────────────────────────────
+  // Uses generateInvoiceHTML from utils.js (shared template)
+  function generateInvoice(id) {
+    const order = allOrders.find((o) => o.id === id);
+    if (!order) return;
+
+    const html = generateInvoiceHTML(order, false);
+    const ref = `F-${String(id).padStart(6, "0")}`;
+    const w = window.open("", `Facture-${ref}`, "width=900,height=700");
+    w.document.write(html);
+    w.document.close();
+  }
+
+  return {
+    loadOrders,
+    filterOrders,
+    showOrderDetails,
+    saveOrderStatus,
+    generateInvoice,
+  };
 })();

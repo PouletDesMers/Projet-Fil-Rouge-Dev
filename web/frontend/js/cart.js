@@ -41,23 +41,23 @@ function updateCartBadge() {
   }
 }
 
-  // (Optional) helper for later: add a product from the product page
-  function addToCart(item) {
-    const items = getCartItems();
-    const idx = items.findIndex(
-      (x) => x.id === item.id && x.duration === item.duration
-    );
-    if (idx >= 0) {
-      items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
-    } else {
-      items.push({
-        id: item.id,
-        slug: item.slug || item.id,
-        name: item.name,
-        price: Number(item.price) || 0,
-        qty: Number(item.qty) || 1,
-        duration: item.duration || "Monthly",
-      });
+// (Optional) helper for later: add a product from the product page
+function addToCart(item) {
+  const items = getCartItems();
+  const idx = items.findIndex(
+    (x) => x.id === item.id && x.duration === item.duration,
+  );
+  if (idx >= 0) {
+    items[idx].qty = (Number(items[idx].qty) || 0) + (Number(item.qty) || 1);
+  } else {
+    items.push({
+      id: item.id,
+      slug: item.slug || item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      qty: Number(item.qty) || 1,
+      duration: item.duration || "Monthly",
+    });
   }
   saveCartItems(items);
 }
@@ -83,7 +83,7 @@ function moneyEUR(n) {
 function calcTotals(items) {
   const subtotal = items.reduce(
     (s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 0),
-    0
+    0,
   );
   let promoDiscount = 0;
   if (appliedPromo) {
@@ -102,6 +102,9 @@ function renderHome() {
   if (!appRoot) return;
   appRoot.innerHTML = HOME_HTML;
   window.scrollTo({ top: 0, behavior: "instant" });
+  // Réattacher les listeners sur les boutons du panier
+  setTimeout(() => initProductButtons(), 100);
+  setTimeout(() => updateCartBadge(), 200);
 }
 
 // Validate promo code via Stripe (server-side)
@@ -160,7 +163,7 @@ function renderCart() {
             </div>
           </div>
         </div>
-      `
+      `,
         )
         .join("")
     : `
@@ -180,7 +183,8 @@ function renderCart() {
       <div class="container my-4">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <h1 class="h4 mb-0"><i class="bi bi-cart3 me-2"></i>Récapitulatif commande</h1>
-          <div class="d-flex gap-2">
+                    <div class="d-flex gap-2">
+                      ${items.length > 0 ? `<button class="btn btn-outline-danger btn-sm" id="clearCartBtn" onclick="if(confirm('Vider le panier ?')){localStorage.removeItem('cartItems');window.updateCartBadge();window.location.reload();}"><i class="bi bi-trash me-1"></i>Vider</button>` : ""}
             <button class="btn btn-outline-secondary btn-sm" id="backHistoryBtn">
               <i class="bi bi-arrow-left"></i> Retour
             </button>
@@ -194,8 +198,8 @@ function renderCart() {
           <!-- LEFT COL: Produits -->
           <div class="col-lg-8">
             <div class="vstack gap-3">
-              ${itemsHtml}
-            </div>
+                          ${itemsHtml}
+                        </div>
           </div>
 
           <!-- RIGHT COL: Récap / promo / paiement -->
@@ -208,11 +212,15 @@ function renderCart() {
                   <span class="text-muted">Sous-total</span>
                   <span>${moneyEUR(subtotal)}</span>
                 </div>
-                ${promoDiscount > 0 ? `
+                ${
+                  promoDiscount > 0
+                    ? `
                 <div class="d-flex justify-content-between small mb-2 text-success">
                   <span><i class="bi bi-tag-fill me-1"></i>Réduction promo</span>
                   <span>− ${moneyEUR(promoDiscount)}</span>
-                </div>` : ""}
+                </div>`
+                    : ""
+                }
                 <div class="d-flex justify-content-between small mb-2">
                   <span class="text-muted">TVA</span>
                   <span>${moneyEUR(tax)}</span>
@@ -233,7 +241,10 @@ function renderCart() {
             <div class="card shadow-sm border-0 mb-3">
               <div class="card-body">
                 <h3 class="h6 mb-2"><i class="bi bi-ticket-perforated me-1"></i>Code promo</h3>
-                ${appliedPromo ? promoHtml : `
+                ${
+                  appliedPromo
+                    ? promoHtml
+                    : `
                 <div class="input-group">
                   <input type="text" class="form-control text-uppercase" placeholder="Votre code promo" id="promoInput"
                          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
@@ -243,7 +254,8 @@ function renderCart() {
                   </button>
                 </div>
                 <div class="small mt-2 d-none" id="promoMsg"></div>
-                `}
+                `
+                }
               </div>
             </div>
 
@@ -312,7 +324,9 @@ function renderCart() {
   });
 
   // ── Continuer les achats ──
-  document.getElementById("continueShoppingBtn")?.addEventListener("click", renderHome);
+  document
+    .getElementById("continueShoppingBtn")
+    ?.addEventListener("click", renderHome);
 
   // ── Supprimer un article ──
   appRoot.querySelectorAll("[data-action='remove']").forEach((btn) => {
@@ -338,49 +352,51 @@ function renderCart() {
   });
 
   // ── Code promo Stripe ──
-  document.getElementById("promoApplyBtn")?.addEventListener("click", async () => {
-    const code = (document.getElementById("promoInput")?.value || "").trim();
-    const msg = document.getElementById("promoMsg");
-    const spinner = document.getElementById("promoApplySpinner");
-    const label = document.getElementById("promoApplyLabel");
-    if (!msg) return;
+  document
+    .getElementById("promoApplyBtn")
+    ?.addEventListener("click", async () => {
+      const code = (document.getElementById("promoInput")?.value || "").trim();
+      const msg = document.getElementById("promoMsg");
+      const spinner = document.getElementById("promoApplySpinner");
+      const label = document.getElementById("promoApplyLabel");
+      if (!msg) return;
 
-    if (!code) {
-      msg.textContent = "Veuillez entrer un code promo.";
-      msg.className = "small mt-2 text-danger";
-      msg.classList.remove("d-none");
-      return;
-    }
+      if (!code) {
+        msg.textContent = "Veuillez entrer un code promo.";
+        msg.className = "small mt-2 text-danger";
+        msg.classList.remove("d-none");
+        return;
+      }
 
-    // Afficher spinner
-    spinner?.classList.remove("d-none");
-    if (label) label.textContent = "";
+      // Afficher spinner
+      spinner?.classList.remove("d-none");
+      if (label) label.textContent = "";
 
-    try {
-      const result = await validatePromoCode(code);
-      if (result.valid) {
-        appliedPromo = {
-          code: result.code,
-          type: result.type,         // 'percent' | 'amount'
-          discount: result.discount, // valeur numérique
-          label: result.label,       // ex: "WELCOME20 (-20%)"
-        };
-        renderCart(); // re-render avec réduction appliquée
-      } else {
-        msg.textContent = "Code promo invalide ou expiré.";
+      try {
+        const result = await validatePromoCode(code);
+        if (result.valid) {
+          appliedPromo = {
+            code: result.code,
+            type: result.type, // 'percent' | 'amount'
+            discount: result.discount, // valeur numérique
+            label: result.label, // ex: "WELCOME20 (-20%)"
+          };
+          renderCart(); // re-render avec réduction appliquée
+        } else {
+          msg.textContent = "Code promo invalide ou expiré.";
+          msg.className = "small mt-2 text-danger";
+          msg.classList.remove("d-none");
+          spinner?.classList.add("d-none");
+          if (label) label.textContent = "Appliquer";
+        }
+      } catch (err) {
+        msg.textContent = err.message || "Erreur lors de la validation.";
         msg.className = "small mt-2 text-danger";
         msg.classList.remove("d-none");
         spinner?.classList.add("d-none");
         if (label) label.textContent = "Appliquer";
       }
-    } catch (err) {
-      msg.textContent = err.message || "Erreur lors de la validation.";
-      msg.className = "small mt-2 text-danger";
-      msg.classList.remove("d-none");
-      spinner?.classList.add("d-none");
-      if (label) label.textContent = "Appliquer";
-    }
-  });
+    });
 
   // ── Supprimer promo ──
   document.getElementById("promoRemoveBtn")?.addEventListener("click", () => {
@@ -389,60 +405,67 @@ function renderCart() {
   });
 
   // ── Checkout Stripe ──
-  document.getElementById("checkoutBtn")?.addEventListener("click", async () => {
-    const items = getCartItems();
-    if (!items.length) return;
+  document
+    .getElementById("checkoutBtn")
+    ?.addEventListener("click", async () => {
+      const items = getCartItems();
+      if (!items.length) return;
 
-    const btn = document.getElementById("checkoutBtn");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirection…';
+      const btn = document.getElementById("checkoutBtn");
+      btn.disabled = true;
+      btn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-2"></span>Redirection…';
 
-    try {
-      const { total } = calcTotals(items);
+      try {
+        const { total } = calcTotals(items);
 
-      const res = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          items,
-          promoCode: appliedPromo?.code || null,
-        }),
-      });
+        const res = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            items,
+            promoCode: appliedPromo?.code || null,
+          }),
+        });
 
-      // Pas connecté → rediriger vers la page de connexion
-      if (res.status === 401) {
-        window.location.href = "/auth.html?redirect=/index.html?view=cart";
-        return;
+        // Pas connecté → rediriger vers la page de connexion
+        if (res.status === 401) {
+          window.location.href = "/auth.html?redirect=/index.html?view=cart";
+          return;
+        }
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erreur Stripe");
+        if (data.url) {
+          // Sauvegarder le montant + code promo dans sessionStorage pour confirm-order
+          const normalized = items.map((it) => ({
+            product_slug: it.slug || it.id || it.name,
+            product_name: it.name,
+            price: Number(it.price) || 0,
+            quantity: Number(it.qty) || 1,
+            duration: it.duration || "",
+          }));
+          sessionStorage.setItem(
+            "pendingOrder",
+            JSON.stringify({
+              totalAmount: total,
+              demo: !!data.demo,
+              promoCode: appliedPromo?.code || null,
+              items: normalized,
+            }),
+          );
+          window.location.href = data.url;
+        } else {
+          throw new Error("URL de paiement manquante");
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML =
+          '<i class="bi bi-credit-card me-1"></i>Passer au paiement';
+        alert("Erreur : " + err.message);
       }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur Stripe");
-      if (data.url) {
-        // Sauvegarder le montant + code promo dans sessionStorage pour confirm-order
-        const normalized = items.map(it => ({
-          product_slug: it.slug || it.id || it.name,
-          product_name: it.name,
-          price: Number(it.price) || 0,
-          quantity: Number(it.qty) || 1,
-          duration: it.duration || ''
-        }));
-        sessionStorage.setItem('pendingOrder', JSON.stringify({
-          totalAmount: total,
-          demo: !!data.demo,
-          promoCode: appliedPromo?.code || null,
-          items: normalized,
-        }));
-        window.location.href = data.url;
-      } else {
-        throw new Error("URL de paiement manquante");
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-credit-card me-1"></i>Passer au paiement';
-      alert("Erreur : " + err.message);
-    }
-  });
+    });
 
   // ── Chatbot ──
   const chatbotBox = document.getElementById("chatbotBox");
@@ -489,7 +512,7 @@ function initCartBindings() {
 
   // Handle click on "Home" or Logo to reset SPA if on index.html
   const homeLinks = document.querySelectorAll(
-    'a[href="/index.html"], .navbar-brand'
+    'a[href="/index.html"], .navbar-brand',
   );
   if (appRoot) {
     homeLinks.forEach((link) => {
@@ -503,8 +526,12 @@ function initCartBindings() {
           renderHome();
           window.history.pushState({}, "", "/index.html");
           // Reload dynamic home data (categories, top ventes)
-          try { loadCategories(); } catch (_) {}
-          try { loadTopProducts(); } catch (_) {}
+          try {
+            loadCategories();
+          } catch (_) {}
+          try {
+            loadTopProducts();
+          } catch (_) {}
         }
       });
     });
@@ -523,25 +550,35 @@ function initCartBindings() {
   initProductButtons();
 }
 
+// Event delegation : marche même avec des boutons ajoutés dynamiquement
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn-add-to-cart");
+  if (!btn) return;
+  e.preventDefault();
+  const id = btn.getAttribute("data-id");
+  const name = btn.getAttribute("data-name");
+  const price = btn.getAttribute("data-price");
+  const duration = btn.getAttribute("data-duration") || "mois";
+  const slug = btn.getAttribute("data-slug") || id;
+  if (id && name && price) {
+    addToCart({ id, slug, name, price: Number(price), qty: 1, duration });
+    // Toast popup au lieu de modifier le bouton
+    const toast = document.createElement("div");
+    toast.className = "toast-popup";
+    toast.innerHTML = `<i class="bi bi-check-circle me-2"></i><strong>${name}</strong> ajouté au panier !`;
+    toast.style.cssText =
+      "position:fixed;bottom:30px;right:30px;background:#22c55e;color:white;padding:14px 24px;border-radius:10px;font-size:1em;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:slideIn .3s ease";
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transition = "opacity .3s";
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+});
+
 function initProductButtons() {
-  document.querySelectorAll(".btn-add-to-cart").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const id = btn.getAttribute("data-id");
-      const name = btn.getAttribute("data-name");
-      const price = btn.getAttribute("data-price");
-      if (id && name && price) {
-        addToCart({ id, name, price: Number(price), qty: 1 });
-        // Feedback
-        const originalText = btn.textContent;
-        btn.textContent = "Added!";
-        btn.classList.replace("btn-primary", "btn-success");
-        setTimeout(() => {
-          btn.textContent = originalText;
-          btn.classList.replace("btn-success", "btn-primary");
-        }, 2000);
-      }
-    });
-  });
+  // Gardée pour compatibilité mais plus nécessaire avec l'event delegation
 }
 
 // Gérer le paramètre ?view=cart au chargement de la page

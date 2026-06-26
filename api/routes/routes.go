@@ -28,6 +28,8 @@ func Register(r *mux.Router) {
 	r.Handle("/api/resend-verification-email", mw.RateLimitRegister(http.HandlerFunc(handlers.ResendVerificationEmail))).Methods("POST")
 	r.Handle("/api/users", mw.RateLimitRegister(http.HandlerFunc(handlers.CreateUser))).Methods("POST")
 	r.HandleFunc("/api/users/exists", handlers.GetUserExists).Methods("GET")
+	r.HandleFunc("/swagger", handlers.GetSwaggerSpec).Methods("GET")
+	r.HandleFunc("/swagger/", handlers.GetSwaggerSpec).Methods("GET")
 	r.HandleFunc("/api/swagger.json", handlers.GetSwaggerSpec).Methods("GET")
 	r.HandleFunc("/api/public/carousel-images", handlers.GetActiveCarouselImages).Methods("GET")
 	r.HandleFunc("/api/public/categories", handlers.GetActiveCategories).Methods("GET")
@@ -112,6 +114,17 @@ func Register(r *mux.Router) {
 	r.Handle("/api/commandes/{id}", auth(http.HandlerFunc(handlers.UpdateCommande))).Methods("PUT")
 	r.Handle("/api/commandes/{id}", auth(http.HandlerFunc(handlers.DeleteCommande))).Methods("DELETE")
 
+	// Client billing (mes abonnements)
+	r.Handle("/api/mes-abonnements", auth(http.HandlerFunc(handlers.GetMesAbonnements))).Methods("GET")
+	r.Handle("/api/mes-abonnements/{id}/cancel", auth(http.HandlerFunc(handlers.CancelAbonnement))).Methods("PUT")
+	r.Handle("/api/abonnements/from-purchase", auth(http.HandlerFunc(handlers.CreateAbonnementFromPurchase))).Methods("POST")
+
+	// Admin Billing (admin only)
+	r.Handle("/api/admin/abonnements", adminRaw(http.HandlerFunc(handlers.GetAbonnements))).Methods("GET")
+	r.Handle("/api/admin/abonnements", adminRaw(http.HandlerFunc(handlers.CreateAbonnement))).Methods("POST")
+	r.Handle("/api/admin/abonnements/{id}", adminRaw(http.HandlerFunc(handlers.UpdateAbonnement))).Methods("PUT")
+	r.Handle("/api/admin/abonnements/{id}", adminRaw(http.HandlerFunc(handlers.DeleteAbonnement))).Methods("DELETE")
+
 	r.Handle("/api/factures", auth(http.HandlerFunc(handlers.GetFactures))).Methods("GET")
 	r.Handle("/api/factures", auth(http.HandlerFunc(handlers.CreateFacture))).Methods("POST")
 	r.Handle("/api/factures/{id}", auth(http.HandlerFunc(handlers.GetFacture))).Methods("GET")
@@ -156,6 +169,7 @@ func Register(r *mux.Router) {
 
 	// ── Backup (admin + adminLimiter) ──────────────────────────────────────────
 	r.Handle("/api/admin/backup", adminLim(http.HandlerFunc(handlers.TriggerBackup))).Methods("POST")
+	r.Handle("/api/admin/backup/status", adminLim(http.HandlerFunc(handlers.GetBackupStatus))).Methods("GET")
 	r.Handle("/api/admin/backup/list", adminLim(http.HandlerFunc(handlers.ListBackups))).Methods("GET")
 	r.Handle("/api/admin/backup/stats", adminLim(http.HandlerFunc(handlers.GetBackupStats))).Methods("GET")
 	r.Handle("/api/admin/backup/schedule", adminLim(http.HandlerFunc(handlers.GetBackupSchedule))).Methods("GET")
@@ -170,10 +184,12 @@ func Register(r *mux.Router) {
 	// ── Newsletter ──────────────────────────────────────────────────
 	r.HandleFunc("/api/newsletter/subscribe", handlers.SubscribeNewsletter).Methods("POST")
 	r.HandleFunc("/api/newsletter/unsubscribe", handlers.UnsubscribeNewsletter).Methods("POST")
-	r.Handle("/api/admin/newsletter/subscribers", auth(http.HandlerFunc(handlers.GetNewsletterSubscribers))).Methods("GET")
-	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
-	r.Handle("/api/admin/newsletter/campaigns", auth(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
-	r.Handle("/api/admin/newsletter/campaigns/{id}/send", auth(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/subscribers", adminRaw(http.HandlerFunc(handlers.GetNewsletterSubscribers))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.GetNewsletterCampaigns))).Methods("GET")
+	r.Handle("/api/admin/newsletter/campaigns", adminRaw(http.HandlerFunc(handlers.CreateNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/campaigns/{id}/send", adminRaw(http.HandlerFunc(handlers.SendNewsletterCampaign))).Methods("POST")
+	r.Handle("/api/admin/newsletter/campaigns/{id}", adminRaw(http.HandlerFunc(handlers.DeleteNewsletterCampaign))).Methods("DELETE")
+	r.Handle("/api/admin/newsletter/subscribers/{email}", adminRaw(http.HandlerFunc(handlers.DeleteNewsletterSubscriber))).Methods("DELETE")
 
 	// ── Stats & Analytics ────────────────────────────────────────────
 	r.Handle("/api/admin/stats/top-products", adminRaw(http.HandlerFunc(handlers.GetTopProductsLast3Months))).Methods("GET")
@@ -187,8 +203,8 @@ func Register(r *mux.Router) {
 	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.GetRolePermissions))).Methods("GET")
 	r.Handle("/api/admin/roles/{id}/permissions", adminRaw(http.HandlerFunc(handlers.AssignPermissionToRole))).Methods("POST")
 	r.Handle("/api/admin/roles/{id}/permissions/{code}", adminRaw(http.HandlerFunc(handlers.RemovePermissionFromRole))).Methods("DELETE")
-	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.GetUserRoles))).Methods("GET")
-	r.Handle("/api/admin/users/{id}/roles", auth(http.HandlerFunc(handlers.AssignRoleToUser))).Methods("POST")
-	r.Handle("/api/admin/users/{id}/roles/{roleId}", auth(http.HandlerFunc(handlers.RemoveRoleFromUser))).Methods("DELETE")
-	r.Handle("/api/admin/users/{id}/permissions", auth(http.HandlerFunc(handlers.GetUserPermissions))).Methods("GET")
+	r.Handle("/api/admin/users/{id}/roles", adminRaw(http.HandlerFunc(handlers.GetUserRoles))).Methods("GET")
+	r.Handle("/api/admin/users/{id}/roles", adminRaw(http.HandlerFunc(handlers.AssignRoleToUser))).Methods("POST")
+	r.Handle("/api/admin/users/{id}/roles/{roleId}", adminRaw(http.HandlerFunc(handlers.RemoveRoleFromUser))).Methods("DELETE")
+	r.Handle("/api/admin/users/{id}/permissions", adminRaw(http.HandlerFunc(handlers.GetUserPermissions))).Methods("GET")
 }

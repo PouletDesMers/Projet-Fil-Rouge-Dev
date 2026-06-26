@@ -181,7 +181,7 @@ func GetSwaggerSpec(w http.ResponseWriter, r *http.Request) {
 		"components": map[string]interface{}{
 			"securitySchemes": map[string]interface{}{
 				"BearerAuth": map[string]interface{}{
-					"type": "http", "scheme": "bearer", "bearerFormat": "Token",
+					"type": "http", "scheme": "bearer", "bearerFormat": "OpaqueToken",
 					"description": "Token de session ou clé API",
 				},
 			},

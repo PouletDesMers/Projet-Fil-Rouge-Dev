@@ -1,0 +1,4 @@
+
+# Security Recaps (local only)
+SNYK_RECAP.*
+snyk-*.json

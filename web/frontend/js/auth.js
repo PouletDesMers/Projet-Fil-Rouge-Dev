@@ -148,7 +148,8 @@ function showStep(step) {
   registerForm.classList.toggle("d-none", step !== "register");
 
   // Reset form fields when switching steps to prevent data leakage
-  if (step !== "login") {
+  // Keep password for 2FA step: the TOTP verification re-sends password alongside the code
+  if (step !== "login" && step !== "twofa") {
     loginPassword.value = "";
   }
   if (step !== "register") {
@@ -309,12 +310,20 @@ loginForm.addEventListener("submit", async (e) => {
     }
 
     if (result?.success) {
+      // Store token in localStorage (fallback si le cookie httpOnly n'est pas accepté en HTTP)
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+      }
+
       // Check if user is admin - block admin login on public page
       try {
-        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include' });
+        const token = localStorage.getItem("token");
+        const headers = { "Authorization": token ? `Bearer ${token}` : '' };
+        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include', headers });
         if (profileRes.ok) {
           const prof = await profileRes.json();
           if (prof.role === 'admin') {
+            localStorage.removeItem("token");
             await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
             showMsg("danger", "Les administrateurs doivent utiliser /backend/login.html");
             setTimeout(() => { window.location.href = "/backend/login.html"; }, 1500);
@@ -325,8 +334,6 @@ loginForm.addEventListener("submit", async (e) => {
         console.error("Profile check error:", err);
       }
 
-      // Token is now stored in httpOnly cookie automatically by server
-      // No need to store in localStorage anymore for security
       if (rememberMe?.checked) {
         localStorage.setItem(REMEMBER_KEY, currentEmail);
       } else {
@@ -363,12 +370,20 @@ twoFAForm.addEventListener("submit", async (e) => {
     });
 
     if (result?.success) {
+      // Store token in localStorage (fallback si le cookie httpOnly n'est pas accepté en HTTP)
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+      }
+
       // Check if user is admin - block admin login on public page
       try {
-        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include' });
+        const token = localStorage.getItem("token");
+        const headers = { "Authorization": token ? `Bearer ${token}` : '' };
+        const profileRes = await fetch(API_BASE + '/auth/profile', { credentials: 'include', headers });
         if (profileRes.ok) {
           const prof = await profileRes.json();
           if (prof.role === 'admin') {
+            localStorage.removeItem("token");
             await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
             showMsg("danger", "Les administrateurs doivent utiliser /backend/login.html");
             setTimeout(() => { window.location.href = "/backend/login.html"; }, 1500);

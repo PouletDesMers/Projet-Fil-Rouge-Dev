@@ -37,9 +37,7 @@ func generateAPIKey() string {
 func isAdmin(r *http.Request) bool {
 	userID, ok := getUserID(r)
 	if !ok { return false }
-	var role string
-	config.DB.QueryRow("SELECT role FROM utilisateur WHERE id_utilisateur = $1", userID).Scan(&role)
-	return role == "admin"
+	return userHasRole(userID, "admin")
 }
 
 func GetAPITokens(w http.ResponseWriter, r *http.Request) {

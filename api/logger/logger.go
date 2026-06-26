@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +27,9 @@ const (
 
 	maxLogEntries = 500
 	dbLogChanSize = 4096
+
+	// Chemin par défaut du fichier de log (surchargeable via LOG_FILE_PATH)
+	defaultLogFilePath = "/var/log/api/api.log"
 )
 
 type LogEntry struct {
@@ -47,14 +52,80 @@ type MemoryLogger struct {
 	counter int64
 }
 
-// dbLogChan est le channel async vers la goroutine d'écriture DB.
+// ── File writer (JSONL) ──────────────────────────────────────────────────
+
+var (
+	fileMu      sync.Mutex
+	logFile     *os.File
+	logFilePath string
+)
+
+// InitLogFile ouvre (ou crée) le fichier de log en mode append.
+// Le chemin est lu depuis LOG_FILE_PATH, avec fallback sur defaultLogFilePath.
+func InitLogFile() {
+	path := os.Getenv("LOG_FILE_PATH")
+	if path == "" {
+		path = defaultLogFilePath
+	}
+	logFilePath = path
+
+	// Créer le répertoire parent si nécessaire
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("[WARN] InitLogFile: cannot create directory %s: %v", dir, err)
+		return
+	}
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("[WARN] InitLogFile: cannot open %s: %v", path, err)
+		return
+	}
+	logFile = f
+	log.Printf("[INFO] InitLogFile: logging to %s", path)
+}
+
+// writeToFile écrit une entrée au format JSONL (une ligne = un objet JSON).
+func writeToFile(entry LogEntry) {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+
+	if logFile == nil {
+		return
+	}
+
+	line, err := json.Marshal(entry)
+	if err != nil {
+		log.Printf("[WARN] writeToFile: json.Marshal: %v", err)
+		return
+	}
+
+	if _, err := logFile.Write(append(line, '\n')); err != nil {
+		log.Printf("[WARN] writeToFile: write error: %v", err)
+	}
+}
+
+// FlushLogFile vide et ferme le fichier de log proprement.
+func FlushLogFile() {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+	if logFile != nil {
+		logFile.Sync()
+		logFile.Close()
+		logFile = nil
+	}
+}
+
+// ── dbLogChan est le channel async vers la goroutine d'écriture DB ───────
+
 var dbLogChan = make(chan LogEntry, dbLogChanSize)
 
 var AppLogger = &MemoryLogger{
 	entries: make([]LogEntry, 0, maxLogEntries),
 }
 
-// addEntry ajoute une entrée dans le buffer circulaire RAM et l'envoie au writer DB.
+// addEntry ajoute une entrée dans le buffer circulaire RAM,
+// l'envoie au writer DB et l'écrit dans le fichier de log.
 func (ml *MemoryLogger) addEntry(entry LogEntry) {
 	ml.mu.Lock()
 	defer ml.mu.Unlock()
@@ -68,11 +139,14 @@ func (ml *MemoryLogger) addEntry(entry LogEntry) {
 	}
 	ml.entries = append(ml.entries, entry)
 
+	// Envoi asynchrone vers la DB (ne bloque pas)
 	select {
 	case dbLogChan <- entry:
 	default:
-		// Channel plein — on ne bloque pas la requête HTTP.
 	}
+
+	// Écriture synchrone dans le fichier (garantit la persistance disque)
+	writeToFile(entry)
 }
 
 func (ml *MemoryLogger) Log(level LogLevel, message string) {
@@ -196,7 +270,11 @@ func insertLogBatch(entries []LogEntry) error {
 }
 
 func InitLogDB() {
+	// Initialiser le fichier de log AVANT la DB
+	InitLogFile()
+
 	if config.DB == nil {
+		log.Println("[WARN] InitLogDB: DB not available — logs écrits uniquement dans le fichier")
 		return
 	}
 	_, err := config.DB.Exec(`
@@ -373,7 +451,9 @@ func ClearLogs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	AppLogger.FlushRAM()
-	Info("Logs purgés par un administrateur")
+
+	// Ne PAS vider le fichier (historique préservé)
+	Info("Logs purgés par un administrateur (DB + RAM) — fichier préservé")
 
 	resp := map[string]string{"message": "Logs cleared"}
 	if dbErr != "" {

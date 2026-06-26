@@ -99,5 +99,6 @@ func main() {
 	if config.DB != nil {
 		config.DB.Close()
 	}
+	logger.FlushLogFile()
 	log.Println("Server stopped gracefully")
 }

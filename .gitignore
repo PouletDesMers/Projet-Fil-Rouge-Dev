@@ -77,4 +77,8 @@ coverage.html
 restic-cache/
 backups/
 
-tp.md
+tp.md*.typ
+SNYK_RECAP.typ
+gemini-code-1780907575738.md
+
+temp/*

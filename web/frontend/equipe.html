@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CYNA — Notre Équipe</title>
+
+    <link rel="icon" type="image/png" href="img/favicon.png" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .team-hero {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.95),
+          rgba(86, 16, 192, 0.85)
+        );
+        padding: 80px 20px;
+        color: white;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 60px;
+      }
+
+      .team-hero h1 {
+        font-size: 2.8rem;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+
+      .team-hero p {
+        font-size: 1.15rem;
+        opacity: 0.95;
+        max-width: 700px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+
+      .team-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      .team-section {
+        margin-bottom: 80px;
+      }
+
+      .section-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--cyna-dark);
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 3px solid var(--cyna-primary);
+        display: inline-block;
+      }
+
+      .section-description {
+        font-size: 1.1rem;
+        color: var(--cyna-text-muted);
+        margin-bottom: 40px;
+        max-width: 800px;
+        line-height: 1.8;
+      }
+
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+      }
+
+      .team-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .team-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(86, 16, 192, 0.15);
+      }
+
+      .team-card-avatar {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.1),
+          rgba(86, 16, 192, 0.1)
+        );
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: var(--cyna-primary);
+      }
+
+      .team-card-avatar i {
+        font-size: 4rem;
+      }
+
+      .team-card-content {
+        padding: 24px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .team-card-name {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: var(--cyna-dark);
+        margin-bottom: 8px;
+      }
+
+      .team-card-role {
+        color: var(--cyna-primary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+      }
+
+      .team-card-bio {
+        color: var(--cyna-text-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        flex-grow: 1;
+      }
+
+      .team-card-socials {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--cyna-border);
+      }
+
+      .team-card-socials a {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(86, 16, 192, 0.1);
+        color: var(--cyna-primary);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+      }
+
+      .team-card-socials a:hover {
+        background: var(--cyna-primary);
+        color: white;
+        transform: scale(1.1);
+      }
+
+      .mission-box {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.05),
+          rgba(86, 16, 192, 0.05)
+        );
+        border-left: 4px solid var(--cyna-primary);
+        padding: 30px;
+        border-radius: 8px;
+        margin: 40px 0;
+      }
+
+      .mission-box h3 {
+        color: var(--cyna-dark);
+        font-weight: bold;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+      }
+
+      .mission-box p {
+        color: var(--cyna-text-muted);
+        line-height: 1.8;
+        margin: 0;
+      }
+
+      .values-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-top: 40px;
+      }
+
+      .value-card {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(17, 24, 39, 0.06);
+      }
+
+      .value-card i {
+        font-size: 2.5rem;
+        color: var(--cyna-primary);
+        margin-bottom: 16px;
+      }
+
+      .value-card h4 {
+        color: var(--cyna-dark);
+        font-weight: 600;
+        margin-bottom: 12px;
+        font-size: 1.1rem;
+      }
+
+      .value-card p {
+        color: var(--cyna-text-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .cta-section {
+        background: linear-gradient(
+          135deg,
+          rgba(53, 30, 144, 0.95),
+          rgba(86, 16, 192, 0.85)
+        );
+        padding: 60px 30px;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+        margin: 60px 0;
+      }
+
+      .cta-section h2 {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 16px;
+      }
+
+      .cta-section p {
+        font-size: 1.1rem;
+        margin-bottom: 24px;
+        opacity: 0.95;
+      }
+
+      .cta-button {
+        background: white;
+        color: var(--cyna-primary);
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+      }
+
+      .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- NAVBAR -->
+    <div id="navbar-container"></div>
+
+    <div id="appRoot" class="app-root">
+      <div class="team-container">
+        <!-- Hero Section -->
+        <div class="team-hero">
+          <h1 data-i18n="team.title">Notre Équipe</h1>
+          <p data-i18n="team.subtitle">
+            Rencontrez les experts passionnés qui construisent CYNA chaque jour. Ensemble, nous créons des solutions innovantes en cybersécurité pour protéger votre entreprise.
+          </p>
+        </div>
+
+        <!-- Mission Section -->
+        <div class="team-section">
+          <h2 class="section-title" data-i18n="team.mission_title">Notre Mission</h2>
+          <p class="section-description" data-i18n="team.mission_description">
+            Chez CYNA, nous croyons que chaque organisation mérite une protection cybernétique robuste et accessibles. Notre équipe est dédiée à transformer la façon dont les entreprises abordent la sécurité.
+          </p>
+
+          <div class="mission-box">
+            <h3 data-i18n="team.mission_box_title">Pourquoi nous faisons cela ?</h3>
+            <p data-i18n="team.mission_box_content">
+              Nous avons fondé CYNA pour offrir une protection pragmatique et globale contre les cybermenaces aux PME et ETI, qui manquent souvent de ressources et d'expertise. Notre mission est de rendre la cybersécurité accessible à tous.
+            </p>
+          </div>
+        </div>
+
+        <!-- Team Members Section -->
+        <div class="team-section">
+          <h2 class="section-title" data-i18n="team.team_members_title">L'Équipe du Projet</h2>
+          <p class="section-description" data-i18n="team.team_members_description">
+            Ces passionnés ont uni leurs compétences pour créer CYNA. Ensemble, ils apportent une expertise diversifiée en développement, cybersécurité et gestion de projet.
+          </p>
+
+          <div class="team-grid">
+            <!-- Member 1 -->
+            <div class="team-card">
+              <div class="team-card-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="team-card-content">
+                <div class="team-card-name">Riantsoa RAMANAMPAMONJY</div>
+                <div class="team-card-role" data-i18n="team.role_developer">Développeur</div>
+                <div class="team-card-bio" data-i18n="team.member1_bio">
+                  Expert en développement backend et infrastructure, passionné par la création de solutions robustes et scalables.
+                </div>
+                <div class="team-card-socials">
+                  <a href="#" title="LinkedIn" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                  <a href="#" title="GitHub" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Member 2 -->
+            <div class="team-card">
+              <div class="team-card-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="team-card-content">
+                <div class="team-card-name">Clément DROUAL</div>
+                <div class="team-card-role" data-i18n="team.role_developer">Développeur</div>
+                <div class="team-card-bio" data-i18n="team.member2_bio">
+                  Spécialiste du frontend et de l'expérience utilisateur, créant des interfaces intuitives et modernes.
+                </div>
+                <div class="team-card-socials">
+                  <a href="#" title="LinkedIn" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                  <a href="#" title="GitHub" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Member 3 -->
+            <div class="team-card">
+              <div class="team-card-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="team-card-content">
+                <div class="team-card-name">William DA SILVA FERREIRA BATISTA</div>
+                <div class="team-card-role" data-i18n="team.role_security">Expert Sécurité</div>
+                <div class="team-card-bio" data-i18n="team.member3_bio">
+                  Spécialiste en cybersécurité et tests de pénétration, garantissant que CYNA offre une protection maximale.
+                </div>
+                <div class="team-card-socials">
+                  <a href="#" title="LinkedIn" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                  <a href="#" title="GitHub" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Member 4 -->
+            <div class="team-card">
+              <div class="team-card-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="team-card-content">
+                <div class="team-card-name">Emmanouil STAVRAKAKIS</div>
+                <div class="team-card-role" data-i18n="team.role_devops">DevOps & Infrastructure</div>
+                <div class="team-card-bio" data-i18n="team.member4_bio">
+                  Expert en infrastructure cloud et DevOps, assurant la fiabilité et la scalabilité de nos services.
+                </div>
+                <div class="team-card-socials">
+                  <a href="#" title="LinkedIn" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                  <a href="#" title="GitHub" aria-label="GitHub"><i class="bi bi-github"></i></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Values Section -->
+        <div class="team-section">
+          <h2 class="section-title" data-i18n="team.values_title">Nos Valeurs</h2>
+          <div class="values-grid">
+            <div class="value-card">
+              <i class="bi bi-shield-check"></i>
+              <h4 data-i18n="team.value_security">Sécurité</h4>
+              <p data-i18n="team.value_security_desc">
+                La protection de vos données est notre priorité absolue.
+              </p>
+            </div>
+            <div class="value-card">
+              <i class="bi bi-people-fill"></i>
+              <h4 data-i18n="team.value_expertise">Expertise</h4>
+              <p data-i18n="team.value_expertise_desc">
+                Une équipe d'experts passionnés et engagés.
+              </p>
+            </div>
+            <div class="value-card">
+              <i class="bi bi-lightning-fill"></i>
+              <h4 data-i18n="team.value_innovation">Innovation</h4>
+              <p data-i18n="team.value_innovation_desc">
+                Des solutions modernes et avant-gardistes.
+              </p>
+            </div>
+            <div class="value-card">
+              <i class="bi bi-handshake"></i>
+              <h4 data-i18n="team.value_partnership">Partenariat</h4>
+              <p data-i18n="team.value_partnership_desc">
+                Nous travaillons comme un véritable partenaire.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="cta-section">
+          <h2 data-i18n="team.cta_title">Vous souhaitez nous rejoindre ?</h2>
+          <p data-i18n="team.cta_description">
+            Nous cherchons toujours des talents passionnés pour renforcer notre équipe.
+          </p>
+          <a href="/contact.html" class="cta-button" data-i18n="team.cta_button">Nous Contacter</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer mt-5">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3 data-i18n="footer.about_title">À propos</h3>
+          <ul>
+            <li><a href="#" data-i18n="footer.about_cyna">À propos de CYNA</a></li>
+            <li><a href="/equipe.html" data-i18n="footer.team">Notre équipe</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.products_title">Produits</h3>
+          <ul>
+            <li><a href="/categories.html" data-i18n="footer.categories">Catégories</a></li>
+            <li><a href="#" data-i18n="footer.pricing">Tarification</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.support_title">Support</h3>
+          <ul>
+            <li><a href="/contact.html" data-i18n="footer.contact">Contactez-nous</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3 data-i18n="footer.legal_title">Légal</h3>
+          <ul>
+            <li><a href="#" data-i18n="footer.terms">Conditions d'utilisation</a></li>
+            <li><a href="#" data-i18n="footer.privacy">Politique de confidentialité</a></li>
+            <li><a href="#" data-i18n="footer.cookies">Politique de cookies</a></li>
+            <li><a href="#" data-i18n="footer.legal_notice">Mentions légales</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p data-i18n="footer.copyright">
+          © 2026 CYNA. Tous droits réservés.
+        </p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- i18n d'abord -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- Scripts existants -->
+    <script src="js/navbar.js"></script>
+  </body>
+</html>
