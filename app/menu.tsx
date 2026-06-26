@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   StyleSheet,
@@ -9,8 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LanguageSelector } from '@/components/language-selector';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { useTranslation } from '@/context/language-context';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
@@ -31,7 +34,9 @@ function MenuLink({ icon, label, onPress }: MenuLinkProps) {
 
 export default function MenuModal() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAuthenticated, user, logout } = useAuth();
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
   const go = (path: string) => {
     router.back();
@@ -63,32 +68,33 @@ export default function MenuModal() {
 
       {/* Navigation */}
       <View style={styles.nav}>
-        <MenuLink icon="home-outline"    label="Accueil"    onPress={() => go('/(tabs)')} />
-        <MenuLink icon="grid-outline"    label="Catalogue"  onPress={() => go('/(tabs)/explore')} />
-        <MenuLink icon="cart-outline"    label="Panier"     onPress={() => go('/(tabs)/cart')} />
+        <MenuLink icon="home-outline"    label={t('menu.home')}      onPress={() => go('/(tabs)')} />
+        <MenuLink icon="grid-outline"    label={t('menu.catalogue')} onPress={() => go('/(tabs)/explore')} />
+        <MenuLink icon="cart-outline"    label={t('menu.cart')}      onPress={() => go('/(tabs)/cart')} />
 
         {isAuthenticated ? (
           <>
             <View style={styles.separator} />
-            <MenuLink icon="speedometer-outline"    label="Tableau de bord"       onPress={() => go('/(tabs)/dashboard')} />
-            <MenuLink icon="person-outline"         label="Mon compte"            onPress={() => go('/(tabs)/account')} />
-            <MenuLink icon="settings-outline"       label="Mes paramètres"        onPress={() => go('/account/profile')} />
-            <MenuLink icon="receipt-outline"        label="Mes commandes"         onPress={() => go('/orders')} />
-            <MenuLink icon="refresh-circle-outline" label="Mes abonnements"       onPress={() => go('/account/subscriptions')} />
+            <MenuLink icon="speedometer-outline"    label={t('menu.dashboard')}      onPress={() => go('/(tabs)/dashboard')} />
+            <MenuLink icon="person-outline"         label={t('menu.account')}        onPress={() => go('/(tabs)/account')} />
+            <MenuLink icon="settings-outline"       label={t('menu.settings')}       onPress={() => go('/account/profile')} />
+            <MenuLink icon="receipt-outline"        label={t('menu.orders')}         onPress={() => go('/orders')} />
+            <MenuLink icon="refresh-circle-outline" label={t('menu.subscriptions')}  onPress={() => go('/account/subscriptions')} />
           </>
         ) : (
           <>
             <View style={styles.separator} />
-            <MenuLink icon="log-in-outline"    label="Se connecter"  onPress={() => go('/(auth)/login')} />
-            <MenuLink icon="person-add-outline" label="S'inscrire"   onPress={() => go('/(auth)/register')} />
+            <MenuLink icon="log-in-outline"     label={t('menu.login')}    onPress={() => go('/(auth)/login')} />
+            <MenuLink icon="person-add-outline" label={t('menu.register')} onPress={() => go('/(auth)/register')} />
           </>
         )}
 
         <View style={styles.separator} />
-        <MenuLink icon="chatbubble-outline"  label="Contact"           onPress={() => go('/contact')} />
-        <MenuLink icon="information-circle-outline" label="À propos"  onPress={() => go('/about')} />
-        <MenuLink icon="document-text-outline" label="CGU"            onPress={() => go('/cgu')} />
-        <MenuLink icon="shield-outline"      label="Mentions légales"  onPress={() => go('/legal')} />
+        <MenuLink icon="language-outline"           label={t('menu.language')}      onPress={() => setShowLanguageSelector(true)} />
+        <MenuLink icon="chatbubble-outline"          label={t('menu.contact')}       onPress={() => go('/contact')} />
+        <MenuLink icon="information-circle-outline"  label={t('menu.about')}         onPress={() => go('/about')} />
+        <MenuLink icon="document-text-outline"       label={t('menu.cgu')}           onPress={() => go('/cgu')} />
+        <MenuLink icon="shield-outline"              label={t('menu.legal')}         onPress={() => go('/legal')} />
 
         {isAuthenticated && (
           <>
@@ -96,25 +102,27 @@ export default function MenuModal() {
             <TouchableOpacity
               style={styles.logoutBtn}
               accessibilityRole="button"
-              accessibilityLabel="Se déconnecter"
+              accessibilityLabel={t('menu.logout')}
               onPress={() =>
                 Alert.alert(
-                  'Déconnexion',
-                  'Voulez-vous vraiment vous déconnecter ?',
+                  t('menu.logout_title'),
+                  t('menu.logout_message'),
                   [
-                    { text: 'Annuler', style: 'cancel' },
-                    { text: 'Se déconnecter', style: 'destructive', onPress: logout },
+                    { text: t('menu.logout_cancel'), style: 'cancel' },
+                    { text: t('menu.logout_confirm'), style: 'destructive', onPress: logout },
                   ]
                 )
               }
               activeOpacity={0.8}
             >
               <Ionicons name="log-out-outline" size={20} color="#ff4444" />
-              <ThemedText style={styles.logoutText}>Se déconnecter</ThemedText>
+              <ThemedText style={styles.logoutText}>{t('menu.logout')}</ThemedText>
             </TouchableOpacity>
           </>
         )}
       </View>
+
+      <LanguageSelector visible={showLanguageSelector} onClose={() => setShowLanguageSelector(false)} />
     </SafeAreaView>
   );
 }

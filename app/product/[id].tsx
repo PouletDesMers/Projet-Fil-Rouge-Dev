@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ThemedText } from '@/components/themed-text';
 import { Duration, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
+import { useTranslation } from '@/context/language-context';
 import { api, normalizeProduct, Product } from '@/services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -23,6 +24,7 @@ export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { addItem, count } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -46,7 +48,7 @@ export default function ProductScreen() {
         loadSimilar(normalized.categorie.slug, normalized.id);
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger ce produit');
+      Alert.alert(t('common.error'), t('product.load_error'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function ProductScreen() {
           <Ionicons name="arrow-back" size={24} color="#3b12a3" />
         </TouchableOpacity>
         <View style={styles.errorState}>
-          <ThemedText style={styles.errorText}>Produit introuvable</ThemedText>
+          <ThemedText style={styles.errorText}>{t('product.not_found')}</ThemedText>
         </View>
       </SafeAreaView>
     );
@@ -102,6 +104,9 @@ export default function ProductScreen() {
 
   const images = product.images?.length ? product.images : product.image ? [product.image] : [];
   const finalPrice = product.prix * DURATION_DISCOUNT[selectedDuration];
+
+  const formatSimilarPrice = (prix: number) =>
+    prix === 0 ? t('common.price_on_quote') : t('common.price_per_month', { price: prix.toFixed(2) });
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -156,7 +161,7 @@ export default function ProductScreen() {
             <ThemedText style={styles.productName}>{product.nom}</ThemedText>
             {!product.disponible && (
               <View style={styles.badge}>
-                <ThemedText style={styles.badgeText}>Indisponible</ThemedText>
+                <ThemedText style={styles.badgeText}>{t('common.badge_unavailable')}</ThemedText>
               </View>
             )}
           </View>
@@ -179,7 +184,7 @@ export default function ProductScreen() {
           {/* Durée abonnement */}
           {product.prix > 0 && (
             <View style={styles.durationSection}>
-              <ThemedText style={styles.durationTitle}>Durée de l'abonnement</ThemedText>
+              <ThemedText style={styles.durationTitle}>{t('product.duration_title')}</ThemedText>
               <View style={styles.durationRow}>
                 {(Object.keys(DURATION_LABELS) as Duration[]).map((d) => (
                   <TouchableOpacity
@@ -198,14 +203,18 @@ export default function ProductScreen() {
 
           {/* Prix */}
           <View style={styles.priceBox}>
-            <ThemedText style={styles.priceLabel}>Prix</ThemedText>
+            <ThemedText style={styles.priceLabel}>{t('product.price_label')}</ThemedText>
             {product.prix === 0 ? (
-              <ThemedText style={styles.price}>Sur devis</ThemedText>
+              <ThemedText style={styles.price}>{t('common.price_on_quote')}</ThemedText>
             ) : (
               <>
-                <ThemedText style={styles.price}>{finalPrice.toFixed(2)} €/mois</ThemedText>
+                <ThemedText style={styles.price}>
+                  {t('common.price_per_month', { price: finalPrice.toFixed(2) })}
+                </ThemedText>
                 {selectedDuration !== '1_month' && (
-                  <ThemedText style={styles.originalPrice}>{product.prix.toFixed(2)} €/mois</ThemedText>
+                  <ThemedText style={styles.originalPrice}>
+                    {t('common.price_per_month', { price: product.prix.toFixed(2) })}
+                  </ThemedText>
                 )}
               </>
             )}
@@ -214,7 +223,7 @@ export default function ProductScreen() {
           {/* Services similaires */}
           {similarProducts.length > 0 && (
             <View style={styles.similarSection}>
-              <ThemedText style={styles.similarTitle}>Services similaires</ThemedText>
+              <ThemedText style={styles.similarTitle}>{t('product.similar_title')}</ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {similarProducts.map((p) => (
                   <TouchableOpacity
@@ -232,12 +241,10 @@ export default function ProductScreen() {
                     )}
                     <View style={styles.similarInfo}>
                       <ThemedText style={styles.similarName} numberOfLines={2}>{p.nom}</ThemedText>
-                      <ThemedText style={styles.similarPrice}>
-                        {p.prix === 0 ? 'Sur devis' : `${p.prix.toFixed(2)} €/mois`}
-                      </ThemedText>
+                      <ThemedText style={styles.similarPrice}>{formatSimilarPrice(p.prix)}</ThemedText>
                       {!p.disponible && (
                         <View style={styles.similarBadge}>
-                          <ThemedText style={styles.similarBadgeText}>Indisponible</ThemedText>
+                          <ThemedText style={styles.similarBadgeText}>{t('common.badge_unavailable')}</ThemedText>
                         </View>
                       )}
                     </View>
@@ -258,7 +265,7 @@ export default function ProductScreen() {
             onPress={() => router.push('/contact' as never)}
           >
             <Ionicons name="mail-outline" size={20} color="#fff" />
-            <ThemedText style={styles.ctaText}>Demander un devis</ThemedText>
+            <ThemedText style={styles.ctaText}>{t('product.cta_quote')}</ThemedText>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -269,7 +276,11 @@ export default function ProductScreen() {
           >
             <Ionicons name={added ? 'checkmark-circle' : 'cart'} size={20} color="#fff" />
             <ThemedText style={styles.ctaText}>
-              {!product.disponible ? 'Indisponible' : added ? 'Ajouté au panier !' : "S'abonner"}
+              {!product.disponible
+                ? t('product.cta_unavailable')
+                : added
+                ? t('product.cta_added')
+                : t('product.cta_subscribe')}
             </ThemedText>
           </TouchableOpacity>
         )}

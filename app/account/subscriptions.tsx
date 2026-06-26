@@ -11,17 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { Abonnement, api } from '@/services/api';
-
-const STATUS_LABEL: Record<string, string> = {
-  actif:    'Actif',
-  active:   'Actif',
-  inactif:  'Inactif',
-  inactive: 'Inactif',
-  suspendu: 'Suspendu',
-  suspended:'Suspendu',
-  cancelled:'Résilié',
-};
 
 const STATUS_COLOR: Record<string, string> = {
   actif:    '#27ae60',
@@ -35,8 +26,19 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [subscriptions, setSubscriptions] = useState<Abonnement[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_LABEL: Record<string, string> = {
+    actif:    t('subscriptions.status_active'),
+    active:   t('subscriptions.status_active'),
+    inactif:  t('subscriptions.status_inactive'),
+    inactive: t('subscriptions.status_inactive'),
+    suspendu: t('subscriptions.status_suspended'),
+    suspended:t('subscriptions.status_suspended'),
+    cancelled:t('subscriptions.status_cancelled'),
+  };
 
   useEffect(() => {
     api.get<Abonnement[]>('/api/abonnements')
@@ -59,7 +61,7 @@ export default function SubscriptionsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Mes abonnements</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('subscriptions.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -74,7 +76,7 @@ export default function SubscriptionsScreen() {
             : '—';
           const end = item.endDate
             ? new Date(item.endDate).toLocaleDateString('fr-FR')
-            : 'En cours';
+            : t('subscriptions.card_ongoing');
           return (
             <View style={styles.card}>
               <View style={styles.cardRow}>
@@ -82,10 +84,10 @@ export default function SubscriptionsScreen() {
                   <Ionicons name="shield-checkmark-outline" size={24} color="#3b12a3" />
                 </View>
                 <View style={styles.cardBody}>
-                  <ThemedText style={styles.cardTitle}>Abonnement #{item.id}</ThemedText>
-                  <ThemedText style={styles.cardSub}>Du {start} au {end}</ThemedText>
+                  <ThemedText style={styles.cardTitle}>{t('subscriptions.card_title', { id: item.id })}</ThemedText>
+                  <ThemedText style={styles.cardSub}>{t('subscriptions.card_period', { start, end })}</ThemedText>
                   {item.quantity != null && (
-                    <ThemedText style={styles.cardSub}>Quantité : {item.quantity}</ThemedText>
+                    <ThemedText style={styles.cardSub}>{t('subscriptions.card_quantity', { qty: item.quantity })}</ThemedText>
                   )}
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[statusKey] ?? '#888' }]}>
@@ -97,7 +99,7 @@ export default function SubscriptionsScreen() {
               {item.autoRenewal && (
                 <View style={styles.renewalRow}>
                   <Ionicons name="refresh-outline" size={14} color="#3b12a3" />
-                  <ThemedText style={styles.renewalText}>Renouvellement automatique activé</ThemedText>
+                  <ThemedText style={styles.renewalText}>{t('subscriptions.card_renewal')}</ThemedText>
                 </View>
               )}
             </View>
@@ -106,14 +108,14 @@ export default function SubscriptionsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="refresh-circle-outline" size={56} color="#ccc" />
-            <ThemedText style={styles.emptyTitle}>Aucun abonnement actif</ThemedText>
-            <ThemedText style={styles.emptySub}>Vos abonnements apparaîtront ici</ThemedText>
+            <ThemedText style={styles.emptyTitle}>{t('subscriptions.empty_title')}</ThemedText>
+            <ThemedText style={styles.emptySub}>{t('subscriptions.empty_subtitle')}</ThemedText>
             <TouchableOpacity
               style={styles.ctaBtn}
               onPress={() => router.push('/(tabs)/explore')}
               activeOpacity={0.8}
             >
-              <ThemedText style={styles.ctaText}>Découvrir nos services</ThemedText>
+              <ThemedText style={styles.ctaText}>{t('common.discover_services')}</ThemedText>
             </TouchableOpacity>
           </View>
         }

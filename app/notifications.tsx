@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 interface Notif {
@@ -39,6 +40,7 @@ function formatDate(str: string) {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +49,7 @@ export default function NotificationsScreen() {
       .then((raw) => {
         const mapped: Notif[] = (raw || []).map((r) => ({
           id:      String(r.id ?? r.id_notification ?? ''),
-          title:   (r.titre ?? r.title ?? 'Notification') as string,
+          title:   (r.titre ?? r.title ?? t('notifications.default_title')) as string,
           message: (r.message ?? r.contenu ?? '') as string,
           type:    (['info', 'success', 'warning', 'error'].includes(r.type as string)
             ? r.type as 'info' | 'success' | 'warning' | 'error'
@@ -88,12 +90,11 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Notifications</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('notifications.header')}</ThemedText>
         {unreadCount > 0 && (
           <View style={styles.headerBadge}>
             <ThemedText style={styles.headerBadgeText}>{unreadCount}</ThemedText>
@@ -108,10 +109,8 @@ export default function NotificationsScreen() {
       ) : notifs.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="notifications-off-outline" size={64} color="#ddd" />
-          <ThemedText style={styles.emptyTitle}>Aucune notification</ThemedText>
-          <ThemedText style={styles.emptyText}>
-            Vous serez notifié des mises à jour importantes de votre compte et de vos abonnements.
-          </ThemedText>
+          <ThemedText style={styles.emptyTitle}>{t('notifications.empty_title')}</ThemedText>
+          <ThemedText style={styles.emptyText}>{t('notifications.empty_text')}</ThemedText>
         </View>
       ) : (
         <FlatList

@@ -14,17 +14,19 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 const PWD_RULES = [
-  { test: (p: string) => p.length >= 8,           label: '8 caractères minimum'  },
-  { test: (p: string) => /[A-Z]/.test(p),         label: '1 lettre majuscule'    },
-  { test: (p: string) => /[0-9]/.test(p),         label: '1 chiffre'             },
-  { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: '1 caractère spécial'   },
+  { test: (p: string) => p.length >= 8,           label: 'common.rule_chars'   },
+  { test: (p: string) => /[A-Z]/.test(p),         label: 'common.rule_upper'   },
+  { test: (p: string) => /[0-9]/.test(p),         label: 'common.rule_digit'   },
+  { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: 'common.rule_special' },
 ];
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   const [currentPassword, setCurrentPassword]     = useState('');
@@ -38,23 +40,23 @@ export default function ChangePasswordScreen() {
 
   const handleSave = async () => {
     if (!currentPassword) {
-      Alert.alert('Champ requis', 'Veuillez saisir votre mot de passe actuel.');
+      Alert.alert(t('common.error'), t('change_password.error_missing_current'));
       return;
     }
     if (!newPassword) {
-      Alert.alert('Champ requis', 'Veuillez saisir un nouveau mot de passe.');
+      Alert.alert(t('common.error'), t('change_password.error_missing_new'));
       return;
     }
     if (!allRulesOk) {
-      Alert.alert('Mot de passe invalide', 'Votre nouveau mot de passe ne respecte pas tous les critères de sécurité.');
+      Alert.alert(t('common.error'), t('change_password.error_weak'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Erreur', 'Les nouveaux mots de passe ne correspondent pas.');
+      Alert.alert(t('common.error'), t('change_password.error_mismatch'));
       return;
     }
     if (currentPassword === newPassword) {
-      Alert.alert('Erreur', 'Le nouveau mot de passe doit être différent de l\'actuel.');
+      Alert.alert(t('common.error'), t('change_password.error_same'));
       return;
     }
 
@@ -64,17 +66,17 @@ export default function ChangePasswordScreen() {
         motDePasse: newPassword,
         ancienMotDePasse: currentPassword,
       });
-      Alert.alert('Succès', 'Votre mot de passe a été modifié avec succès.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), t('change_password.success'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (err: unknown) {
       const lc = err instanceof Error ? err.message.toLowerCase() : '';
       if (lc.includes('incorrect') || lc.includes('unauthorized')) {
-        Alert.alert('Erreur', 'Mot de passe actuel incorrect. Veuillez réessayer.');
+        Alert.alert(t('common.error'), t('change_password.error_wrong_current'));
       } else if (err instanceof TypeError || lc.includes('network') || lc.includes('fetch')) {
-        Alert.alert('Erreur réseau', 'Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+        Alert.alert(t('common.error'), t('common.network_error'));
       } else {
-        Alert.alert('Erreur', 'Impossible de modifier le mot de passe. Veuillez réessayer.');
+        Alert.alert(t('common.error'), t('change_password.error_generic'));
       }
     } finally {
       setSaving(false);
@@ -87,7 +89,7 @@ export default function ChangePasswordScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Changer le mot de passe</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('change_password.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -95,13 +97,13 @@ export default function ChangePasswordScreen() {
         <ScrollView contentContainerStyle={styles.content}>
 
           <View style={styles.card}>
-            <ThemedText style={styles.label}>Mot de passe actuel</ThemedText>
+            <ThemedText style={styles.label}>{t('change_password.current')}</ThemedText>
             <View style={styles.passwordRow}>
               <TextInput
                 style={styles.input}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="Votre mot de passe actuel"
+                placeholder={t('change_password.current_placeholder')}
                 placeholderTextColor="#aaa"
                 secureTextEntry={!showCurrent}
                 returnKeyType="next"
@@ -113,13 +115,13 @@ export default function ChangePasswordScreen() {
 
             <View style={styles.divider} />
 
-            <ThemedText style={styles.label}>Nouveau mot de passe</ThemedText>
+            <ThemedText style={styles.label}>{t('change_password.new')}</ThemedText>
             <View style={styles.passwordRow}>
               <TextInput
                 style={styles.input}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Nouveau mot de passe"
+                placeholder={t('change_password.new_placeholder')}
                 placeholderTextColor="#aaa"
                 secureTextEntry={!showNew}
                 returnKeyType="next"
@@ -140,7 +142,7 @@ export default function ChangePasswordScreen() {
                         size={14}
                         color={ok ? '#16a34a' : '#9ca3af'}
                       />
-                      <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
+                      <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{t(label)}</ThemedText>
                     </View>
                   );
                 })}
@@ -149,13 +151,13 @@ export default function ChangePasswordScreen() {
 
             <View style={styles.divider} />
 
-            <ThemedText style={styles.label}>Confirmer le nouveau mot de passe</ThemedText>
+            <ThemedText style={styles.label}>{t('change_password.confirm')}</ThemedText>
             <View style={styles.passwordRow}>
               <TextInput
                 style={styles.input}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Confirmer le mot de passe"
+                placeholder={t('change_password.confirm_placeholder')}
                 placeholderTextColor="#aaa"
                 secureTextEntry={!showNew}
                 returnKeyType="done"
@@ -164,7 +166,7 @@ export default function ChangePasswordScreen() {
             </View>
 
             {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-              <ThemedText style={styles.mismatchText}>Les mots de passe ne correspondent pas</ThemedText>
+              <ThemedText style={styles.mismatchText}>{t('change_password.error_mismatch')}</ThemedText>
             )}
           </View>
 
@@ -175,7 +177,7 @@ export default function ChangePasswordScreen() {
             activeOpacity={0.8}
           >
             <ThemedText style={styles.saveBtnText}>
-              {saving ? 'Modification...' : 'Modifier le mot de passe'}
+              {saving ? t('change_password.loading') : t('change_password.submit')}
             </ThemedText>
           </TouchableOpacity>
 

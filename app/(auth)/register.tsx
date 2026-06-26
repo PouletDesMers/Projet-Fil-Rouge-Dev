@@ -14,18 +14,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 const PWD_RULES = [
-  { test: (p: string) => p.length >= 8,             label: '8 caractères minimum' },
-  { test: (p: string) => /[A-Z]/.test(p),           label: '1 lettre majuscule'   },
-  { test: (p: string) => /[0-9]/.test(p),           label: '1 chiffre'            },
-  { test: (p: string) => /[^a-zA-Z0-9]/.test(p),   label: '1 caractère spécial'  },
+  { test: (p: string) => p.length >= 8,             label: 'common.rule_chars' },
+  { test: (p: string) => /[A-Z]/.test(p),           label: 'common.rule_upper' },
+  { test: (p: string) => /[0-9]/.test(p),           label: 'common.rule_digit' },
+  { test: (p: string) => /[^a-zA-Z0-9]/.test(p),   label: 'common.rule_special' },
 ];
 
 type Step = 'form' | 'done';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('form');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -53,18 +55,18 @@ export default function RegisterScreen() {
     setError(null);
     setFieldErrors({});
 
-    if (!firstName.trim()) { fe(['firstName']); setError('Veuillez saisir votre prénom'); return; }
-    if (!lastName.trim())  { fe(['lastName']);  setError('Veuillez saisir votre nom');    return; }
-    if (!email.trim())     { fe(['email']);     setError('Veuillez saisir votre e-mail'); return; }
+    if (!firstName.trim()) { fe(['firstName']); setError(t('register.error_firstname')); return; }
+    if (!lastName.trim())  { fe(['lastName']);  setError(t('register.error_lastname'));  return; }
+    if (!email.trim())     { fe(['email']);     setError(t('register.error_email'));     return; }
     if (!email.includes('@') || !email.includes('.')) {
-      fe(['email']); setError('Adresse e-mail invalide'); return;
+      fe(['email']); setError(t('register.error_invalid_email')); return;
     }
-    if (!password) { fe(['password']); setError('Veuillez choisir un mot de passe'); return; }
+    if (!password) { fe(['password']); setError(t('register.error_password')); return; }
     if (!PWD_RULES.every(r => r.test(password))) {
-      fe(['password']); setError('Votre mot de passe ne respecte pas tous les critères'); return;
+      fe(['password']); setError(t('register.error_weak')); return;
     }
     if (password !== confirmPassword) {
-      fe(['confirmPassword']); setError('Les mots de passe ne correspondent pas'); return;
+      fe(['confirmPassword']); setError(t('register.error_mismatch')); return;
     }
 
     setIsLoading(true);
@@ -75,12 +77,12 @@ export default function RegisterScreen() {
       const isNetwork = err instanceof TypeError;
       const lc = err instanceof Error ? err.message.toLowerCase() : '';
       if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
-        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+        setError(t('common.network_error'));
       } else if (lc.includes('already exists') || lc.includes('email already')) {
         fe(['email']);
-        setError('Cette adresse e-mail est déjà utilisée.');
+        setError(t('register.error_taken'));
       } else {
-        setError("Inscription impossible. Veuillez vérifier vos informations.");
+        setError(t('register.error_generic'));
       }
     } finally {
       setIsLoading(false);
@@ -94,22 +96,22 @@ export default function RegisterScreen() {
         <View style={styles.topSection}>
           <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
           <ThemedText style={styles.logo}>CYNA</ThemedText>
-          <ThemedText style={styles.tagline}>Bienvenue dans la famille</ThemedText>
+          <ThemedText style={styles.tagline}>{t('register.success_tagline')}</ThemedText>
         </View>
         <View style={[styles.card, styles.successCard]}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color="#16a34a" />
           </View>
-          <ThemedText style={styles.successTitle}>Compte créé !</ThemedText>
+          <ThemedText style={styles.successTitle}>{t('register.success_title')}</ThemedText>
           <ThemedText style={styles.successText}>
-            Un email de vérification a été envoyé à {email}. Cliquez sur le lien dans l'email pour activer votre compte.
+            {t('register.success_text', { email })}
           </ThemedText>
           <TouchableOpacity
             style={[styles.button, { width: '100%', marginTop: 8 }]}
             onPress={() => router.replace('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.buttonText}>Aller à la connexion</ThemedText>
+            <ThemedText style={styles.buttonText}>{t('register.success_button')}</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -124,31 +126,31 @@ export default function RegisterScreen() {
           <View style={styles.topSection}>
             <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
             <ThemedText style={styles.logo}>CYNA</ThemedText>
-            <ThemedText style={styles.tagline}>Rejoignez nos clients protégés</ThemedText>
+            <ThemedText style={styles.tagline}>{t('register.tagline')}</ThemedText>
           </View>
 
           <View style={styles.card}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-              <ThemedText style={styles.backText}>Retour</ThemedText>
+              <ThemedText style={styles.backText}>{t('common.back')}</ThemedText>
             </TouchableOpacity>
 
-            <ThemedText style={styles.title}>Créer un compte</ThemedText>
-            <ThemedText style={styles.subtitle}>Rejoignez CYNA dès aujourd'hui</ThemedText>
+            <ThemedText style={styles.title}>{t('register.title')}</ThemedText>
+            <ThemedText style={styles.subtitle}>{t('register.subtitle')}</ThemedText>
 
             <View style={styles.form}>
               {/* Prénom / Nom */}
               <View style={styles.row}>
                 <TextInput
                   style={[styles.input, styles.halfInput, fieldErrors.firstName && styles.inputError]}
-                  placeholder="Prénom *"
+                  placeholder={t('register.firstname_placeholder')}
                   placeholderTextColor="#888"
                   value={firstName}
                   onChangeText={v => { setFirstName(v); clearField('firstName'); }}
                 />
                 <TextInput
                   style={[styles.input, styles.halfInput, fieldErrors.lastName && styles.inputError]}
-                  placeholder="Nom *"
+                  placeholder={t('register.lastname_placeholder')}
                   placeholderTextColor="#888"
                   value={lastName}
                   onChangeText={v => { setLastName(v); clearField('lastName'); }}
@@ -158,7 +160,7 @@ export default function RegisterScreen() {
               {/* Email */}
               <TextInput
                 style={[styles.input, fieldErrors.email && styles.inputError]}
-                placeholder="Adresse e-mail *"
+                placeholder={t('register.email_placeholder')}
                 placeholderTextColor="#888"
                 value={email}
                 onChangeText={v => { setEmail(v); clearField('email'); }}
@@ -171,7 +173,7 @@ export default function RegisterScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput, fieldErrors.password && styles.inputError]}
-                  placeholder="Mot de passe *"
+                  placeholder={t('register.password_placeholder')}
                   placeholderTextColor="#888"
                   value={password}
                   onChangeText={v => { setPassword(v); clearField('password'); }}
@@ -194,7 +196,7 @@ export default function RegisterScreen() {
                           size={14}
                           color={ok ? '#16a34a' : '#9ca3af'}
                         />
-                        <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
+                        <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{t(label)}</ThemedText>
                       </View>
                     );
                   })}
@@ -204,7 +206,7 @@ export default function RegisterScreen() {
               {/* Confirmation */}
               <TextInput
                 style={[styles.input, fieldErrors.confirmPassword && styles.inputError]}
-                placeholder="Confirmer le mot de passe *"
+                placeholder={t('register.confirm_placeholder')}
                 placeholderTextColor="#888"
                 value={confirmPassword}
                 onChangeText={v => { setConfirmPassword(v); clearField('confirmPassword'); }}
@@ -220,14 +222,14 @@ export default function RegisterScreen() {
                 activeOpacity={0.8}
               >
                 <ThemedText style={styles.buttonText}>
-                  {isLoading ? 'Inscription...' : "S'inscrire"}
+                  {isLoading ? t('register.loading') : t('register.submit')}
                 </ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.link}>
                 <ThemedText style={styles.linkSubText}>
-                  Déjà un compte ?{' '}
-                  <ThemedText style={styles.linkText}>Se connecter</ThemedText>
+                  {t('register.already_account')}{' '}
+                  <ThemedText style={styles.linkText}>{t('register.login')}</ThemedText>
                 </ThemedText>
               </TouchableOpacity>
             </View>

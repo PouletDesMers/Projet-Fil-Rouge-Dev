@@ -17,19 +17,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 type Step = 'recap' | 'address' | 'payment' | 'confirm';
 
-const STEPS: { key: Step; label: string }[] = [
-  { key: 'recap',   label: 'Récap'     },
-  { key: 'address', label: 'Adresse'   },
-  { key: 'payment', label: 'Paiement'  },
-  { key: 'confirm', label: 'Confirmé'  },
+const STEP_KEYS: { key: Step; labelKey: string }[] = [
+  { key: 'recap',   labelKey: 'checkout.step_recap'    },
+  { key: 'address', labelKey: 'checkout.step_address'  },
+  { key: 'payment', labelKey: 'checkout.step_payment'  },
+  { key: 'confirm', labelKey: 'checkout.step_confirm'  },
 ];
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { items, total, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const [step, setStep] = useState<Step>('recap');
@@ -49,6 +51,8 @@ export default function CheckoutScreen() {
   const [cardCvc, setCardCvc]        = useState('');
   const [cardName, setCardName]      = useState('');
 
+  const STEPS = STEP_KEYS.map(s => ({ key: s.key, label: t(s.labelKey) }));
+
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -56,28 +60,26 @@ export default function CheckoutScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Commande</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t('checkout.header')}</ThemedText>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.authGate}>
           <Ionicons name="lock-closed-outline" size={56} color="#3b12a3" />
-          <ThemedText style={styles.authGateTitle}>Connexion requise</ThemedText>
-          <ThemedText style={styles.authGateText}>
-            Vous devez être connecté pour finaliser votre commande.
-          </ThemedText>
+          <ThemedText style={styles.authGateTitle}>{t('checkout.auth_title')}</ThemedText>
+          <ThemedText style={styles.authGateText}>{t('checkout.auth_text')}</ThemedText>
           <TouchableOpacity
             style={styles.authGateBtn}
             onPress={() => router.push('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.authGateBtnText}>Se connecter</ThemedText>
+            <ThemedText style={styles.authGateBtnText}>{t('checkout.auth_login')}</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.authGateBtnOutline}
             onPress={() => router.push('/(auth)/register')}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.authGateBtnOutlineText}>Créer un compte</ThemedText>
+            <ThemedText style={styles.authGateBtnOutlineText}>{t('checkout.auth_register')}</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -95,7 +97,7 @@ export default function CheckoutScreen() {
 
   const validateAddress = () => {
     if (!fullName.trim() || !street.trim() || !city.trim() || !zip.trim()) {
-      Alert.alert('Champs manquants', 'Veuillez remplir tous les champs d\'adresse');
+      Alert.alert(t('checkout.alert_missing_address'), t('common.missing_fields'));
       return false;
     }
     return true;
@@ -103,7 +105,7 @@ export default function CheckoutScreen() {
 
   const validatePayment = () => {
     if (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim() || !cardName.trim()) {
-      Alert.alert('Champs manquants', 'Veuillez remplir tous les champs de paiement');
+      Alert.alert(t('checkout.alert_missing_payment'), t('common.missing_fields'));
       return false;
     }
     return true;
@@ -115,24 +117,23 @@ export default function CheckoutScreen() {
     try {
       const cleanNumber = cardNumber.replace(/\s/g, '');
 
-      // Cartes de test Stripe reconnues en mode démo
       const TEST_CARDS: Record<string, { success: boolean; message?: string }> = {
         '4242424242424242': { success: true },
-        '4000000000000002': { success: false, message: 'Votre carte a été refusée.' },
-        '4000000000009995': { success: false, message: 'Fonds insuffisants.' },
-        '4000000000000069': { success: false, message: 'Carte expirée.' },
+        '4000000000000002': { success: false, message: t('checkout.card_declined') },
+        '4000000000009995': { success: false, message: t('checkout.card_funds') },
+        '4000000000000069': { success: false, message: t('checkout.card_expired') },
       };
 
       const testResult = TEST_CARDS[cleanNumber];
       if (!testResult) {
         Alert.alert(
-          'Carte non reconnue',
-          'En mode démonstration, utilisez :\n✅ 4242 4242 4242 4242 (succès)\n❌ 4000 0000 0000 0002 (refusée)',
+          t('checkout.alert_unknown_card_title'),
+          t('checkout.alert_unknown_card'),
         );
         return;
       }
       if (!testResult.success) {
-        Alert.alert('Paiement refusé', testResult.message ?? 'Carte refusée.');
+        Alert.alert(t('checkout.alert_declined_title'), testResult.message ?? t('checkout.card_declined'));
         return;
       }
 
@@ -155,8 +156,8 @@ export default function CheckoutScreen() {
       clearCart();
       setStep('confirm');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
-      Alert.alert('Erreur', msg);
+      const msg = err instanceof Error ? err.message : t('common.error');
+      Alert.alert(t('common.error'), msg);
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +166,7 @@ export default function CheckoutScreen() {
   const handleNext = () => {
     if (step === 'recap') {
       if (availableItems.length === 0) {
-        Alert.alert('Panier vide', 'Aucun article disponible dans votre panier');
+        Alert.alert(t('checkout.alert_empty_cart_title'), t('checkout.alert_empty_cart'));
         return;
       }
       setStep('address');
@@ -189,7 +190,7 @@ export default function CheckoutScreen() {
         <TouchableOpacity onPress={back} style={styles.backBtn} disabled={step === 'confirm'}>
           {step !== 'confirm' && <Ionicons name="arrow-back" size={24} color="#fff" />}
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Commande</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('checkout.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -224,17 +225,17 @@ export default function CheckoutScreen() {
           {/* ── Étape 1 : Récapitulatif ── */}
           {step === 'recap' && (
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Récapitulatif de votre commande</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t('checkout.recap_title')}</ThemedText>
 
               {items.length === 0 ? (
                 <View style={styles.emptyCart}>
                   <Ionicons name="cart-outline" size={48} color="#ccc" />
-                  <ThemedText style={styles.emptyCartText}>Votre panier est vide</ThemedText>
+                  <ThemedText style={styles.emptyCartText}>{t('checkout.recap_empty')}</ThemedText>
                   <TouchableOpacity
                     style={styles.linkBtn}
                     onPress={() => router.push('/(tabs)/explore')}
                   >
-                    <ThemedText style={styles.linkBtnText}>Voir le catalogue</ThemedText>
+                    <ThemedText style={styles.linkBtnText}>{t('common.view_catalog')}</ThemedText>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -246,23 +247,21 @@ export default function CheckoutScreen() {
                   {items.some((i) => !i.available) && (
                     <View style={styles.warningBox}>
                       <Ionicons name="warning-outline" size={16} color="#e67e22" />
-                      <ThemedText style={styles.warningText}>
-                        Les articles indisponibles ne seront pas inclus dans la commande
-                      </ThemedText>
+                      <ThemedText style={styles.warningText}>{t('checkout.recap_warning')}</ThemedText>
                     </View>
                   )}
 
                   <View style={styles.totalCard}>
                     <View style={styles.totalRow}>
-                      <ThemedText style={styles.totalLabel}>Sous-total</ThemedText>
+                      <ThemedText style={styles.totalLabel}>{t('checkout.recap_subtotal')}</ThemedText>
                       <ThemedText style={styles.totalValue}>{total.toFixed(2)} €</ThemedText>
                     </View>
                     <View style={styles.totalRow}>
-                      <ThemedText style={styles.totalLabel}>TVA (20%)</ThemedText>
+                      <ThemedText style={styles.totalLabel}>{t('checkout.recap_vat')}</ThemedText>
                       <ThemedText style={styles.totalValue}>{(total * 0.2).toFixed(2)} €</ThemedText>
                     </View>
                     <View style={[styles.totalRow, styles.totalBorderTop]}>
-                      <ThemedText style={styles.totalLabelBold}>Total TTC</ThemedText>
+                      <ThemedText style={styles.totalLabelBold}>{t('checkout.recap_total')}</ThemedText>
                       <ThemedText style={styles.totalAmountBold}>{(total * 1.2).toFixed(2)} €</ThemedText>
                     </View>
                   </View>
@@ -274,20 +273,20 @@ export default function CheckoutScreen() {
           {/* ── Étape 2 : Adresse ── */}
           {step === 'address' && (
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Adresse de facturation</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t('checkout.address_title')}</ThemedText>
               <View style={styles.form}>
-                <LabeledInput label="Nom complet" value={fullName} onChangeText={setFullName} placeholder="Jean Dupont" />
-                <LabeledInput label="Rue et numéro" value={street} onChangeText={setStreet} placeholder="12 rue de la Paix" />
+                <LabeledInput label={t('checkout.address_fullname')} value={fullName} onChangeText={setFullName} placeholder={t('checkout.address_fullname_placeholder')} />
+                <LabeledInput label={t('checkout.address_street')} value={street} onChangeText={setStreet} placeholder={t('checkout.address_street_placeholder')} />
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <LabeledInput label="Code postal" value={zip} onChangeText={setZip} placeholder="75001" keyboardType="numeric" />
+                    <LabeledInput label={t('checkout.address_zip')} value={zip} onChangeText={setZip} placeholder={t('checkout.address_zip_placeholder')} keyboardType="numeric" />
                   </View>
                   <View style={{ width: 12 }} />
                   <View style={{ flex: 2 }}>
-                    <LabeledInput label="Ville" value={city} onChangeText={setCity} placeholder="Paris" />
+                    <LabeledInput label={t('checkout.address_city')} value={city} onChangeText={setCity} placeholder={t('checkout.address_city_placeholder')} />
                   </View>
                 </View>
-                <LabeledInput label="Pays" value={country} onChangeText={setCountry} placeholder="France" />
+                <LabeledInput label={t('checkout.address_country')} value={country} onChangeText={setCountry} placeholder="France" />
               </View>
             </View>
           )}
@@ -295,16 +294,16 @@ export default function CheckoutScreen() {
           {/* ── Étape 3 : Paiement ── */}
           {step === 'payment' && (
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Informations de paiement</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t('checkout.payment_title')}</ThemedText>
 
               <View style={styles.secureNote}>
                 <Ionicons name="lock-closed" size={14} color="#27ae60" />
-                <ThemedText style={styles.secureNoteText}>Paiement sécurisé par Stripe</ThemedText>
+                <ThemedText style={styles.secureNoteText}>{t('checkout.payment_secure')}</ThemedText>
               </View>
 
               <View style={styles.form}>
                 <LabeledInput
-                  label="Numéro de carte"
+                  label={t('checkout.payment_card_number')}
                   value={cardNumber}
                   onChangeText={(v) => setCardNumber(formatCard(v))}
                   placeholder="4242 4242 4242 4242"
@@ -313,7 +312,7 @@ export default function CheckoutScreen() {
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
                     <LabeledInput
-                      label="Expiration"
+                      label={t('checkout.payment_expiry')}
                       value={cardExpiry}
                       onChangeText={(v) => setCardExpiry(formatExpiry(v))}
                       placeholder="MM/AA"
@@ -323,7 +322,7 @@ export default function CheckoutScreen() {
                   <View style={{ width: 12 }} />
                   <View style={{ flex: 1 }}>
                     <LabeledInput
-                      label="CVC"
+                      label={t('checkout.payment_cvc')}
                       value={cardCvc}
                       onChangeText={(v) => setCardCvc(v.replace(/\D/g, '').slice(0, 4))}
                       placeholder="123"
@@ -333,7 +332,7 @@ export default function CheckoutScreen() {
                   </View>
                 </View>
                 <LabeledInput
-                  label="Nom sur la carte"
+                  label={t('checkout.payment_name')}
                   value={cardName}
                   onChangeText={setCardName}
                   placeholder="JEAN DUPONT"
@@ -343,7 +342,7 @@ export default function CheckoutScreen() {
 
               {/* Récap montant */}
               <View style={styles.paymentSummary}>
-                <ThemedText style={styles.paymentSummaryLabel}>Montant à débiter</ThemedText>
+                <ThemedText style={styles.paymentSummaryLabel}>{t('checkout.payment_amount')}</ThemedText>
                 <ThemedText style={styles.paymentSummaryAmount}>{(total * 1.2).toFixed(2)} €</ThemedText>
               </View>
             </View>
@@ -355,29 +354,27 @@ export default function CheckoutScreen() {
               <View style={styles.confirmIcon}>
                 <Ionicons name="checkmark-circle" size={72} color="#3b12a3" />
               </View>
-              <ThemedText style={styles.confirmTitle}>Commande confirmée !</ThemedText>
+              <ThemedText style={styles.confirmTitle}>{t('checkout.confirm_title')}</ThemedText>
               {orderId && (
                 <View style={styles.orderIdBox}>
-                  <ThemedText style={styles.orderIdLabel}>Numéro de commande</ThemedText>
+                  <ThemedText style={styles.orderIdLabel}>{t('checkout.confirm_order_label')}</ThemedText>
                   <ThemedText style={styles.orderIdValue}>#{orderId.slice(0, 8).toUpperCase()}</ThemedText>
                 </View>
               )}
-              <ThemedText style={styles.confirmSubtitle}>
-                Merci pour votre confiance. Un email de confirmation vous a été envoyé avec les détails de votre abonnement.
-              </ThemedText>
+              <ThemedText style={styles.confirmSubtitle}>{t('checkout.confirm_subtitle')}</ThemedText>
               <TouchableOpacity
                 style={styles.ctaButton}
                 onPress={() => router.replace('/(tabs)')}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.ctaButtonText}>Retour à l'accueil</ThemedText>
+                <ThemedText style={styles.ctaButtonText}>{t('checkout.confirm_back_home')}</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.ctaButtonOutline}
                 onPress={() => router.push('/orders')}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.ctaButtonOutlineText}>Voir mes commandes</ThemedText>
+                <ThemedText style={styles.ctaButtonOutlineText}>{t('checkout.confirm_view_orders')}</ThemedText>
               </TouchableOpacity>
             </View>
           )}
@@ -399,7 +396,7 @@ export default function CheckoutScreen() {
             ) : (
               <>
                 <ThemedText style={styles.nextBtnText}>
-                  {step === 'payment' ? 'Confirmer la commande' : 'Continuer'}
+                  {step === 'payment' ? t('checkout.next_confirm') : t('checkout.next_continue')}
                 </ThemedText>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
               </>
@@ -414,17 +411,18 @@ export default function CheckoutScreen() {
 // ── Sous-composants ────────────────────────────────────────────────────────────
 
 function RecapItem({ item }: { item: CartItem }) {
+  const { t } = useTranslation();
   const lineTotal = item.price * item.quantity * DURATION_DISCOUNT[item.duration];
   return (
     <View style={[styles.recapItem, !item.available && styles.recapItemUnavailable]}>
       <View style={styles.recapItemLeft}>
         <ThemedText style={styles.recapItemName} numberOfLines={2}>{item.name}</ThemedText>
         <ThemedText style={styles.recapItemMeta}>
-          {DURATION_LABELS[item.duration]} · Qté {item.quantity}
+          {DURATION_LABELS[item.duration]} · {t('checkout.item_qty', { qty: item.quantity })}
         </ThemedText>
         {!item.available && (
           <View style={styles.unavailableBadge}>
-            <ThemedText style={styles.unavailableBadgeText}>Non inclus</ThemedText>
+            <ThemedText style={styles.unavailableBadgeText}>{t('common.badge_not_included')}</ThemedText>
           </View>
         )}
       </View>

@@ -4,9 +4,11 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 
 export default function AddressesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -14,16 +16,14 @@ export default function AddressesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Carnet d'adresses</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('addresses.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
         <Ionicons name="location-outline" size={56} color="#ccc" />
-        <ThemedText style={styles.title}>Aucune adresse enregistrée</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Vos adresses de facturation seront sauvegardées ici lors de vos commandes.
-        </ThemedText>
+        <ThemedText style={styles.title}>{t('addresses.empty_title')}</ThemedText>
+        <ThemedText style={styles.subtitle}>{t('addresses.empty_subtitle')}</ThemedText>
       </View>
     </SafeAreaView>
   );

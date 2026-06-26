@@ -13,10 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 export default function CatalogueScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const initialQ = Array.isArray(params.q) ? params.q[0] : (params.q ?? '');
 
@@ -141,11 +143,11 @@ export default function CatalogueScreen() {
         )}
         <View style={styles.productFooter}>
           <ThemedText style={styles.productPrice}>
-            {item.prix === 0 ? 'Sur devis' : `${item.prix.toFixed(2)} €/mois`}
+            {item.prix === 0 ? t('common.price_on_quote') : t('common.price_per_month', { price: item.prix.toFixed(2) })}
           </ThemedText>
           {!item.disponible && (
             <View style={styles.badge}>
-              <ThemedText style={styles.badgeText}>Épuisé</ThemedText>
+              <ThemedText style={styles.badgeText}>{t('common.badge_out_of_stock')}</ThemedText>
             </View>
           )}
         </View>
@@ -169,7 +171,7 @@ export default function CatalogueScreen() {
           <Ionicons name="search-outline" size={18} color="#888" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Rechercher un service..."
+            placeholder={t('explore.search_placeholder')}
             placeholderTextColor="#aaa"
             value={search}
             onChangeText={setSearch}
@@ -187,7 +189,7 @@ export default function CatalogueScreen() {
           <View style={styles.priceRow}>
             <TextInput
               style={[styles.priceInput, { marginRight: 8 }]}
-              placeholder="Prix min"
+              placeholder={t('explore.filter_min_price')}
               placeholderTextColor="#aaa"
               value={minPrice}
               onChangeText={setMinPrice}
@@ -195,7 +197,7 @@ export default function CatalogueScreen() {
             />
             <TextInput
               style={styles.priceInput}
-              placeholder="Prix max"
+              placeholder={t('explore.filter_max_price')}
               placeholderTextColor="#aaa"
               value={maxPrice}
               onChangeText={setMaxPrice}
@@ -206,14 +208,14 @@ export default function CatalogueScreen() {
             <View style={[styles.checkbox, onlyAvailable && styles.checkboxChecked]}>
               {onlyAvailable && <ThemedText style={styles.checkmark}>✓</ThemedText>}
             </View>
-            <ThemedText style={styles.availableLabel}>Disponibles uniquement</ThemedText>
+            <ThemedText style={styles.availableLabel}>{t('explore.filter_available')}</ThemedText>
           </TouchableOpacity>
           <View style={styles.sortRow}>
             {([
-              { key: 'default',    label: 'Pertinence' },
-              { key: 'price_asc',  label: 'Prix ↑' },
-              { key: 'price_desc', label: 'Prix ↓' },
-              { key: 'name_asc',   label: 'A→Z' },
+              { key: 'default',    label: t('explore.sort_relevance') },
+              { key: 'price_asc',  label: t('explore.sort_price_asc') },
+              { key: 'price_desc', label: t('explore.sort_price_desc') },
+              { key: 'name_asc',   label: t('explore.sort_name_asc') },
             ] as { key: SortKey; label: string }[]).map((s) => (
               <TouchableOpacity
                 key={s.key}
@@ -232,7 +234,7 @@ export default function CatalogueScreen() {
       {/* Filtres catégories */}
       <View style={styles.catsWrapper}>
         <FlatList
-          data={[{ id: '', nom: 'Tous', slug: '' } as Category, ...categories]}
+          data={[{ id: '', nom: t('explore.all_categories'), slug: '' } as Category, ...categories]}
           keyExtractor={(c) => c.id || 'all'}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -270,16 +272,16 @@ export default function CatalogueScreen() {
               </View>
             ) : !hasMore && products.length > 0 ? (
               <View style={styles.listEnd}>
-                <ThemedText style={styles.listEndText}>— Fin des résultats —</ThemedText>
+                <ThemedText style={styles.listEndText}>{t('explore.end_results')}</ThemedText>
               </View>
             ) : null
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={48} color="#ccc" />
-              <ThemedText style={styles.emptyText}>Aucun résultat</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('explore.empty_title')}</ThemedText>
               <ThemedText style={styles.emptySubtext}>
-                {search.trim() ? 'Essayez avec d\'autres mots-clés' : 'Aucun service dans cette catégorie'}
+                {search.trim() ? t('explore.empty_other_keywords') : t('explore.empty_no_category')}
               </ThemedText>
             </View>
           }

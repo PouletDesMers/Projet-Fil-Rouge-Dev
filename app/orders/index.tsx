@@ -11,16 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, normalizeOrder, Order } from '@/services/api';
 import { downloadOrderPdf } from '@/services/pdf';
-
-const STATUS_LABEL: Record<string, string> = {
-  pending:   'En attente',
-  confirmed: 'Confirmée',
-  active:    'Active',
-  cancelled: 'Annulée',
-  completed: 'Terminée',
-};
 
 const STATUS_COLOR: Record<string, string> = {
   pending:   '#e67e22',
@@ -39,9 +32,18 @@ function groupByYear(orders: Order[]): Record<string, Order[]> {
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  const STATUS_LABEL: Record<string, string> = {
+    pending:   t('orders.status_pending'),
+    confirmed: t('orders.status_confirmed'),
+    active:    t('orders.status_active'),
+    cancelled: t('orders.status_cancelled'),
+    completed: t('orders.status_completed'),
+  };
 
   useEffect(() => {
     loadOrders();
@@ -80,7 +82,7 @@ export default function OrdersScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Mes commandes</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('orders.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -105,7 +107,7 @@ export default function OrdersScreen() {
                   <ThemedText style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</ThemedText>
                   <ThemedText style={styles.orderDate}>{date}</ThemedText>
                   <ThemedText style={styles.orderItems}>
-                    {order.items?.length ?? 0} article(s)
+                    {t('orders.items_count', { count: order.items?.length ?? 0 })}
                   </ThemedText>
                 </View>
                 <View style={styles.orderRight}>
@@ -134,7 +136,7 @@ export default function OrdersScreen() {
                       ? <ActivityIndicator size="small" color="#3b12a3" />
                       : <>
                           <Ionicons name="download-outline" size={16} color="#3b12a3" />
-                          <ThemedText style={styles.invoiceBtnText}>Facture</ThemedText>
+                          <ThemedText style={styles.invoiceBtnText}>{t('orders.invoice_button')}</ThemedText>
                         </>
                     }
                   </TouchableOpacity>
@@ -146,14 +148,14 @@ export default function OrdersScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="receipt-outline" size={56} color="#ccc" />
-            <ThemedText style={styles.emptyTitle}>Aucune commande</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>Vos commandes apparaîtront ici</ThemedText>
+            <ThemedText style={styles.emptyTitle}>{t('orders.empty_title')}</ThemedText>
+            <ThemedText style={styles.emptySubtitle}>{t('orders.empty_subtitle')}</ThemedText>
             <TouchableOpacity
               style={styles.ctaButton}
               onPress={() => router.push('/(tabs)/explore')}
               activeOpacity={0.8}
             >
-              <ThemedText style={styles.ctaText}>Découvrir nos services</ThemedText>
+              <ThemedText style={styles.ctaText}>{t('common.discover_services')}</ThemedText>
             </TouchableOpacity>
           </View>
         }

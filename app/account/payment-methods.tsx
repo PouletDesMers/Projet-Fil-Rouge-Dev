@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 interface Paiement {
@@ -30,15 +31,9 @@ const METHOD_ICON: Record<string, string> = {
   prélèvement:  'repeat-outline',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  completed: 'Réussi',
-  pending:   'En attente',
-  failed:    'Échoué',
-  refunded:  'Remboursé',
-};
-
 const STATUS_COLOR: Record<string, string> = {
   completed: '#27ae60',
+  paid:      '#27ae60',
   pending:   '#e67e22',
   failed:    '#e74c3c',
   refunded:  '#888',
@@ -46,8 +41,17 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [payments, setPayments] = useState<Paiement[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_LABEL: Record<string, string> = {
+    completed: t('payments.status_completed'),
+    paid:      t('payments.status_paid'),
+    pending:   t('payments.status_pending'),
+    failed:    t('payments.status_failed'),
+    refunded:  t('payments.status_refunded'),
+  };
 
   useEffect(() => {
     api.get<Paiement[]>('/api/paiements')
@@ -70,7 +74,7 @@ export default function PaymentMethodsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Méthodes de paiement</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('payments.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -80,7 +84,7 @@ export default function PaymentMethodsScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           payments.length > 0 ? (
-            <ThemedText style={styles.sectionLabel}>Historique des paiements</ThemedText>
+            <ThemedText style={styles.sectionLabel}>{t('payments.section_label')}</ThemedText>
           ) : null
         }
         renderItem={({ item }) => {
@@ -96,10 +100,10 @@ export default function PaymentMethodsScreen() {
                   <Ionicons name={iconName as never} size={22} color="#3b12a3" />
                 </View>
                 <View style={styles.cardBody}>
-                  <ThemedText style={styles.cardTitle}>{item.method ?? 'Carte'}</ThemedText>
+                  <ThemedText style={styles.cardTitle}>{item.method ?? t('payments.default_method')}</ThemedText>
                   <ThemedText style={styles.cardSub}>{date} · Commande #{item.orderId}</ThemedText>
                   {item.externalReference ? (
-                    <ThemedText style={styles.cardRef}>Réf : {item.externalReference}</ThemedText>
+                    <ThemedText style={styles.cardRef}>{t('payments.ref', { ref: item.externalReference })}</ThemedText>
                   ) : null}
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[statusKey] ?? '#888' }]}>
@@ -114,8 +118,8 @@ export default function PaymentMethodsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={56} color="#ccc" />
-            <ThemedText style={styles.emptyTitle}>Aucun paiement enregistré</ThemedText>
-            <ThemedText style={styles.emptySub}>Vos paiements apparaîtront ici après vos commandes</ThemedText>
+            <ThemedText style={styles.emptyTitle}>{t('payments.empty_title')}</ThemedText>
+            <ThemedText style={styles.emptySub}>{t('payments.empty_subtitle')}</ThemedText>
           </View>
         }
       />

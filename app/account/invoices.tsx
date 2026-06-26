@@ -11,11 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, normalizeOrder, Order } from '@/services/api';
 import { downloadOrderPdf } from '@/services/pdf';
 
 export default function InvoicesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export default function InvoicesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Mes factures</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('invoices.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -76,7 +78,7 @@ export default function InvoicesScreen() {
                 </View>
                 <View style={styles.cardBody}>
                   <ThemedText style={styles.cardTitle}>
-                    Facture #{item.id.slice(0, 8).toUpperCase()}
+                    {t('invoices.card_title', { id: item.id.slice(0, 8).toUpperCase() })}
                   </ThemedText>
                   <ThemedText style={styles.cardSub}>{date}</ThemedText>
                   <ThemedText style={styles.cardAmount}>{item.total.toFixed(2)} €</ThemedText>
@@ -92,7 +94,7 @@ export default function InvoicesScreen() {
                   ) : (
                     <>
                       <Ionicons name="download-outline" size={18} color="#3b12a3" />
-                      <ThemedText style={styles.downloadText}>PDF</ThemedText>
+                      <ThemedText style={styles.downloadText}>{t('invoices.download')}</ThemedText>
                     </>
                   )}
                 </TouchableOpacity>
@@ -103,8 +105,8 @@ export default function InvoicesScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={56} color="#ccc" />
-            <ThemedText style={styles.emptyTitle}>Aucune facture</ThemedText>
-            <ThemedText style={styles.emptySub}>Vos factures apparaîtront ici après vos commandes</ThemedText>
+            <ThemedText style={styles.emptyTitle}>{t('invoices.empty_title')}</ThemedText>
+            <ThemedText style={styles.emptySub}>{t('invoices.empty_subtitle')}</ThemedText>
           </View>
         }
       />

@@ -14,21 +14,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 type Step = 'email' | 'code' | 'password' | 'done';
 
 const PWD_RULES = [
-  { test: (p: string) => p.length >= 8,           label: '8 caractères minimum' },
-  { test: (p: string) => /[A-Z]/.test(p),         label: '1 lettre majuscule'   },
-  { test: (p: string) => /[0-9]/.test(p),         label: '1 chiffre'            },
-  { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: '1 caractère spécial'  },
+  { test: (p: string) => p.length >= 8,           label: 'common.rule_chars' },
+  { test: (p: string) => /[A-Z]/.test(p),         label: 'common.rule_upper' },
+  { test: (p: string) => /[0-9]/.test(p),         label: 'common.rule_digit' },
+  { test: (p: string) => /[^a-zA-Z0-9]/.test(p), label: 'common.rule_special' },
 ];
 
 const STEP_INDEX: Partial<Record<Step, number>> = { email: 0, code: 1, password: 2 };
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -54,17 +56,17 @@ export default function ForgotPasswordScreen() {
     setError(null);
     setEmailError(false);
     if (!email.trim()) {
-      setEmailError(true); setError('Veuillez saisir votre adresse e-mail'); return;
+      setEmailError(true); setError(t('forgot.error_email')); return;
     }
     if (!email.includes('@') || !email.includes('.')) {
-      setEmailError(true); setError('Adresse e-mail invalide'); return;
+      setEmailError(true); setError(t('forgot.error_invalid_email')); return;
     }
     setIsLoading(true);
     try {
       await api.post('/api/password-reset/request', { email: email.trim().toLowerCase() });
       setStep('code');
     } catch {
-      setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+      setError(t('common.network_error'));
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +76,7 @@ export default function ForgotPasswordScreen() {
     setError(null);
     setCodeError(false);
     if (!code.trim() || code.trim().length !== 6 || !/^\d{6}$/.test(code.trim())) {
-      setCodeError(true); setError('Veuillez saisir le code à 6 chiffres reçu par e-mail'); return;
+      setCodeError(true); setError(t('forgot.error_code')); return;
     }
     setStep('password');
   };
@@ -85,13 +87,13 @@ export default function ForgotPasswordScreen() {
     setConfirmError(false);
 
     if (!password) {
-      setPasswordError(true); setError('Veuillez saisir un nouveau mot de passe'); return;
+      setPasswordError(true); setError(t('forgot.error_password')); return;
     }
     if (!PWD_RULES.every(r => r.test(password))) {
-      setPasswordError(true); setError('Votre mot de passe ne respecte pas tous les critères'); return;
+      setPasswordError(true); setError(t('forgot.error_weak')); return;
     }
     if (password !== confirmPassword) {
-      setConfirmError(true); setError('Les mots de passe ne correspondent pas'); return;
+      setConfirmError(true); setError(t('forgot.error_mismatch')); return;
     }
 
     setIsLoading(true);
@@ -106,13 +108,13 @@ export default function ForgotPasswordScreen() {
       const isNetwork = err instanceof TypeError;
       const lc = err instanceof Error ? err.message.toLowerCase() : '';
       if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
-        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+        setError(t('common.network_error'));
       } else if (lc.includes('invalid') || lc.includes('expired') || lc.includes('already used')) {
         setStep('code');
         setCodeError(true);
-        setError('Code invalide ou expiré. Recommencez depuis le début.');
+        setError(t('forgot.error_expired'));
       } else {
-        setError('Une erreur est survenue. Veuillez réessayer.');
+        setError(t('forgot.error_generic'));
       }
     } finally {
       setIsLoading(false);
@@ -127,7 +129,7 @@ export default function ForgotPasswordScreen() {
           {step !== 'done' && (
             <TouchableOpacity onPress={goBack} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-              <ThemedText style={styles.backText}>Retour</ThemedText>
+              <ThemedText style={styles.backText}>{t('common.back')}</ThemedText>
             </TouchableOpacity>
           )}
 
@@ -147,14 +149,12 @@ export default function ForgotPasswordScreen() {
           {/* ── Étape 1 : e-mail ── */}
           {step === 'email' && (
             <>
-              <ThemedText style={styles.title}>Mot de passe oublié</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Saisissez votre adresse e-mail pour réinitialiser votre mot de passe.
-              </ThemedText>
+              <ThemedText style={styles.title}>{t('forgot.title_email')}</ThemedText>
+              <ThemedText style={styles.subtitle}>{t('forgot.subtitle_email')}</ThemedText>
               <View style={styles.form}>
                 <TextInput
                   style={[styles.input, emailError && styles.inputError]}
-                  placeholder="Adresse e-mail"
+                  placeholder={t('forgot.email_placeholder')}
                   placeholderTextColor="#888"
                   value={email}
                   onChangeText={v => { setEmail(v); setError(null); setEmailError(false); }}
@@ -172,11 +172,11 @@ export default function ForgotPasswordScreen() {
                   activeOpacity={0.8}
                 >
                   <ThemedText style={styles.buttonText}>
-                    {isLoading ? 'Envoi en cours...' : 'Continuer'}
+                    {isLoading ? t('forgot.button_loading') : t('forgot.button_submit')}
                   </ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.link}>
-                  <ThemedText style={styles.linkText}>Retour à la connexion</ThemedText>
+                  <ThemedText style={styles.linkText}>{t('forgot.back_login')}</ThemedText>
                 </TouchableOpacity>
               </View>
             </>
@@ -185,11 +185,9 @@ export default function ForgotPasswordScreen() {
           {/* ── Étape 2 : code OTP ── */}
           {step === 'code' && (
             <>
-              <ThemedText style={styles.title}>Vérification</ThemedText>
+              <ThemedText style={styles.title}>{t('forgot.title_code')}</ThemedText>
               <ThemedText style={styles.subtitle}>
-                Un code à 6 chiffres a été envoyé à{' '}
-                <ThemedText style={styles.emailHighlight}>{email}</ThemedText>.
-                {'\n'}Saisissez-le ci-dessous.
+                {t('forgot.subtitle_code', { email })}
               </ThemedText>
               <View style={styles.form}>
                 <TextInput
@@ -205,14 +203,14 @@ export default function ForgotPasswordScreen() {
                 />
                 <FormError message={error} />
                 <TouchableOpacity style={styles.button} onPress={handleCodeNext} activeOpacity={0.8}>
-                  <ThemedText style={styles.buttonText}>Valider</ThemedText>
+                  <ThemedText style={styles.buttonText}>{t('forgot.button_code')}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleEmailNext}
                   style={styles.link}
                   disabled={isLoading}
                 >
-                  <ThemedText style={styles.linkText}>Renvoyer le code</ThemedText>
+                  <ThemedText style={styles.linkText}>{t('forgot.resend_code')}</ThemedText>
                 </TouchableOpacity>
               </View>
             </>
@@ -221,16 +219,15 @@ export default function ForgotPasswordScreen() {
           {/* ── Étape 3 : nouveau mot de passe ── */}
           {step === 'password' && (
             <>
-              <ThemedText style={styles.title}>Nouveau mot de passe</ThemedText>
+              <ThemedText style={styles.title}>{t('forgot.title_new_password')}</ThemedText>
               <ThemedText style={styles.subtitle}>
-                Choisissez un nouveau mot de passe pour{' '}
-                <ThemedText style={styles.emailHighlight}>{email}</ThemedText>.
+                {t('forgot.subtitle_new_password', { email })}
               </ThemedText>
               <View style={styles.form}>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
-                    placeholder="Nouveau mot de passe"
+                    placeholder={t('forgot.new_password_placeholder')}
                     placeholderTextColor="#888"
                     value={password}
                     onChangeText={v => { setPassword(v); setError(null); setPasswordError(false); }}
@@ -254,7 +251,7 @@ export default function ForgotPasswordScreen() {
                             size={14}
                             color={ok ? '#16a34a' : '#9ca3af'}
                           />
-                          <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{label}</ThemedText>
+                          <ThemedText style={[styles.reqText, ok && styles.reqOk]}>{t(label)}</ThemedText>
                         </View>
                       );
                     })}
@@ -263,7 +260,7 @@ export default function ForgotPasswordScreen() {
 
                 <TextInput
                   style={[styles.input, confirmError && styles.inputError]}
-                  placeholder="Confirmer le mot de passe"
+                  placeholder={t('forgot.confirm_placeholder')}
                   placeholderTextColor="#888"
                   value={confirmPassword}
                   onChangeText={v => { setConfirmPassword(v); setError(null); setConfirmError(false); }}
@@ -281,7 +278,7 @@ export default function ForgotPasswordScreen() {
                   activeOpacity={0.8}
                 >
                   <ThemedText style={styles.buttonText}>
-                    {isLoading ? 'Enregistrement...' : 'Réinitialiser'}
+                    {isLoading ? t('forgot.button_reset_loading') : t('forgot.button_reset')}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -294,16 +291,14 @@ export default function ForgotPasswordScreen() {
               <View style={styles.successIcon}>
                 <Ionicons name="checkmark-circle" size={64} color="#16a34a" />
               </View>
-              <ThemedText style={styles.successTitle}>Mot de passe mis à jour !</ThemedText>
-              <ThemedText style={styles.successText}>
-                Votre mot de passe a été réinitialisé avec succès.
-              </ThemedText>
+              <ThemedText style={styles.successTitle}>{t('forgot.success_title')}</ThemedText>
+              <ThemedText style={styles.successText}>{t('forgot.success_text')}</ThemedText>
               <TouchableOpacity
                 style={styles.button}
                 onPress={() => router.replace('/(auth)/login')}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.buttonText}>Se connecter</ThemedText>
+                <ThemedText style={styles.buttonText}>{t('forgot.success_button')}</ThemedText>
               </TouchableOpacity>
             </View>
           )}

@@ -15,10 +15,12 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, UserProfile } from '@/services/api';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,7 @@ export default function ProfileScreen() {
       setLastName(data.lastName ?? '');
       setPhone(data.phone ?? '');
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger le profil.');
+      Alert.alert(t('common.error'), t('profile.load_error'));
     } finally {
       setLoading(false);
     }
@@ -48,17 +50,17 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Champs requis', 'Le prénom et le nom sont obligatoires.');
+      Alert.alert(t('profile.required_fields'), t('profile.required_fields'));
       return;
     }
     setSaving(true);
     try {
       await api.put('/api/user/profile', { firstName, lastName, phone });
-      Alert.alert('Succès', 'Profil mis à jour avec succès.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), t('profile.save_success'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch {
-      Alert.alert('Erreur', 'Impossible de mettre à jour le profil.');
+      Alert.alert(t('common.error'), t('profile.save_error'));
     } finally {
       setSaving(false);
     }
@@ -78,7 +80,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Informations personnelles</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('profile.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
@@ -88,7 +90,7 @@ export default function ProfileScreen() {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.card}>
-            <ThemedText style={styles.label}>Adresse e-mail</ThemedText>
+            <ThemedText style={styles.label}>{t('profile.email')}</ThemedText>
             <View style={styles.readonlyField}>
               <ThemedText style={styles.readonlyText}>{profile?.email}</ThemedText>
               <Ionicons name="lock-closed-outline" size={16} color="#aaa" />
@@ -96,36 +98,36 @@ export default function ProfileScreen() {
 
             <View style={styles.divider} />
 
-            <ThemedText style={styles.label}>Prénom</ThemedText>
+            <ThemedText style={styles.label}>{t('profile.firstname')}</ThemedText>
             <TextInput
               style={styles.input}
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Votre prénom"
+              placeholder={t('profile.firstname_placeholder')}
               autoCapitalize="words"
               returnKeyType="next"
             />
 
             <View style={styles.divider} />
 
-            <ThemedText style={styles.label}>Nom</ThemedText>
+            <ThemedText style={styles.label}>{t('profile.lastname')}</ThemedText>
             <TextInput
               style={styles.input}
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Votre nom"
+              placeholder={t('profile.lastname_placeholder')}
               autoCapitalize="words"
               returnKeyType="next"
             />
 
             <View style={styles.divider} />
 
-            <ThemedText style={styles.label}>Téléphone</ThemedText>
+            <ThemedText style={styles.label}>{t('profile.phone')}</ThemedText>
             <TextInput
               style={styles.input}
               value={phone}
               onChangeText={setPhone}
-              placeholder="+33 6 00 00 00 00"
+              placeholder={t('profile.phone_placeholder')}
               keyboardType="phone-pad"
               returnKeyType="done"
             />
@@ -139,7 +141,7 @@ export default function ProfileScreen() {
           >
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <ThemedText style={styles.saveBtnText}>Enregistrer</ThemedText>
+              : <ThemedText style={styles.saveBtnText}>{t('profile.save')}</ThemedText>
             }
           </TouchableOpacity>
         </ScrollView>

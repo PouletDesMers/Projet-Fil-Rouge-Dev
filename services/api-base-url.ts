@@ -33,5 +33,5 @@ export function resolveApiBaseUrl() {
     return `http://${host}:8080`;
   }
 
-  return 'https://api.cyna.com';
+  return 'https://api-cyna.atkk.fr';
 }

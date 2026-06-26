@@ -1,45 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 
 export default function AboutScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const services = [
+    { icon: 'shield-checkmark-outline', label: t('about.service_soc') },
+    { icon: 'scan-outline',             label: t('about.service_edr') },
+    { icon: 'server-outline',           label: t('about.service_siem') },
+    { icon: 'bug-outline',              label: t('about.service_pentest') },
+    { icon: 'people-outline',           label: t('about.service_training') },
+  ];
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>À propos de Cyna</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('about.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.logoBox}>
           <ThemedText style={styles.logo}>CYNA</ThemedText>
-          <ThemedText style={styles.tagline}>Cybersécurité as a Service</ThemedText>
+          <ThemedText style={styles.tagline}>{t('about.tagline')}</ThemedText>
         </View>
 
         <View style={styles.card}>
-          <ThemedText style={styles.sectionTitle}>Notre mission</ThemedText>
-          <ThemedText style={styles.text}>
-            Cyna est une entreprise spécialisée dans les solutions de cybersécurité pour les PME et ETI.
-            Notre mission est de rendre la cybersécurité accessible, efficace et abordable pour toutes les organisations.
-          </ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('about.mission_title')}</ThemedText>
+          <ThemedText style={styles.text}>{t('about.mission_text')}</ThemedText>
         </View>
 
         <View style={styles.card}>
-          <ThemedText style={styles.sectionTitle}>Nos services</ThemedText>
-          {[
-            { icon: 'shield-checkmark-outline', label: 'SOC as a Service' },
-            { icon: 'scan-outline',             label: 'EDR managé' },
-            { icon: 'server-outline',           label: 'SIEM cloud' },
-            { icon: 'bug-outline',              label: 'Pentest & Audit' },
-            { icon: 'people-outline',           label: 'Formation & Sensibilisation' },
-          ].map(({ icon, label }) => (
+          <ThemedText style={styles.sectionTitle}>{t('about.services_title')}</ThemedText>
+          {services.map(({ icon, label }) => (
             <View key={label} style={styles.serviceItem}>
               <Ionicons name={icon as never} size={20} color="#3b12a3" />
               <ThemedText style={styles.serviceLabel}>{label}</ThemedText>
@@ -48,12 +49,12 @@ export default function AboutScreen() {
         </View>
 
         <View style={styles.card}>
-          <ThemedText style={styles.sectionTitle}>Contact</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('about.contact_title')}</ThemedText>
           <ThemedText style={styles.text}>support@cyna-it.fr</ThemedText>
           <ThemedText style={styles.text}>www.cyna-it.fr</ThemedText>
         </View>
 
-        <ThemedText style={styles.version}>Version 1.0.0</ThemedText>
+        <ThemedText style={styles.version}>{t('about.version')}</ThemedText>
       </ScrollView>
     </SafeAreaView>
   );

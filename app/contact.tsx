@@ -15,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 export default function ContactScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -27,11 +29,11 @@ export default function ContactScreen() {
 
   const handleSubmit = async () => {
     if (!isAuthenticated && !email.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir votre adresse e-mail');
+      Alert.alert(t('common.error'), t('contact.error_email'));
       return;
     }
     if (!subject.trim() || !message.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir le sujet et le message');
+      Alert.alert(t('common.error'), t('contact.error_fields'));
       return;
     }
     setIsLoading(true);
@@ -41,13 +43,13 @@ export default function ContactScreen() {
       if (!isAuthenticated) payload.email = email.trim();
       await api.post(endpoint, payload);
       Alert.alert(
-        'Message envoyé',
-        'Notre équipe vous répondra dans les plus brefs délais.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        t('contact.success_title'),
+        t('contact.success_message'),
+        [{ text: t('common.ok'), onPress: () => router.back() }]
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Impossible d\'envoyer le message';
-      Alert.alert('Erreur', msg);
+      const msg = err instanceof Error ? err.message : t('common.network_error');
+      Alert.alert(t('common.error'), msg);
     } finally {
       setIsLoading(false);
     }
@@ -59,13 +61,12 @@ export default function ContactScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Contact</ThemedText>
+        <ThemedText style={styles.headerTitle}>{t('contact.header')}</ThemedText>
         <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {/* Infos contact */}
           <View style={styles.infoBox}>
             <View style={styles.infoItem}>
               <Ionicons name="mail-outline" size={20} color="#3b12a3" />
@@ -73,16 +74,16 @@ export default function ContactScreen() {
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="time-outline" size={20} color="#3b12a3" />
-              <ThemedText style={styles.infoText}>Lun–Ven : 9h–18h</ThemedText>
+              <ThemedText style={styles.infoText}>{t('contact.hours')}</ThemedText>
             </View>
           </View>
 
           <View style={styles.form}>
-            <ThemedText style={styles.formTitle}>Envoyer un message</ThemedText>
+            <ThemedText style={styles.formTitle}>{t('contact.form_title')}</ThemedText>
             {!isAuthenticated && (
               <TextInput
                 style={styles.input}
-                placeholder="Votre e-mail *"
+                placeholder={t('contact.email_placeholder')}
                 placeholderTextColor="#aaa"
                 value={email}
                 onChangeText={setEmail}
@@ -92,14 +93,14 @@ export default function ContactScreen() {
             )}
             <TextInput
               style={styles.input}
-              placeholder="Sujet *"
+              placeholder={t('contact.subject_placeholder')}
               placeholderTextColor="#aaa"
               value={subject}
               onChangeText={setSubject}
             />
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Votre message *"
+              placeholder={t('contact.message_placeholder')}
               placeholderTextColor="#aaa"
               value={message}
               onChangeText={setMessage}
@@ -115,12 +116,12 @@ export default function ContactScreen() {
             >
               <Ionicons name="send-outline" size={18} color="#fff" />
               <ThemedText style={styles.buttonText}>
-                {isLoading ? 'Envoi...' : 'Envoyer'}
+                {isLoading ? t('contact.loading') : t('contact.submit')}
               </ThemedText>
             </TouchableOpacity>
             {!isAuthenticated && (
               <TouchableOpacity onPress={() => router.push('/(auth)/login')} activeOpacity={0.7}>
-                <ThemedText style={styles.loginLink}>Déjà client ? Se connecter</ThemedText>
+                <ThemedText style={styles.loginLink}>{t('contact.login_link')}</ThemedText>
               </TouchableOpacity>
             )}
           </View>

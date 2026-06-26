@@ -15,9 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormError } from '@/components/form-error';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { useTranslation } from '@/context/language-context';
 import { api } from '@/services/api';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,16 +69,16 @@ export default function LoginScreen() {
       setPasswordError(emptyPassword);
       setError(
         emptyEmail && emptyPassword
-          ? 'Veuillez remplir tous les champs'
+          ? t('login.error_fields')
           : emptyEmail
-          ? 'Veuillez saisir votre adresse e-mail'
-          : 'Veuillez saisir votre mot de passe'
+          ? t('login.error_email')
+          : t('login.error_password')
       );
       return;
     }
     if (!email.includes('@')) {
       setEmailError(true);
-      setError('Adresse e-mail invalide');
+      setError(t('login.error_invalid_email'));
       return;
     }
     setIsLoading(true);
@@ -92,16 +94,16 @@ export default function LoginScreen() {
       const isNetwork = err instanceof TypeError;
       const lc = err instanceof Error ? err.message.toLowerCase() : '';
       if (isNetwork || lc.includes('network') || lc.includes('failed to fetch')) {
-        setError('Impossible de contacter le serveur. Vérifiez votre connexion Internet.');
+        setError(t('common.network_error'));
       } else if (lc.includes('not verified') || lc.includes('verify your email') || lc.includes('email not verified')) {
         setEmailNotVerified(true);
-        setError("Votre e-mail n'est pas encore vérifié.");
+        setError(t('login.error_not_verified'));
       } else if (lc.includes('disabled') || lc.includes('account is disabled')) {
-        setError('Votre compte a été désactivé. Contactez le support CYNA.');
+        setError(t('login.error_disabled'));
       } else {
         setEmailError(true);
         setPasswordError(true);
-        setError('Email ou mot de passe incorrect.');
+        setError(t('login.error_credentials'));
       }
     } finally {
       setIsLoading(false);
@@ -115,7 +117,7 @@ export default function LoginScreen() {
     try {
       await login(pendingCreds.current.email, pendingCreds.current.password, totpCode.trim());
     } catch {
-      setTotpError('Code invalide ou expiré — vérifiez et réessayez.');
+      setTotpError(t('login.twofa_error'));
       setTotpCode('');
     } finally {
       setIsLoading(false);
@@ -138,19 +140,17 @@ export default function LoginScreen() {
             <View style={styles.topSection}>
               <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
               <ThemedText style={styles.logo}>CYNA</ThemedText>
-              <ThemedText style={styles.tagline}>Vérification en deux étapes</ThemedText>
+              <ThemedText style={styles.tagline}>{t('login.twofa_tagline')}</ThemedText>
             </View>
 
             <View style={styles.card}>
               <TouchableOpacity onPress={handleBack2fa} style={styles.backBtn}>
                 <Ionicons name="arrow-back" size={22} color="#3b12a3" />
-                <ThemedText style={styles.backText}>Retour</ThemedText>
+                <ThemedText style={styles.backText}>{t('common.back')}</ThemedText>
               </TouchableOpacity>
 
-              <ThemedText style={styles.title}>Vérification</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Ouvrez votre application d'authentification et saisissez le code à 6 chiffres.
-              </ThemedText>
+              <ThemedText style={styles.title}>{t('login.twofa_title')}</ThemedText>
+              <ThemedText style={styles.subtitle}>{t('login.twofa_subtitle')}</ThemedText>
 
               <View style={styles.form}>
                 <View style={styles.totpContainer}>
@@ -179,7 +179,7 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                 >
                   <ThemedText style={styles.buttonText}>
-                    {isLoading ? 'Vérification...' : 'Valider'}
+                    {isLoading ? t('login.twofa_loading') : t('login.twofa_submit')}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -198,17 +198,17 @@ export default function LoginScreen() {
           <View style={styles.topSection}>
             <Ionicons name="shield-checkmark" size={56} color="rgba(255,255,255,0.9)" />
             <ThemedText style={styles.logo}>CYNA</ThemedText>
-            <ThemedText style={styles.tagline}>Cybersécurité managée pour les PME</ThemedText>
+            <ThemedText style={styles.tagline}>{t('login.tagline')}</ThemedText>
           </View>
 
           <View style={styles.card}>
-            <ThemedText style={styles.title}>Bienvenue</ThemedText>
-            <ThemedText style={styles.subtitle}>Connectez-vous pour continuer</ThemedText>
+            <ThemedText style={styles.title}>{t('login.title')}</ThemedText>
+            <ThemedText style={styles.subtitle}>{t('login.subtitle')}</ThemedText>
 
             <View style={styles.form}>
               <TextInput
                 style={[styles.input, emailError && styles.inputError]}
-                placeholder="Adresse e-mail"
+                placeholder={t('login.email_placeholder')}
                 placeholderTextColor="#888"
                 value={email}
                 onChangeText={v => { setEmail(v); clearErrors(); }}
@@ -221,7 +221,7 @@ export default function LoginScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, styles.passwordInput, passwordError && styles.inputError]}
-                  placeholder="Mot de passe"
+                  placeholder={t('login.password_placeholder')}
                   placeholderTextColor="#888"
                   value={password}
                   onChangeText={v => { setPassword(v); clearErrors(); }}
@@ -235,7 +235,7 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotLink}>
-                <ThemedText style={styles.forgotText}>Mot de passe oublié ?</ThemedText>
+                <ThemedText style={styles.forgotText}>{t('login.forgot')}</ThemedText>
               </TouchableOpacity>
 
               <FormError message={error} />
@@ -248,10 +248,10 @@ export default function LoginScreen() {
                 >
                   <ThemedText style={styles.resendText}>
                     {resendDone
-                      ? '✓ Email de vérification renvoyé'
+                      ? t('login.resend_done')
                       : resendLoading
-                      ? 'Envoi...'
-                      : 'Renvoyer l\'email de vérification'}
+                      ? t('login.resend_loading')
+                      : t('login.resend_action')}
                   </ThemedText>
                 </TouchableOpacity>
               )}
@@ -262,17 +262,17 @@ export default function LoginScreen() {
                 disabled={isLoading}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Se connecter"
+                accessibilityLabel={t('login.submit')}
               >
                 <ThemedText style={styles.buttonText}>
-                  {isLoading ? 'Connexion...' : 'Se connecter'}
+                  {isLoading ? t('login.loading') : t('login.submit')}
                 </ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={styles.link}>
                 <ThemedText style={styles.linkSubText}>
-                  Pas encore de compte ?{' '}
-                  <ThemedText style={styles.linkText}>S'inscrire</ThemedText>
+                  {t('login.no_account')}{' '}
+                  <ThemedText style={styles.linkText}>{t('login.register')}</ThemedText>
                 </ThemedText>
               </TouchableOpacity>
             </View>

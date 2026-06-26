@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, CarouselImage, Category, normalizeCarouselImage, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 const { width: W } = Dimensions.get('window');
@@ -22,6 +23,7 @@ const CARD_W = Math.floor((W - 48) / 2);
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [topProducts, setTopProducts] = useState<Product[]>([]);
@@ -57,7 +59,7 @@ export default function HomeScreen() {
   };
 
   const formatPrice = (prix: number) =>
-    prix === 0 ? 'Sur devis' : `${prix.toFixed(2)} €/mois`;
+    prix === 0 ? t('common.price_on_quote') : t('common.price_per_month', { price: prix.toFixed(2) });
 
   if (loading) {
     return (
@@ -78,13 +80,13 @@ export default function HomeScreen() {
           </View>
           <View style={styles.brandRow}>
             <ThemedText style={styles.brandLogo}>CYNA</ThemedText>
-            <ThemedText style={styles.brandTagline}>Cybersécurité managée pour les PME</ThemedText>
+            <ThemedText style={styles.brandTagline}>{t('home.tagline')}</ThemedText>
           </View>
           <View style={styles.searchRow}>
             <Ionicons name="search-outline" size={16} color="#aaa" style={{ marginLeft: 12 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Rechercher un service..."
+              placeholder={t('home.search_placeholder')}
               placeholderTextColor="#aaa"
               value={search}
               onChangeText={setSearch}
@@ -150,9 +152,9 @@ export default function HomeScreen() {
         {categories.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Nos catégories</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t('home.categories_title')}</ThemedText>
               <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-                <ThemedText style={styles.seeAll}>Voir tout</ThemedText>
+                <ThemedText style={styles.seeAll}>{t('common.see_all')}</ThemedText>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -188,9 +190,9 @@ export default function HomeScreen() {
         {topProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Nos services phares</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t('home.products_title')}</ThemedText>
               <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-                <ThemedText style={styles.seeAll}>Voir tout</ThemedText>
+                <ThemedText style={styles.seeAll}>{t('common.see_all')}</ThemedText>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productList}>
@@ -211,7 +213,7 @@ export default function HomeScreen() {
                     <ThemedText style={styles.productPrice} numberOfLines={1}>{formatPrice(p.prix)}</ThemedText>
                     {!p.disponible && (
                       <View style={styles.badge}>
-                        <ThemedText style={styles.badgeText}>Épuisé</ThemedText>
+                        <ThemedText style={styles.badgeText}>{t('common.badge_out_of_stock')}</ThemedText>
                       </View>
                     )}
                   </View>
@@ -225,12 +227,10 @@ export default function HomeScreen() {
         {carousel.length === 0 && categories.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="shield-checkmark-outline" size={72} color="#3b12a3" />
-            <ThemedText style={styles.emptyTitle}>Bienvenue sur CYNA</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-              Découvrez nos solutions de cybersécurité managées
-            </ThemedText>
+            <ThemedText style={styles.emptyTitle}>{t('home.empty_title')}</ThemedText>
+            <ThemedText style={styles.emptySubtitle}>{t('home.empty_subtitle')}</ThemedText>
             <TouchableOpacity style={styles.ctaButton} onPress={() => router.push('/(tabs)/explore')} activeOpacity={0.8}>
-              <ThemedText style={styles.ctaText}>Voir le catalogue</ThemedText>
+              <ThemedText style={styles.ctaText}>{t('common.view_catalog')}</ThemedText>
             </TouchableOpacity>
           </View>
         )}

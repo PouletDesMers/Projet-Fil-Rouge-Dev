@@ -6,18 +6,19 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, Category, normalizeCategory, normalizeProduct, Product } from '@/services/api';
 
 export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const [category, setCategory] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,11 +109,11 @@ export default function CategoryScreen() {
         )}
         <View style={styles.productFooter}>
           <ThemedText style={styles.productPrice}>
-            {item.prix === 0 ? 'Sur devis' : `${item.prix.toFixed(2)} €/mois`}
+            {item.prix === 0 ? t('common.price_on_quote') : t('common.price_per_month', { price: item.prix.toFixed(2) })}
           </ThemedText>
           {!item.disponible && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Épuisé</Text>
+              <ThemedText style={styles.badgeText}>{t('common.badge_out_of_stock')}</ThemedText>
             </View>
           )}
         </View>
@@ -130,13 +131,12 @@ export default function CategoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle} numberOfLines={1}>
-          {category?.nom ?? 'Catégorie'}
+          {category?.nom ?? t('category.header_fallback')}
         </ThemedText>
         <View style={{ width: 40 }} />
       </View>
@@ -158,7 +158,7 @@ export default function CategoryScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={48} color="#ccc" />
-            <ThemedText style={styles.emptyText}>Aucun produit dans cette catégorie</ThemedText>
+            <ThemedText style={styles.emptyText}>{t('category.empty')}</ThemedText>
           </View>
         }
         ListHeaderComponent={
