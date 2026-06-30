@@ -1,11 +1,12 @@
 const { Resend } = require("resend");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
 async function sendWelcomeEmail(email, firstName) {
   try {
     const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: RESEND_FROM,
       to: email,
       subject: "Bienvenue sur CYNA!",
       html: `
@@ -27,7 +28,7 @@ async function sendVerificationEmail(email, firstName, verificationToken) {
   try {
     const verificationLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/verify-email.html?token=${verificationToken}`;
     const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: RESEND_FROM,
       to: email,
       subject: "Vérifiez votre adresse email CYNA",
       html: `
@@ -52,7 +53,7 @@ async function sendPasswordResetEmail(email, resetToken) {
   try {
     const resetLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password.html?token=${resetToken}`;
     const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: RESEND_FROM,
       to: email,
       subject: "Réinitialiser votre mot de passe CYNA",
       html: `
