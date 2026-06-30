@@ -112,10 +112,9 @@ app.use(cookieParser());
 app.use(
   csrfOriginGuard({
     allowedOrigins: [
-      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL || "http://localhost:3000",
       process.env.APP_ORIGIN,
-      "http://localhost:3000",
-    ],
+    ].filter(Boolean),
   }),
 );
 app.use("/api", apiLimiter);
@@ -2580,8 +2579,9 @@ app.use((req, res) => {
 });
 
 // Start server
+const frontendUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running at ${frontendUrl}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`Health check: http://localhost:${port}/health`);
+  console.log(`Health check: ${frontendUrl}/health`);
 });

@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"os"
+	"strings"
 )
 
 func SecurityHeaders(next http.Handler) http.Handler {
@@ -18,12 +20,28 @@ func SecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func CORS(next http.Handler) http.Handler {
+// buildAllowedOrigins lit la variable d'environnement ALLOWED_ORIGINS
+// (liste d'URLs séparées par des virgules) et construit un map.
+func buildAllowedOrigins() map[string]bool {
 	allowed := map[string]bool{
-		"http://localhost:3000": true,
-		"https://cyna.fr":      true,
-		"https://app.cyna.fr":  true,
+		"https://cyna.fr":     true,
+		"https://app.cyna.fr": true,
 	}
+	originsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if originsEnv == "" {
+		originsEnv = "http://localhost:3000"
+	}
+	for _, origin := range strings.Split(originsEnv, ",") {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			allowed[origin] = true
+		}
+	}
+	return allowed
+}
+
+func CORS(next http.Handler) http.Handler {
+	allowed := buildAllowedOrigins()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if allowed[origin] {

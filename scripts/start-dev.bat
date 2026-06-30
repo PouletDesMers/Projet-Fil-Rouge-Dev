@@ -1,4 +1,10 @@
 @echo off
+setlocal
+
+REM Utiliser les variables d'environnement ou les valeurs par défaut
+if "%API_URL%"=="" set API_URL=http://localhost:8080
+if "%FRONTEND_URL%"=="" set FRONTEND_URL=http://localhost:3000
+
 echo ========================================
 echo  DEMARRAGE ENVIRONNEMENT DE DEV - CYNA
 echo ========================================
@@ -20,9 +26,9 @@ echo ========================================
 echo  Services demarres !
 echo ========================================
 echo.
-echo API Backend:     http://localhost:8080
-echo Frontend Web:    http://localhost:3000
-echo PostgreSQL DB:   localhost:5432
+echo API Backend:     %API_URL%
+echo Frontend Web:    %FRONTEND_URL%
+echo PostgreSQL DB:   %DB_HOST%:%DB_PORT%
 echo.
 echo Pour lancer l'app mobile: npm start
 echo Pour voir les logs: docker-compose logs -f

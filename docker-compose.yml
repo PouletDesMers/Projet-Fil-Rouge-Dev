@@ -35,6 +35,8 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,https://cyna.fr,https://app.cyna.fr}
+      API_URL: ${API_URL:-http://localhost:8080}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     volumes:

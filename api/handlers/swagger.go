@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -170,6 +171,15 @@ func GetSwaggerSpec(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
+		apiURL = "http://localhost:8080"
+	}
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
 	spec := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
@@ -177,7 +187,7 @@ func GetSwaggerSpec(w http.ResponseWriter, r *http.Request) {
 			"description": "API REST — générée dynamiquement depuis les routes enregistrées",
 			"version":     "1.0.0",
 		},
-		"servers": []map[string]interface{}{{"url": "http://localhost:8080", "description": "API Go directe"}},
+		"servers": []map[string]interface{}{{"url": apiURL, "description": "API Go directe"}},
 		"components": map[string]interface{}{
 			"securitySchemes": map[string]interface{}{
 				"BearerAuth": map[string]interface{}{
@@ -189,6 +199,6 @@ func GetSwaggerSpec(w http.ResponseWriter, r *http.Request) {
 		"paths": paths,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Origin", frontendURL)
 	json.NewEncoder(w).Encode(spec)
 }
