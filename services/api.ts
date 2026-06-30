@@ -214,7 +214,12 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     prix:        prix ?? 0,
     image:       images[0],
     images:      images,
-    disponible:  raw.actif !== false && statut !== 'Indisponible' && statut.toLowerCase() !== 'inactif',
+    disponible:  raw.actif !== false
+      && statut !== 'Indisponible'
+      && statut.toLowerCase() !== 'inactif'
+      && statut.toLowerCase() !== 'epuise'
+      && statut.toLowerCase() !== 'épuisé'
+      && statut.toLowerCase() !== 'out_of_stock',
     priorite:    (raw.ordre_affichage ?? 0) as number,
     categorie:   (raw.categorie_slug || raw.id_categorie) ? {
       id:          String(raw.id_categorie ?? ''),

@@ -62,9 +62,9 @@ export default function ChangePasswordScreen() {
 
     setSaving(true);
     try {
-      await api.put('/api/user/profile', {
-        motDePasse: newPassword,
-        ancienMotDePasse: currentPassword,
+      await api.put('/api/user/change-password', {
+        currentPassword,
+        newPassword,
       });
       Alert.alert(t('common.success'), t('change_password.success'), [
         { text: t('common.ok'), onPress: () => router.back() },

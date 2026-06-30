@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -20,23 +21,30 @@ export default function InvoicesScreen() {
   const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get<Record<string, unknown>[]>('/api/commandes')
-      .then(data => setOrders((data || []).map(normalizeOrder)))
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const loadInvoices = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const data = await api.get<Record<string, unknown>[]>('/api/commandes');
+      setOrders((data || []).map(normalizeOrder));
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { loadInvoices(); }, []);
 
   const handleDownload = async (order: Order) => {
     setDownloading(order.id);
     try {
-      // Charger le détail de la commande pour avoir les articles
       const detail = await api.get<Record<string, unknown>>(`/api/commandes/${order.id}`);
       await downloadOrderPdf(normalizeOrder(detail));
     } catch {
-      // Si le détail échoue, utiliser les données qu'on a déjà
       await downloadOrderPdf(order);
     } finally {
       setDownloading(null);
@@ -65,6 +73,9 @@ export default function InvoicesScreen() {
         data={orders}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadInvoices(true)} colors={['#3b12a3']} tintColor="#3b12a3" />
+        }
         renderItem={({ item }) => {
           const date = item.date
             ? new Date(item.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -107,6 +118,10 @@ export default function InvoicesScreen() {
             <Ionicons name="document-text-outline" size={56} color="#ccc" />
             <ThemedText style={styles.emptyTitle}>{t('invoices.empty_title')}</ThemedText>
             <ThemedText style={styles.emptySub}>{t('invoices.empty_subtitle')}</ThemedText>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => loadInvoices(true)} activeOpacity={0.8}>
+              <Ionicons name="refresh-outline" size={16} color="#3b12a3" />
+              <ThemedText style={styles.retryText}>{t('common.retry')}</ThemedText>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -145,4 +160,6 @@ const styles = StyleSheet.create({
   empty:      { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
   emptySub:   { fontSize: 14, color: '#666', textAlign: 'center', paddingHorizontal: 32 },
+  retryBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0ecff', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 4 },
+  retryText:  { fontSize: 14, color: '#3b12a3', fontWeight: '600' },
 });

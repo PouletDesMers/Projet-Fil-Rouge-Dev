@@ -11,16 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/context/language-context';
 import { api, normalizeOrder, Order } from '@/services/api';
 import { downloadOrderPdf } from '@/services/pdf';
-
-const STATUS_LABEL: Record<string, string> = {
-  pending:   'En attente',
-  confirmed: 'Confirmée',
-  active:    'Active',
-  cancelled: 'Annulée',
-  completed: 'Terminée',
-};
 
 const STATUS_COLOR: Record<string, string> = {
   pending:   '#e67e22',
@@ -30,14 +23,9 @@ const STATUS_COLOR: Record<string, string> = {
   completed: '#888',
 };
 
-const DURATION_LABEL: Record<string, string> = {
-  '1month':  '1 mois',
-  '1year':   '1 an',
-  '2years':  '2 ans',
-};
-
 export default function OrderDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +39,19 @@ export default function OrderDetailScreen() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const durationLabel = (d?: string) => {
+    if (!d) return '';
+    const map: Record<string, string> = {
+      '1month':  t('orders.duration_1month'),
+      '1_month': t('orders.duration_1month'),
+      '1year':   t('orders.duration_1year'),
+      '1_year':  t('orders.duration_1year'),
+      '2years':  t('orders.duration_2years'),
+      '2_years': t('orders.duration_2years'),
+    };
+    return map[d] ?? d;
+  };
 
   if (loading) {
     return (
@@ -67,14 +68,14 @@ export default function OrderDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Détail commande</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t('orders.detail_header')}</ThemedText>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
-          <ThemedText style={styles.errorText}>Commande introuvable</ThemedText>
+          <ThemedText style={styles.errorText}>{t('orders.not_found')}</ThemedText>
           <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-            <ThemedText style={styles.backLinkText}>Retour aux commandes</ThemedText>
+            <ThemedText style={styles.backLinkText}>{t('orders.back_link')}</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -88,13 +89,26 @@ export default function OrderDetailScreen() {
   const taxAmount = order.total * 0.2 / 1.2;
   const htAmount = order.total - taxAmount;
 
+  const statusLabel = (() => {
+    const map: Record<string, string> = {
+      pending:   t('orders.status_pending'),
+      confirmed: t('orders.status_confirmed'),
+      active:    t('orders.status_active'),
+      cancelled: t('orders.status_cancelled'),
+      completed: t('orders.status_completed'),
+    };
+    return map[statusKey] ?? order.status;
+  })();
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <ThemedText style={styles.headerTitle}>Commande #{order.id.slice(0, 8).toUpperCase()}</ThemedText>
+        <ThemedText style={styles.headerTitle}>
+          {t('orders.detail_title', { id: order.id.slice(0, 8).toUpperCase() })}
+        </ThemedText>
         <TouchableOpacity
           style={styles.pdfBtn}
           onPress={async () => {
@@ -115,9 +129,7 @@ export default function OrderDetailScreen() {
         <View style={styles.card}>
           <View style={styles.statusRow}>
             <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[statusKey] ?? '#888' }]}>
-              <ThemedText style={styles.statusText}>
-                {STATUS_LABEL[statusKey] ?? order.status}
-              </ThemedText>
+              <ThemedText style={styles.statusText}>{statusLabel}</ThemedText>
             </View>
             <ThemedText style={styles.dateText}>{date}</ThemedText>
           </View>
@@ -126,7 +138,7 @@ export default function OrderDetailScreen() {
         {/* Articles */}
         {order.items && order.items.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Articles commandés</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('orders.items_section')}</ThemedText>
             <View style={styles.card}>
               {order.items.map((item, index) => (
                 <View key={index}>
@@ -135,8 +147,8 @@ export default function OrderDetailScreen() {
                     <View style={styles.itemInfo}>
                       <ThemedText style={styles.itemName}>{item.productName || item.productId}</ThemedText>
                       <ThemedText style={styles.itemMeta}>
-                        Qté : {item.quantity}
-                        {item.duration ? ` · ${DURATION_LABEL[item.duration] ?? item.duration}` : ''}
+                        {t('orders.item_qty', { qty: item.quantity })}
+                        {item.duration ? ` · ${durationLabel(item.duration)}` : ''}
                       </ThemedText>
                     </View>
                     <ThemedText style={styles.itemPrice}>
@@ -151,20 +163,20 @@ export default function OrderDetailScreen() {
 
         {/* Récapitulatif financier */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Récapitulatif</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('orders.summary_section')}</ThemedText>
           <View style={styles.card}>
             <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>Sous-total HT</ThemedText>
+              <ThemedText style={styles.totalLabel}>{t('orders.subtotal_ht')}</ThemedText>
               <ThemedText style={styles.totalValue}>{htAmount.toFixed(2)} €</ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>TVA (20%)</ThemedText>
+              <ThemedText style={styles.totalLabel}>{t('orders.vat_label')}</ThemedText>
               <ThemedText style={styles.totalValue}>{taxAmount.toFixed(2)} €</ThemedText>
             </View>
             <View style={styles.divider} />
             <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabelBold}>Total TTC</ThemedText>
+              <ThemedText style={styles.totalLabelBold}>{t('orders.total_ttc')}</ThemedText>
               <ThemedText style={styles.totalValueBold}>{order.total.toFixed(2)} €</ThemedText>
             </View>
           </View>

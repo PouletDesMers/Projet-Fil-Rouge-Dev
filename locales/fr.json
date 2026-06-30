@@ -23,7 +23,8 @@
     "view_catalog": "Voir le catalogue",
     "missing_fields": "Champs manquants",
     "network_error": "Impossible de contacter le serveur. Vérifiez votre connexion Internet.",
-    "see_all": "Voir tout"
+    "see_all": "Voir tout",
+    "retry": "Réessayer"
   },
   "lang": {
     "title": "Langue",
@@ -237,7 +238,8 @@
   "addresses": {
     "header": "Carnet d'adresses",
     "empty_title": "Aucune adresse enregistrée",
-    "empty_subtitle": "Vos adresses de facturation seront sauvegardées ici lors de vos commandes."
+    "empty_subtitle": "Vos adresses de facturation seront sauvegardées ici lors de vos commandes.",
+    "web_link": "Gérer sur le site web"
   },
   "invoices": {
     "header": "Mes factures",
@@ -275,13 +277,27 @@
     "items_count": "%{count} article(s)",
     "invoice_button": "Facture",
     "empty_title": "Aucune commande",
-    "empty_subtitle": "Vos commandes apparaîtront ici"
+    "empty_subtitle": "Vos commandes apparaîtront ici",
+    "detail_header": "Détail commande",
+    "detail_title": "Commande #%{id}",
+    "not_found": "Commande introuvable",
+    "back_link": "Retour aux commandes",
+    "items_section": "Articles commandés",
+    "item_qty": "Qté : %{qty}",
+    "summary_section": "Récapitulatif",
+    "subtotal_ht": "Sous-total HT",
+    "vat_label": "TVA (20%)",
+    "total_ttc": "Total TTC",
+    "duration_1month": "1 mois",
+    "duration_1year": "1 an",
+    "duration_2years": "2 ans"
   },
   "notifications": {
     "header": "Notifications",
     "default_title": "Notification",
     "empty_title": "Aucune notification",
-    "empty_text": "Vous serez notifié des mises à jour importantes de votre compte et de vos abonnements."
+    "empty_text": "Vous serez notifié des mises à jour importantes de votre compte et de vos abonnements.",
+    "mark_all_read": "Tout lire"
   },
   "contact": {
     "header": "Contact",
@@ -346,6 +362,13 @@
     "cookies_text": "L'application utilise des cookies techniques nécessaires à son fonctionnement. Aucune donnée n'est transmise à des tiers à des fins commerciales.",
     "ip_title": "Propriété intellectuelle",
     "ip_text": "Tout le contenu de l'application est protégé par les droits de propriété intellectuelle. Toute reproduction sans autorisation est interdite."
+  },
+  "cart": {
+    "empty_title": "Votre panier est vide",
+    "empty_subtitle": "Découvrez nos services de cybersécurité",
+    "unavailable_warning": "%{count} article(s) indisponible(s) exclu(s) du total",
+    "total_label": "Total",
+    "checkout_btn": "Procéder au paiement"
   },
   "menu": {
     "home": "Accueil",

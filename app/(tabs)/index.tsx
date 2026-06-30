@@ -213,7 +213,7 @@ export default function HomeScreen() {
                     <ThemedText style={styles.productPrice} numberOfLines={1}>{formatPrice(p.prix)}</ThemedText>
                     {!p.disponible && (
                       <View style={styles.badge}>
-                        <ThemedText style={styles.badgeText}>{t('common.badge_out_of_stock')}</ThemedText>
+                        <ThemedText style={styles.badgeText}>{t('common.badge_unavailable')}</ThemedText>
                       </View>
                     )}
                   </View>

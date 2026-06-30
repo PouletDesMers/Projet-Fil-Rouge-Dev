@@ -113,7 +113,7 @@ export default function CategoryScreen() {
           </ThemedText>
           {!item.disponible && (
             <View style={styles.badge}>
-              <ThemedText style={styles.badgeText}>{t('common.badge_out_of_stock')}</ThemedText>
+              <ThemedText style={styles.badgeText}>{t('common.badge_unavailable')}</ThemedText>
             </View>
           )}
         </View>

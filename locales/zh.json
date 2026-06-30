@@ -23,7 +23,8 @@
     "view_catalog": "查看目录",
     "missing_fields": "缺少必填项",
     "network_error": "无法连接服务器，请检查您的网络连接。",
-    "see_all": "查看全部"
+    "see_all": "查看全部",
+    "retry": "重试"
   },
   "lang": {
     "title": "语言",
@@ -237,7 +238,8 @@
   "addresses": {
     "header": "地址簿",
     "empty_title": "没有保存的地址",
-    "empty_subtitle": "您的账单地址将在下单时保存在此处。"
+    "empty_subtitle": "您的账单地址将在下单时保存在此处。",
+    "web_link": "在网站上管理"
   },
   "invoices": {
     "header": "我的发票",
@@ -275,13 +277,27 @@
     "items_count": "%{count} 件商品",
     "invoice_button": "发票",
     "empty_title": "没有订单",
-    "empty_subtitle": "您的订单将显示在此处"
+    "empty_subtitle": "您的订单将显示在此处",
+    "detail_header": "订单详情",
+    "detail_title": "订单 #%{id}",
+    "not_found": "找不到订单",
+    "back_link": "返回订单列表",
+    "items_section": "已订购商品",
+    "item_qty": "数量：%{qty}",
+    "summary_section": "摘要",
+    "subtotal_ht": "不含税小计",
+    "vat_label": "增值税 (20%)",
+    "total_ttc": "含税总计",
+    "duration_1month": "1 个月",
+    "duration_1year": "1 年",
+    "duration_2years": "2 年"
   },
   "notifications": {
     "header": "通知",
     "default_title": "通知",
     "empty_title": "没有通知",
-    "empty_text": "当您的账户和订阅有重要更新时，您将收到通知。"
+    "empty_text": "当您的账户和订阅有重要更新时，您将收到通知。",
+    "mark_all_read": "全部标为已读"
   },
   "contact": {
     "header": "联系我们",
@@ -346,6 +362,13 @@
     "cookies_text": "本应用程序使用必要的技术 Cookie 以正常运行。不会将任何数据出于商业目的传输给第三方。",
     "ip_title": "知识产权",
     "ip_text": "应用程序的所有内容均受知识产权保护。未经授权，禁止复制。"
+  },
+  "cart": {
+    "empty_title": "购物车为空",
+    "empty_subtitle": "探索我们的网络安全服务",
+    "unavailable_warning": "%{count} 件不可用商品已从总计中排除",
+    "total_label": "总计",
+    "checkout_btn": "前往付款"
   },
   "menu": {
     "home": "首页",

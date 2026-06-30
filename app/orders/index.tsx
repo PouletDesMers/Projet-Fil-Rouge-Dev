@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -35,6 +36,8 @@ export default function OrdersScreen() {
   const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const STATUS_LABEL: Record<string, string> = {
@@ -49,14 +52,18 @@ export default function OrdersScreen() {
     loadOrders();
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    setHasError(false);
     try {
       const data = await api.get<Record<string, unknown>[]>('/api/commandes');
       setOrders((data || []).map(normalizeOrder));
     } catch {
+      setHasError(true);
       setOrders([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -92,6 +99,9 @@ export default function OrdersScreen() {
           item.type === 'header' ? `year-${item.year}` : `order-${item.order.id}-${i}`
         }
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadOrders(true)} colors={['#3b12a3']} tintColor="#3b12a3" />
+        }
         renderItem={({ item }) => {
           if (item.type === 'header') {
             return <ThemedText style={styles.yearHeader}>{item.year}</ThemedText>;
@@ -147,16 +157,22 @@ export default function OrdersScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="receipt-outline" size={56} color="#ccc" />
-            <ThemedText style={styles.emptyTitle}>{t('orders.empty_title')}</ThemedText>
-            <ThemedText style={styles.emptySubtitle}>{t('orders.empty_subtitle')}</ThemedText>
-            <TouchableOpacity
-              style={styles.ctaButton}
-              onPress={() => router.push('/(tabs)/explore')}
-              activeOpacity={0.8}
-            >
-              <ThemedText style={styles.ctaText}>{t('common.discover_services')}</ThemedText>
-            </TouchableOpacity>
+            <Ionicons name={hasError ? 'alert-circle-outline' : 'receipt-outline'} size={56} color="#ccc" />
+            <ThemedText style={styles.emptyTitle}>
+              {hasError ? t('common.error') : t('orders.empty_title')}
+            </ThemedText>
+            <ThemedText style={styles.emptySubtitle}>
+              {hasError ? t('common.network_error') : t('orders.empty_subtitle')}
+            </ThemedText>
+            {hasError ? (
+              <TouchableOpacity style={styles.ctaButton} onPress={() => loadOrders(true)} activeOpacity={0.8}>
+                <ThemedText style={styles.ctaText}>{t('common.retry')}</ThemedText>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.ctaButton} onPress={() => router.push('/(tabs)/explore')} activeOpacity={0.8}>
+                <ThemedText style={styles.ctaText}>{t('common.discover_services')}</ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />

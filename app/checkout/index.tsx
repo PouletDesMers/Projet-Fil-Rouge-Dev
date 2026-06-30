@@ -144,6 +144,13 @@ export default function CheckoutScreen() {
       const created = await api.post<{ id: number }>('/api/commandes', {
         totalAmount: Math.round(total * 1.2 * 100) / 100,
         status: 'confirmed',
+        items: availableItems.map((item) => ({
+          productId: item.productId,
+          productName: item.name,
+          quantity: item.quantity,
+          price: Math.round(item.price * DURATION_DISCOUNT[item.duration] * 100) / 100,
+          duration: item.duration,
+        })),
       });
       if (created?.id) {
         await api.post('/api/paiements', {

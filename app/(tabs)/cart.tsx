@@ -10,9 +10,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { CartItem, DURATION_DISCOUNT, DURATION_LABELS, useCart } from '@/context/cart-context';
+import { useTranslation } from '@/context/language-context';
 
 export default function CartScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { items, total, removeItem, updateQty, updateDuration } = useCart();
 
   const unavailableItems = items.filter((i) => !i.available);
@@ -23,7 +25,7 @@ export default function CartScreen() {
         <ThemedText style={styles.itemName} numberOfLines={2}>{item.name}</ThemedText>
         {!item.available && (
           <View style={styles.unavailableBadge}>
-            <ThemedText style={styles.unavailableBadgeText}>Indisponible</ThemedText>
+            <ThemedText style={styles.unavailableBadgeText}>{t('common.badge_unavailable')}</ThemedText>
           </View>
         )}
       </View>
@@ -71,14 +73,14 @@ export default function CartScreen() {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <View style={styles.empty}>
           <Ionicons name="cart-outline" size={64} color="#ccc" />
-          <ThemedText style={styles.emptyTitle}>Votre panier est vide</ThemedText>
-          <ThemedText style={styles.emptySubtitle}>Découvrez nos services de cybersécurité</ThemedText>
+          <ThemedText style={styles.emptyTitle}>{t('cart.empty_title')}</ThemedText>
+          <ThemedText style={styles.emptySubtitle}>{t('cart.empty_subtitle')}</ThemedText>
           <TouchableOpacity
             style={styles.ctaButton}
             onPress={() => router.push('/(tabs)/explore')}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.ctaText}>Voir le catalogue</ThemedText>
+            <ThemedText style={styles.ctaText}>{t('common.view_catalog')}</ThemedText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -98,12 +100,12 @@ export default function CartScreen() {
               <View style={styles.warningBox}>
                 <Ionicons name="warning-outline" size={16} color="#e67e22" />
                 <ThemedText style={styles.warningText}>
-                  {unavailableItems.length} article(s) indisponible(s) exclu(s) du total
+                  {t('cart.unavailable_warning', { count: unavailableItems.length })}
                 </ThemedText>
               </View>
             )}
             <View style={styles.totalRow}>
-              <ThemedText style={styles.totalLabel}>Total</ThemedText>
+              <ThemedText style={styles.totalLabel}>{t('cart.total_label')}</ThemedText>
               <ThemedText style={styles.totalAmount}>{total.toFixed(2)} €</ThemedText>
             </View>
             <TouchableOpacity
@@ -112,9 +114,9 @@ export default function CartScreen() {
               activeOpacity={0.8}
               disabled={unavailableItems.length === items.length}
               accessibilityRole="button"
-              accessibilityLabel="Procéder au paiement"
+              accessibilityLabel={t('cart.checkout_btn')}
             >
-              <ThemedText style={styles.checkoutBtnText}>Procéder au paiement</ThemedText>
+              <ThemedText style={styles.checkoutBtnText}>{t('cart.checkout_btn')}</ThemedText>
               <Ionicons name="arrow-forward" size={18} color="#fff" />
             </TouchableOpacity>
           </View>

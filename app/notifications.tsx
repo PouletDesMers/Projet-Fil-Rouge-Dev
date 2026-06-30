@@ -63,28 +63,46 @@ export default function NotificationsScreen() {
       .finally(() => setLoading(false));
   }, []);
 
+  const markAsRead = (id: string) => {
+    setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    api.put(`/api/notifications/${id}`, { lu: true }).catch(() => {});
+  };
+
+  const markAllRead = () => {
+    const unread = notifs.filter((n) => !n.read);
+    setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+    unread.forEach((n) => {
+      api.put(`/api/notifications/${n.id}`, { lu: true }).catch(() => {});
+    });
+  };
+
   const unreadCount = notifs.filter((n) => !n.read).length;
 
   const renderItem = ({ item }: { item: Notif }) => {
     const meta = TYPE_ICON[item.type] ?? TYPE_ICON.info;
     return (
-      <View style={[styles.card, !item.read && styles.cardUnread]}>
-        <View style={[styles.iconWrap, { backgroundColor: meta.bg }]}>
-          <Ionicons name={meta.icon as never} size={22} color={meta.color} />
-        </View>
-        <View style={styles.cardBody}>
-          <View style={styles.cardTop}>
-            <ThemedText style={styles.cardTitle} numberOfLines={1}>{item.title}</ThemedText>
-            {!item.read && <View style={styles.unreadDot} />}
+      <TouchableOpacity
+        activeOpacity={item.read ? 1 : 0.7}
+        onPress={() => { if (!item.read) markAsRead(item.id); }}
+      >
+        <View style={[styles.card, !item.read && styles.cardUnread]}>
+          <View style={[styles.iconWrap, { backgroundColor: meta.bg }]}>
+            <Ionicons name={meta.icon as never} size={22} color={meta.color} />
           </View>
-          {item.message ? (
-            <ThemedText style={styles.cardMsg} numberOfLines={2}>{item.message}</ThemedText>
-          ) : null}
-          {item.date ? (
-            <ThemedText style={styles.cardDate}>{formatDate(item.date)}</ThemedText>
-          ) : null}
+          <View style={styles.cardBody}>
+            <View style={styles.cardTop}>
+              <ThemedText style={styles.cardTitle} numberOfLines={1}>{item.title}</ThemedText>
+              {!item.read && <View style={styles.unreadDot} />}
+            </View>
+            {item.message ? (
+              <ThemedText style={styles.cardMsg} numberOfLines={2}>{item.message}</ThemedText>
+            ) : null}
+            {item.date ? (
+              <ThemedText style={styles.cardDate}>{formatDate(item.date)}</ThemedText>
+            ) : null}
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -95,10 +113,12 @@ export default function NotificationsScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>{t('notifications.header')}</ThemedText>
-        {unreadCount > 0 && (
-          <View style={styles.headerBadge}>
-            <ThemedText style={styles.headerBadgeText}>{unreadCount}</ThemedText>
-          </View>
+        {unreadCount > 0 ? (
+          <TouchableOpacity style={styles.markAllBtn} onPress={markAllRead}>
+            <ThemedText style={styles.markAllText}>{t('notifications.mark_all_read')}</ThemedText>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 70 }} />
         )}
       </View>
 
@@ -134,13 +154,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#3b12a3', paddingHorizontal: 16, paddingVertical: 14,
   },
-  backBtn:          { padding: 2 },
-  headerTitle:      { color: '#fff', fontSize: 18, fontWeight: '700', flex: 1 },
-  headerBadge: {
-    backgroundColor: '#ef4444', borderRadius: 10,
-    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
-  },
-  headerBadgeText:  { color: '#fff', fontSize: 11, fontWeight: '700' },
+  backBtn:      { padding: 2 },
+  headerTitle:  { color: '#fff', fontSize: 18, fontWeight: '700', flex: 1 },
+  markAllBtn:   { paddingHorizontal: 4, paddingVertical: 2 },
+  markAllText:  { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600' },
 
   list: { padding: 16, gap: 10 },
 

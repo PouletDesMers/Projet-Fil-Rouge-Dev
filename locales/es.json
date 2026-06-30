@@ -23,7 +23,8 @@
     "view_catalog": "Ver el catálogo",
     "missing_fields": "Campos incompletos",
     "network_error": "No se puede contactar el servidor. Verifique su conexión.",
-    "see_all": "Ver todo"
+    "see_all": "Ver todo",
+    "retry": "Reintentar"
   },
   "lang": {
     "title": "Idioma",
@@ -237,7 +238,8 @@
   "addresses": {
     "header": "Libreta de direcciones",
     "empty_title": "Sin direcciones guardadas",
-    "empty_subtitle": "Tus direcciones de facturación se guardarán aquí al realizar pedidos."
+    "empty_subtitle": "Tus direcciones de facturación se guardarán aquí al realizar pedidos.",
+    "web_link": "Gestionar en el sitio web"
   },
   "invoices": {
     "header": "Mis facturas",
@@ -275,13 +277,27 @@
     "items_count": "%{count} artículo(s)",
     "invoice_button": "Factura",
     "empty_title": "Sin pedidos",
-    "empty_subtitle": "Tus pedidos aparecerán aquí"
+    "empty_subtitle": "Tus pedidos aparecerán aquí",
+    "detail_header": "Detalle del pedido",
+    "detail_title": "Pedido #%{id}",
+    "not_found": "Pedido no encontrado",
+    "back_link": "Volver a los pedidos",
+    "items_section": "Artículos pedidos",
+    "item_qty": "Cant: %{qty}",
+    "summary_section": "Resumen",
+    "subtotal_ht": "Subtotal sin IVA",
+    "vat_label": "IVA (20%)",
+    "total_ttc": "Total con IVA",
+    "duration_1month": "1 mes",
+    "duration_1year": "1 año",
+    "duration_2years": "2 años"
   },
   "notifications": {
     "header": "Notificaciones",
     "default_title": "Notificación",
     "empty_title": "Sin notificaciones",
-    "empty_text": "Recibirás notificaciones sobre actualizaciones importantes de tu cuenta y suscripciones."
+    "empty_text": "Recibirás notificaciones sobre actualizaciones importantes de tu cuenta y suscripciones.",
+    "mark_all_read": "Marcar todo como leído"
   },
   "contact": {
     "header": "Contacto",
@@ -346,6 +362,13 @@
     "cookies_text": "La aplicación utiliza cookies técnicas necesarias para su funcionamiento. Ningún dato se comparte con terceros con fines comerciales.",
     "ip_title": "Propiedad intelectual",
     "ip_text": "Todo el contenido de la aplicación está protegido por derechos de propiedad intelectual. Queda prohibida la reproducción sin autorización."
+  },
+  "cart": {
+    "empty_title": "Tu carrito está vacío",
+    "empty_subtitle": "Descubre nuestros servicios de ciberseguridad",
+    "unavailable_warning": "%{count} artículo(s) no disponible(s) excluido(s) del total",
+    "total_label": "Total",
+    "checkout_btn": "Proceder al pago"
   },
   "menu": {
     "home": "Inicio",

@@ -50,7 +50,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert(t('profile.required_fields'), t('profile.required_fields'));
+      Alert.alert(t('common.error'), t('profile.required_fields'));
       return;
     }
     setSaving(true);

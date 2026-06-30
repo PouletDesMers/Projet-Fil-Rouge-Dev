@@ -23,7 +23,8 @@
     "view_catalog": "View catalog",
     "missing_fields": "Missing fields",
     "network_error": "Unable to reach the server. Check your internet connection.",
-    "see_all": "See all"
+    "see_all": "See all",
+    "retry": "Retry"
   },
   "lang": {
     "title": "Language",
@@ -237,7 +238,8 @@
   "addresses": {
     "header": "Address book",
     "empty_title": "No saved addresses",
-    "empty_subtitle": "Your billing addresses will be saved here when you place orders."
+    "empty_subtitle": "Your billing addresses will be saved here when you place orders.",
+    "web_link": "Manage on the website"
   },
   "invoices": {
     "header": "My invoices",
@@ -275,13 +277,27 @@
     "items_count": "%{count} item(s)",
     "invoice_button": "Invoice",
     "empty_title": "No orders",
-    "empty_subtitle": "Your orders will appear here"
+    "empty_subtitle": "Your orders will appear here",
+    "detail_header": "Order detail",
+    "detail_title": "Order #%{id}",
+    "not_found": "Order not found",
+    "back_link": "Back to orders",
+    "items_section": "Ordered items",
+    "item_qty": "Qty: %{qty}",
+    "summary_section": "Summary",
+    "subtotal_ht": "Subtotal excl. tax",
+    "vat_label": "VAT (20%)",
+    "total_ttc": "Total incl. tax",
+    "duration_1month": "1 month",
+    "duration_1year": "1 year",
+    "duration_2years": "2 years"
   },
   "notifications": {
     "header": "Notifications",
     "default_title": "Notification",
     "empty_title": "No notifications",
-    "empty_text": "You will be notified of important updates to your account and subscriptions."
+    "empty_text": "You will be notified of important updates to your account and subscriptions.",
+    "mark_all_read": "Mark all read"
   },
   "contact": {
     "header": "Contact",
@@ -346,6 +362,13 @@
     "cookies_text": "The application uses technical cookies necessary for its operation. No data is shared with third parties for commercial purposes.",
     "ip_title": "Intellectual property",
     "ip_text": "All application content is protected by intellectual property rights. Reproduction without permission is prohibited."
+  },
+  "cart": {
+    "empty_title": "Your cart is empty",
+    "empty_subtitle": "Discover our cybersecurity services",
+    "unavailable_warning": "%{count} unavailable item(s) excluded from total",
+    "total_label": "Total",
+    "checkout_btn": "Proceed to payment"
   },
   "menu": {
     "home": "Home",
