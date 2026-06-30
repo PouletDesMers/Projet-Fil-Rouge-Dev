@@ -75,7 +75,7 @@ async function sendPasswordResetEmail(email, resetToken) {
 async function sendAdminNotification(email, subject, message) {
   try {
     const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: RESEND_FROM,
       to: email,
       subject: subject,
       html: `
@@ -100,7 +100,7 @@ async function sendNewsletterEmail(
 ) {
   try {
     const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: RESEND_FROM,
       to: email,
       subject: campaignTitle,
       html: `

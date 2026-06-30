@@ -52,6 +52,7 @@ services:
     environment:
       API_SECRET: ${API_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM:-CYNA <noreply@cyna.atkk.fr>}
       SMTP_FROM: ${SMTP_FROM}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
