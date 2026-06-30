@@ -45,13 +45,7 @@
       ],
       "expo-secure-store",
       "expo-web-browser",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.cyna.app",
-          "enableGooglePay": false
-        }
-      ]
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
