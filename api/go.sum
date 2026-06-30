@@ -18,3 +18,5 @@ golang.org/x/crypto v0.17.0 h1:r8bRNjWL3GshPW3gkd+RpvzWrZAwPS49OmTGZ/uhM4k=
 golang.org/x/crypto v0.17.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
 golang.org/x/crypto v0.46.0 h1:cKRW/pmt1pKAfetfu+RCEvjvZkA9RimPbh7bhFjGVBU=
 golang.org/x/crypto v0.46.0/go.mod h1:Evb/oLKmMraqjZ2iQTwDwvCtJkczlDuTmdJXoZVzqU0=
+github.com/joho/godotenv v1.5.1 h1:7e62/+Ms1sYxIhQ7sxXfM4BEr5J8j3h5mR+OS3I3PCo=
+github.com/joho/godotenv v1.5.1/go.mod h1:f8LDo5J6OtrmQ6R6m3E13s7sT3iSX7eM7h+kMwrF7X4=
