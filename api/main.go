@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 
 	"api/cache"
 	"api/config"
@@ -20,6 +21,9 @@ import (
 )
 
 func main() {
+	// Charger le fichier .env (ignorer l'erreur si absent, ex: en production avec env vars système)
+	_ = godotenv.Load()
+
 	config.Init()
 	cache.Init()
 	logger.InitLogDB()
